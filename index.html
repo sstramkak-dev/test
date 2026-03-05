@@ -130,8 +130,12 @@
             <i class="fa-solid fa-calendar-day"></i>Daily Sale
           </button>
         </div>
+
+        <!-- Daily Sale Tab -->
         <div id="stab-dailySale" class="tab-content active">
           <div class="daily-sale-wrapper">
+
+            <!-- Header -->
             <div class="page-header" style="padding:0 0 18px 0;">
               <div class="page-header-left">
                 <h2>Daily Sale</h2>
@@ -146,33 +150,106 @@
                 </button>
               </div>
             </div>
+
             <!-- Item catalogue strip -->
             <div class="items-strip">
               <div class="items-strip-label">Item Catalogue — click chip to quick-add to a sale</div>
               <div id="itemChipsContainer" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-                <span class="no-items-hint"><i class="fa-solid fa-circle-info"></i>&nbsp;No items yet — click <strong style="margin:0 3px;">Add Items</strong> to build your catalogue.</span>
+                <span class="no-items-hint">
+                  <i class="fa-solid fa-circle-info"></i>&nbsp;No items yet — click
+                  <strong style="margin:0 3px;">Add Items</strong> to build your catalogue.
+                </span>
               </div>
             </div>
-            <!-- Sale records table -->
-            <div class="sale-table-card">
-              <div class="sale-table-header">
-                <span><i class="fa-solid fa-receipt" style="margin-right:6px;color:#1B7D3D;"></i>Sale Records</span>
-                <span id="saleCountBadge" class="pill pill-green" style="display:none;"></span>
+
+            <!-- Report filter bar -->
+            <div class="report-filter-bar">
+              <div class="report-filter-left">
+                <div class="filter-group">
+                  <i class="fa-regular fa-calendar filter-icon"></i>
+                  <input type="date" id="filter-date-from" onchange="applyReportFilters()" title="From date"/>
+                </div>
+                <span style="color:#ccc;font-size:13px;">—</span>
+                <div class="filter-group">
+                  <i class="fa-regular fa-calendar filter-icon"></i>
+                  <input type="date" id="filter-date-to" onchange="applyReportFilters()" title="To date"/>
+                </div>
+                <div class="filter-group">
+                  <i class="fa-solid fa-user-tie filter-icon"></i>
+                  <input type="text" id="filter-agent" placeholder="Agent…" oninput="applyReportFilters()"/>
+                </div>
+                <div class="filter-group">
+                  <i class="fa-solid fa-building filter-icon"></i>
+                  <input type="text" id="filter-branch" placeholder="Branch…" oninput="applyReportFilters()"/>
+                </div>
+                <div class="filter-group">
+                  <i class="fa-solid fa-boxes-stacked filter-icon"></i>
+                  <select id="filter-item" onchange="applyReportFilters()">
+                    <option value="">All Items</option>
+                  </select>
+                </div>
+                <button class="filter-clear-btn" onclick="clearReportFilters()">
+                  <i class="fa-solid fa-xmark"></i> Clear
+                </button>
               </div>
-              <div class="table-wrap">
-                <table class="data-table">
-                  <thead><tr>
-                    <th>#</th><th>Agent</th><th>Branch</th><th>Date</th>
-                    <th>Items</th><th>Qty</th><th>Total</th><th>Note</th><th>Action</th>
-                  </tr></thead>
-                  <tbody id="saleTableBody"></tbody>
-                </table>
-              </div>
-              <div class="sale-total-bar" id="saleTotalBar" style="display:none;">
-                <span class="total-label"><i class="fa-solid fa-sigma" style="margin-right:4px;"></i>Grand Total</span>
-                <span class="total-value" id="grandTotal">$0.00</span>
+              <div class="report-filter-right">
+                <button class="view-toggle-btn active" id="viewBtn-table" onclick="setReportView('table')" title="Table view">
+                  <i class="fa-solid fa-table-list"></i>
+                </button>
+                <button class="view-toggle-btn" id="viewBtn-summary" onclick="setReportView('summary')" title="Summary view">
+                  <i class="fa-solid fa-chart-bar"></i>
+                </button>
               </div>
             </div>
+
+            <!-- KPI summary cards -->
+            <div class="sale-kpi-row">
+              <div class="sale-kpi-card">
+                <div class="sale-kpi-icon green"><i class="fa-solid fa-receipt"></i></div>
+                <div><div class="sale-kpi-val" id="kpi-total-sales">0</div><div class="sale-kpi-lbl">Total Sales</div></div>
+              </div>
+              <div class="sale-kpi-card">
+                <div class="sale-kpi-icon blue"><i class="fa-solid fa-boxes-stacked"></i></div>
+                <div><div class="sale-kpi-val" id="kpi-total-qty">0</div><div class="sale-kpi-lbl">Items Sold</div></div>
+              </div>
+              <div class="sale-kpi-card">
+                <div class="sale-kpi-icon purple"><i class="fa-solid fa-user-tie"></i></div>
+                <div><div class="sale-kpi-val" id="kpi-agents">0</div><div class="sale-kpi-lbl">Agents</div></div>
+              </div>
+              <div class="sale-kpi-card">
+                <div class="sale-kpi-icon orange"><i class="fa-solid fa-dollar-sign"></i></div>
+                <div><div class="sale-kpi-val" id="kpi-revenue">$0</div><div class="sale-kpi-lbl">Revenue</div></div>
+              </div>
+            </div>
+
+            <!-- TABLE VIEW -->
+            <div id="reportView-table">
+              <div class="sale-table-card">
+                <div class="sale-table-header">
+                  <span><i class="fa-solid fa-receipt" style="margin-right:6px;color:#1B7D3D;"></i>Sale Records</span>
+                  <span id="saleCountBadge" class="pill pill-green" style="display:none;"></span>
+                </div>
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead><tr>
+                      <th>#</th><th>Agent</th><th>Branch</th><th>Date</th>
+                      <th>Items</th><th>Qty</th><th>Currency</th><th>Total</th><th>Note</th><th>Action</th>
+                    </tr></thead>
+                    <tbody id="saleTableBody"></tbody>
+                  </table>
+                </div>
+                <div class="sale-total-bar" id="saleTotalBar" style="display:none;">
+                  <span class="total-label"><i class="fa-solid fa-sigma" style="margin-right:4px;"></i>Grand Total</span>
+                  <span class="total-value" id="grandTotal">$0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SUMMARY VIEW -->
+            <div id="reportView-summary" style="display:none;">
+              <div class="summary-grid" id="summaryGrid"></div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -192,7 +269,6 @@
             <i class="fa-solid fa-ban"></i>Termination
           </button>
         </div>
-        <!-- New Customer -->
         <div id="ctab-newCustomer" class="tab-content active">
           <div class="page-header">
             <div class="page-header-left"><h2>New Customer</h2><p>Manage new customer leads and prospects</p></div>
@@ -205,7 +281,6 @@
             </table>
           </div>
         </div>
-        <!-- Top Up -->
         <div id="ctab-topUp" class="tab-content">
           <div class="page-header">
             <div class="page-header-left"><h2>Top Up</h2><p>Active customers — manage top up &amp; status</p></div>
@@ -218,7 +293,6 @@
             </table>
           </div>
         </div>
-        <!-- Termination -->
         <div id="ctab-termination" class="tab-content">
           <div class="page-header">
             <div class="page-header-left"><h2>Termination</h2><p>Terminated customer accounts</p></div>
@@ -242,7 +316,6 @@
           <button class="tab-btn" id="tab-kpi-btn" onclick="switchSettingsTab('kpi')"><i class="fa-solid fa-chart-line"></i>KPI Setting</button>
           <button class="tab-btn" id="tab-promotionSetting-btn" onclick="switchSettingsTab('promotionSetting')"><i class="fa-solid fa-tag"></i>Promotion</button>
         </div>
-        <!-- Permission -->
         <div id="tab-permission" class="tab-content active">
           <div class="permission-page">
             <div class="permission-header">
@@ -257,7 +330,6 @@
             </div>
           </div>
         </div>
-        <!-- KPI -->
         <div id="tab-kpi" class="tab-content">
           <div class="kpi-page">
             <div class="kpi-header">
@@ -273,21 +345,20 @@
             </div>
           </div>
         </div>
-        <!-- Promotion Setting -->
         <div id="tab-promotionSetting" class="tab-content">
           <div id="promotionSetting-content" style="padding:24px;"></div>
         </div>
       </div>
     </div>
 
-  </div><!-- /content-area -->
-</div><!-- /main -->
+  </div>
+</div>
 
 <!-- ══════════════ MODALS ══════════════ -->
 
 <!-- ADD ITEM -->
 <div class="modal-overlay" id="modal-addItem" onclick="handleOverlay(event,'addItem')">
-  <div class="modal">
+  <div class="modal modal-lg">
     <div class="modal-header">
       <div class="modal-header-left">
         <div class="modal-header-icon purple"><i class="fa-solid fa-boxes-stacked"></i></div>
@@ -301,20 +372,74 @@
         <div class="form-group full">
           <label><i class="fa-solid fa-tag"></i>Item Name <span class="req">*</span></label>
           <div class="input-wrap"><i class="fa-solid fa-tag input-icon"></i>
-            <input type="text" id="item-name" placeholder="e.g. SIM Card, Fiber Plan…" required/>
+            <input type="text" id="item-name" placeholder="e.g. SIM Card, Fiber Plan, Data Package…" required/>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label><i class="fa-solid fa-dollar-sign"></i>Price <span class="opt">(optional)</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-dollar-sign input-icon"></i>
-              <input type="number" id="item-price" placeholder="0.00" min="0" step="0.01"/>
+            <div class="input-wrap price-currency-wrap">
+              <select id="item-currency" class="currency-prefix-select">
+                <option value="$">$ USD</option>
+                <option value="KHR">KHR</option>
+                <option value="฿">฿ THB</option>
+                <option value="S$">S$ SGD</option>
+                <option value="€">€ EUR</option>
+                <option value="£">£ GBP</option>
+                <option value="¥">¥ JPY</option>
+                <option value="custom">✏️ Other</option>
+              </select>
+              <input type="number" id="item-price" placeholder="0.00" min="0" step="0.01" class="price-input"/>
             </div>
           </div>
+          <div class="form-group" id="item-custom-currency-group" style="display:none;">
+            <label><i class="fa-solid fa-pen"></i>Custom Currency Symbol</label>
+            <div class="input-wrap"><i class="fa-solid fa-pen input-icon"></i>
+              <input type="text" id="item-custom-currency" placeholder="e.g. BTC, LAK…"/>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label><i class="fa-solid fa-ruler"></i>Unit <span class="opt">(optional)</span></label>
             <div class="input-wrap"><i class="fa-solid fa-ruler input-icon"></i>
-              <input type="text" id="item-unit" placeholder="e.g. pcs, line, pkg…"/>
+              <select id="item-unit">
+                <option value="">— No unit —</option>
+                <optgroup label="Telecom">
+                  <option value="SIM">SIM</option>
+                  <option value="Line">Line</option>
+                  <option value="Port">Port</option>
+                  <option value="Connection">Connection</option>
+                  <option value="Activation">Activation</option>
+                </optgroup>
+                <optgroup label="Data / Speed">
+                  <option value="GB">GB</option>
+                  <option value="TB">TB</option>
+                  <option value="Mbps">Mbps</option>
+                  <option value="Gbps">Gbps</option>
+                </optgroup>
+                <optgroup label="Time">
+                  <option value="Day">Day</option>
+                  <option value="Month">Month</option>
+                  <option value="Year">Year</option>
+                </optgroup>
+                <optgroup label="Physical">
+                  <option value="pcs">pcs</option>
+                  <option value="Box">Box</option>
+                  <option value="Set">Set</option>
+                  <option value="Pack">Pack</option>
+                  <option value="Bundle">Bundle</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="custom">✏️ Custom…</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" id="item-custom-unit-group" style="display:none;">
+            <label><i class="fa-solid fa-pen"></i>Custom Unit</label>
+            <div class="input-wrap"><i class="fa-solid fa-pen input-icon"></i>
+              <input type="text" id="item-custom-unit" placeholder="e.g. voucher, slot…"/>
             </div>
           </div>
         </div>
@@ -325,7 +450,8 @@
               <select id="item-category">
                 <option value="">— No category —</option>
                 <option>SIM</option><option>Data</option><option>Fiber</option>
-                <option>Device</option><option>Accessory</option><option>Package</option><option>Other</option>
+                <option>Device</option><option>Accessory</option><option>Package</option>
+                <option>Voucher</option><option>Other</option>
               </select>
             </div>
           </div>
@@ -342,7 +468,7 @@
         <div class="form-group full">
           <label><i class="fa-solid fa-align-left"></i>Description <span class="opt">(optional)</span></label>
           <div class="input-wrap"><i class="fa-solid fa-align-left input-icon" style="top:14px;"></i>
-            <textarea id="item-desc" placeholder="Optional description…"></textarea>
+            <textarea id="item-desc" placeholder="Optional description or notes…"></textarea>
           </div>
         </div>
       </div>
