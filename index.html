@@ -1,1154 +1,1191 @@
-// ══════════════════════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════════════════════
-let currentRole        = 'admin';
-let currentPage        = 'dashboard';
-let currentCustomerTab = 'newCustomer';
-let currentSettingsTab = 'permission';
-let currentSaleTab     = 'dailySale';
-let currentReportView  = 'table';
-let filteredSales      = [];
-let itemGroupSelected  = 'unit';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart 5G Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
 
-let itemCatalogue   = [];
-let saleRecords     = [];
-let newCustomers    = [];
-let topUpList       = [];
-let terminationList = [];
-let staffList       = [];
-let kpiList         = [];
-let kpiValueMode    = 'unit';
-let kpiTypeSelected = '';
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Smart_Communications_logo.svg/800px-Smart_Communications_logo.svg.png"
+         alt="Smart 5G"
+         onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex';"/>
+    <div id="logoFallback" class="logo-fallback">
+      <span class="logo-title">SMART</span><span class="logo-sub">· Axiata ·</span>
+    </div>
+  </div>
 
-const TAB_PERM = {
-  permission:['admin'], kpi:['admin','supervisor'], promotionSetting:['admin']
-};
-const TAB_LBL = {
-  permission:'Permission', kpi:'KPI Setting', promotionSetting:'Promotion'
-};
-const PROD_COL = {
-  'Smart@Home':'pill-blue','Smart Fiber+':'pill-purple',
-  'M2M':'pill-orange','Smart Laor 6':'pill-yellow','Smart Laor 10$':'pill-green'
-};
-const NC_COL = {
-  'New Lead':'pill-yellow','Hot Prospect':'pill-orange','Closed':'pill-green'
-};
-const AV_CYC      = ['','blue','orange','purple'];
-const KNOWN_CUR   = ['$','KHR','฿','S$','€','£','¥'];
-const KNOWN_UNITS = ['SIM','Line','Port','Connection','Activation',
-  'GB','TB','Mbps','Gbps','Day','Month','Year','pcs','Box','Set','Pack','Bundle'];
+  <div class="nav-section-label">Main Menu</div>
 
-const g      = id => document.getElementById(id);
-const rv     = id => g(id).value;
-const rt     = id => g(id).value.trim();
-const $      = (s,c=document) => c.querySelector(s);
-const $$     = (s,c=document) => [...c.querySelectorAll(s)];
-const today  = ()  => new Date().toLocaleDateString();
-const ini    = n   => n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-const pad    = i   => String(i+1).padStart(2,'0');
-const fmtMoney = (v,sym) => (sym||'$') + Number(v||0).toFixed(2);
+  <button class="nav-item active" onclick="navigateTo('dashboard',this)">
+    <span class="nav-icon"><i class="fa-solid fa-gauge-high"></i></span>Dashboard
+  </button>
 
-// ══════════════════════════════════════════════════════════
-//  NAVIGATION
-// ══════════════════════════════════════════════════════════
-function navigateTo(page, btn) {
-  $$('.nav-item').forEach(e => e.classList.remove('active'));
-  $$('.page').forEach(p => p.classList.remove('active'));
-  $$('.submenu').forEach(s => s.classList.remove('open'));
-  $$('.nav-item.has-submenu').forEach(b => b.classList.remove('open'));
-  $$('.submenu-item').forEach(s => s.classList.remove('active'));
-  btn.classList.add('active');
-  g('page-'+page).classList.add('active');
-  g('pageTitle').textContent = {
-    dashboard:'Dashboard', promotionPage:'Promotion', deposit:'Deposit'
-  }[page] || page;
-  currentPage = page;
-}
+  <button class="nav-item" onclick="navigateTo('promotionPage',this)">
+    <span class="nav-icon"><i class="fa-solid fa-bullhorn"></i></span>Promotion
+  </button>
 
-function toggleSubmenu(id, btn) {
-  const sub = g(id), isOpen = sub.classList.contains('open');
-  $$('.submenu').forEach(s => s.classList.remove('open'));
-  $$('.nav-item.has-submenu').forEach(b => b.classList.remove('open'));
-  if(!isOpen) {
-    sub.classList.add('open'); btn.classList.add('open');
-    $$('.nav-item').forEach(e => e.classList.remove('active'));
-    btn.classList.add('active');
-  }
-}
+  <!-- Sale submenu -->
+  <button class="nav-item has-submenu" id="saleNavBtn" onclick="toggleSubmenu('saleSubmenu',this)">
+    <span class="nav-icon"><i class="fa-solid fa-chart-bar"></i></span>Sale
+    <span class="nav-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+  </button>
+  <div class="submenu" id="saleSubmenu">
+    <button class="submenu-item" onclick="openSaleTab('dailySale',this)">
+      <span class="sub-icon"><i class="fa-solid fa-calendar-day"></i></span>Daily Sale
+    </button>
+  </div>
 
-function openSaleTab(tab, btn) {
-  $$('.page').forEach(p => p.classList.remove('active'));
-  g('page-sale').classList.add('active');
-  $$('.submenu-item').forEach(e => e.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  $$('.nav-item').forEach(e => e.classList.remove('active'));
-  g('saleNavBtn').classList.add('active','open');
-  g('saleSubmenu').classList.add('open');
-  switchSaleTab(tab); currentPage = 'sale';
-}
-function switchSaleTab(tab) {
-  currentSaleTab = tab;
-  $$('#page-sale .tab-btn').forEach(b => b.classList.remove('active'));
-  $$('#page-sale .tab-content').forEach(t => t.classList.remove('active'));
-  g('stab-'+tab+'-btn').classList.add('active');
-  g('stab-'+tab).classList.add('active');
-  g('pageTitle').textContent = 'Sale — Daily Sale';
-}
+  <button class="nav-item" onclick="navigateTo('deposit',this)">
+    <span class="nav-icon"><i class="fa-solid fa-vault"></i></span>Deposit
+  </button>
 
-function openCustomerTab(tab, btn) {
-  $$('.page').forEach(p => p.classList.remove('active'));
-  g('page-customer').classList.add('active');
-  $$('.submenu-item').forEach(e => e.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  $$('.nav-item').forEach(e => e.classList.remove('active'));
-  g('customerNavBtn').classList.add('active','open');
-  g('customerSubmenu').classList.add('open');
-  switchCustomerTab(tab); currentPage = 'customer';
-}
-function switchCustomerTab(tab) {
-  currentCustomerTab = tab;
-  $$('#page-customer .tab-btn').forEach(b => b.classList.remove('active'));
-  $$('#page-customer .tab-content').forEach(t => t.classList.remove('active'));
-  g('ctab-'+tab+'-btn').classList.add('active');
-  g('ctab-'+tab).classList.add('active');
-  g('pageTitle').textContent = {
-    newCustomer:'Customer — New Customer',
-    topUp:'Customer — Top Up',
-    termination:'Customer — Termination'
-  }[tab] || tab;
-}
+  <!-- Customer submenu -->
+  <button class="nav-item has-submenu" id="customerNavBtn" onclick="toggleSubmenu('customerSubmenu',this)">
+    <span class="nav-icon"><i class="fa-solid fa-users"></i></span>Customer
+    <span class="nav-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+  </button>
+  <div class="submenu" id="customerSubmenu">
+    <button class="submenu-item" onclick="openCustomerTab('newCustomer',this)">
+      <span class="sub-icon"><i class="fa-solid fa-user-plus"></i></span>New Customer
+    </button>
+    <button class="submenu-item" onclick="openCustomerTab('topUp',this)">
+      <span class="sub-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></span>Top Up
+    </button>
+    <button class="submenu-item" onclick="openCustomerTab('termination',this)">
+      <span class="sub-icon"><i class="fa-solid fa-ban"></i></span>Termination
+    </button>
+  </div>
 
-function openSettingsTab(tab, btn) {
-  $$('.page').forEach(p => p.classList.remove('active'));
-  g('page-settings').classList.add('active');
-  $$('.submenu-item').forEach(e => e.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  $$('.nav-item').forEach(e => e.classList.remove('active'));
-  g('settingsNavBtn').classList.add('active','open');
-  g('settingsSubmenu').classList.add('open');
-  switchSettingsTab(tab); currentPage = 'settings';
-}
-function switchSettingsTab(tab) {
-  currentSettingsTab = tab;
-  $$('#page-settings .tab-btn').forEach(b => b.classList.remove('active'));
-  $$('#page-settings .tab-content').forEach(t => t.classList.remove('active'));
-  g('tab-'+tab+'-btn').classList.add('active');
-  g('tab-'+tab).classList.add('active');
-  if(tab !== 'permission' && tab !== 'kpi') renderAccessContent(tab);
-  g('pageTitle').textContent = 'Settings — ' + TAB_LBL[tab];
-}
-function renderAccessContent(tab) {
-  const el = g(tab+'-content'); if(!el) return;
-  const ok = TAB_PERM[tab].includes(currentRole);
-  el.innerHTML = ok ? '' : `<div class="access-denied">
-    <i class="fa-solid fa-lock"></i><h3>Access Denied</h3>
-    <p>Required: <strong>${TAB_PERM[tab].map(r=>r[0].toUpperCase()+r.slice(1)).join(' or ')}</strong></p>
-  </div>`;
-}
+  <div class="nav-section-label">Configuration</div>
 
-// ══════════════════════════════════════════════════════════
-//  ITEM GROUP TOGGLE
-// ══════════════════════════════════════════════════════════
-function selectItemGroup(grp) {
-  itemGroupSelected = grp;
-  g('item-group').value = grp;
-  g('grpBtn-unit').classList.toggle('active', grp==='unit');
-  g('grpBtn-unit').classList.remove('dollar-active');
-  g('grpBtn-dollar').classList.toggle('active', grp==='dollar');
-  g('grpBtn-dollar').classList.toggle('dollar-active', grp==='dollar');
-}
+  <!-- Settings submenu -->
+  <button class="nav-item has-submenu" id="settingsNavBtn" onclick="toggleSubmenu('settingsSubmenu',this)">
+    <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>Settings
+    <span class="nav-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+  </button>
+  <div class="submenu" id="settingsSubmenu">
+    <button class="submenu-item" onclick="openSettingsTab('permission',this)">
+      <span class="sub-icon"><i class="fa-solid fa-shield-halved"></i></span>Permission
+    </button>
+    <button class="submenu-item" onclick="openSettingsTab('kpi',this)">
+      <span class="sub-icon"><i class="fa-solid fa-chart-line"></i></span>KPI Setting
+    </button>
+    <button class="submenu-item" onclick="openSettingsTab('promotionSetting',this)">
+      <span class="sub-icon"><i class="fa-solid fa-tag"></i></span>Promotion
+    </button>
+  </div>
+</aside>
 
-// ═══════════════════��══════════════════════════════════════
-//  ITEM CATALOGUE
-// ══════════════════════════════════════════════════════════
-function submitItem(e) {
-  e.preventDefault();
-  const eid     = rt('item-edit-id');
-  const unitSel = rv('item-unit');
-  const curSel  = rv('item-currency');
-  const d = {
-    name    : rt('item-name'),
-    shortcut: rt('item-shortcut').toUpperCase(),
-    group   : rv('item-group'),
-    price   : rv('item-price'),
-    currency: curSel  === 'custom' ? rt('item-custom-currency') : curSel,
-    unit    : unitSel === 'custom' ? rt('item-custom-unit')     : unitSel,
-    category: rv('item-category'),
-    status  : rv('item-status'),
-    desc    : rt('item-desc')
-  };
-  if(eid) {
-    const idx = itemCatalogue.findIndex(i => i.id === Number(eid));
-    if(idx !== -1) { d.id = Number(eid); itemCatalogue[idx] = d; }
-  } else {
-    d.id = Date.now(); itemCatalogue.push(d);
-  }
-  renderItemChips();
-  buildSaleTableHeader();
-  closeModal('addItem');
-}
+<!-- ══ MAIN ══ -->
+<div class="main">
 
-function renderItemChips() {
-  const con    = g('itemChipsContainer');
-  const active = itemCatalogue.filter(i => i.status === 'Active');
-  if(!active.length) {
-    con.innerHTML = `<span class="no-items-hint">
-      <i class="fa-solid fa-circle-info"></i>&nbsp;No active items — click
-      <strong style="margin:0 3px;">Add Items</strong> to build your catalogue.</span>`;
-    return;
-  }
-  con.innerHTML = active.map(it => {
-    const isDollar = it.group === 'dollar';
-    const cur = it.currency || '$';
-    return `<div class="item-chip ${isDollar?'dollar-chip':''}" title="${it.desc||''}">
-      <span class="chip-shortcut">${it.shortcut||'?'}</span>
-      <span>${it.name}</span>
-      ${!isDollar && it.unit ? `<span class="chip-unit">/${it.unit}</span>` : ''}
-      ${isDollar && it.price ? `<span class="chip-price">${cur}${Number(it.price).toFixed(2)}</span>` : ''}
-    </div>`;
-  }).join('');
-}
-
-// ══════════════════════════════════════════════════════════
-//  NEW SALE MODAL
-// ══════════════════════════════════════════════════════════
-function openNewSaleModal(editId) {
-  $('#modal-newSale form').reset();
-  g('sale-date').value = new Date().toISOString().split('T')[0];
-  buildSaleItemCards();
-
-  if(editId) {
-    const rec = saleRecords.find(s => s.id === editId);
-    if(rec) {
-      g('sale-edit-id').value = editId;
-      g('sale-agent').value   = rec.agent;
-      g('sale-branch').value  = rec.branch;
-      g('sale-date').value    = rec.dateRaw || '';
-      g('sale-note').value    = rec.note;
-      Object.entries(rec.unitQtys||{}).forEach(([id,v]) => {
-        const inp = g('sic-unit-'+id); if(inp) inp.value = v||0;
-      });
-      Object.entries(rec.dollarAmts||{}).forEach(([id,v]) => {
-        const inp = g('sic-dollar-'+id); if(inp) inp.value = v||'';
-      });
-      g('newSale-title').textContent   = 'Edit Sale';
-      g('newSale-sub').textContent     = 'Update sale record';
-      g('sale-save-label').textContent = 'Update Sale';
-    }
-  } else {
-    g('sale-edit-id').value = '';
-    g('newSale-title').textContent   = 'New Sale';
-    g('newSale-sub').textContent     = 'Record a sale for an agent';
-    g('sale-save-label').textContent = 'Save Sale';
-  }
-  recalcSaleModalTotals();
-  g('modal-newSale').classList.add('open');
-}
-
-function buildSaleItemCards() {
-  const unitItems   = itemCatalogue.filter(i => i.status==='Active' && i.group==='unit');
-  const dollarItems = itemCatalogue.filter(i => i.status==='Active' && i.group==='dollar');
-  const unitGrid    = g('saleUnitItemsGrid');
-  const dollarGrid  = g('saleDollarItemsGrid');
-  const noUnit      = g('noUnitItemsMsg');
-  const noDollar    = g('noDollarItemsMsg');
-
-  if(!unitItems.length) {
-    noUnit.style.display = 'flex'; unitGrid.innerHTML = '';
-  } else {
-    noUnit.style.display = 'none';
-    unitGrid.innerHTML = unitItems.map(it => `
-      <div class="sale-item-card">
-        <div class="sic-name">
-          <span class="sic-shortcut">${it.shortcut||'?'}</span>${it.name}
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <h1 id="pageTitle">Dashboard</h1>
+    <div class="topbar-right">
+      <button class="topbar-icon-btn"><i class="fa-regular fa-bell"></i></button>
+      <div class="user-pill">
+        <div class="user-avatar" id="userAvatar">AU</div>
+        <div>
+          <div class="user-pill-name" id="userNameDisplay">Admin User</div>
+          <div class="user-pill-role" id="roleBadgeDisplay">Admin</div>
         </div>
-        <div class="sic-sub">${it.unit||'pcs'}</div>
-        <div class="sic-input-wrap">
-          <label>Qty</label>
-          <input type="number" class="sic-input" id="sic-unit-${it.id}"
-            min="0" value="0" placeholder="0" oninput="recalcSaleModalTotals()"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT AREA -->
+  <div class="content-area">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div id="page-dashboard" class="page active">
+      <div class="blank-placeholder">
+        <i class="fa-solid fa-gauge-high"></i>
+        <h2>Dashboard</h2>
+        <p>Your dashboard content will appear here.</p>
+      </div>
+    </div>
+
+    <!-- ══ PROMOTION ══ -->
+    <div id="page-promotionPage" class="page">
+      <div class="blank-placeholder">
+        <i class="fa-solid fa-bullhorn"></i>
+        <h2>Promotion</h2>
+        <p>Your promotion content will appear here.</p>
+      </div>
+    </div>
+
+    <!-- ══ DEPOSIT ══ -->
+    <div id="page-deposit" class="page">
+      <div class="blank-placeholder">
+        <i class="fa-solid fa-vault"></i>
+        <h2>Deposit</h2>
+        <p>Your deposit content will appear here.</p>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         SALE PAGE
+    ══════════════════════════════════ -->
+    <div id="page-sale" class="page">
+      <div class="card">
+        <div class="tab-header">
+          <button class="tab-btn active" id="stab-dailySale-btn" onclick="switchSaleTab('dailySale')">
+            <i class="fa-solid fa-calendar-day"></i>Daily Sale
+          </button>
         </div>
-      </div>`).join('');
-  }
 
-  if(!dollarItems.length) {
-    noDollar.style.display = 'flex'; dollarGrid.innerHTML = '';
-  } else {
-    noDollar.style.display = 'none';
-    dollarGrid.innerHTML = dollarItems.map(it => {
-      const cur = it.currency || '$';
-      return `
-        <div class="sale-item-card dollar-card">
-          <div class="sic-name">
-            <span class="sic-shortcut">${it.shortcut||'?'}</span>${it.name}
+        <!-- DAILY SALE TAB -->
+        <div id="stab-dailySale" class="tab-content active">
+          <div class="daily-sale-wrapper">
+
+            <!-- Page header -->
+            <div class="page-header" style="padding:0 0 18px 0;">
+              <div class="page-header-left">
+                <h2>Daily Sale</h2>
+                <p>Record daily sales per agent — Unit &amp; Dollar groups</p>
+              </div>
+              <div class="page-header-right">
+                <button class="btn-secondary" onclick="openAddModal('addItem')">
+                  <i class="fa-solid fa-boxes-stacked"></i>Add Items
+                </button>
+                <button class="btn-primary" onclick="openNewSaleModal()">
+                  <i class="fa-solid fa-plus"></i>New Sale
+                </button>
+              </div>
+            </div>
+
+            <!-- Item catalogue chips -->
+            <div class="items-strip">
+              <div class="items-strip-label">Item Catalogue</div>
+              <div id="itemChipsContainer" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <span class="no-items-hint">
+                  <i class="fa-solid fa-circle-info"></i>&nbsp;No items yet — click
+                  <strong style="margin:0 3px;">Add Items</strong> to build your catalogue.
+                </span>
+              </div>
+            </div>
+
+            <!-- Report filter bar -->
+            <div class="report-filter-bar">
+              <div class="report-filter-left">
+                <div class="filter-group">
+                  <i class="fa-regular fa-calendar filter-icon"></i>
+                  <input type="date" id="filter-date-from" onchange="applyReportFilters()" title="From date"/>
+                </div>
+                <span style="color:#ccc;font-size:13px;">—</span>
+                <div class="filter-group">
+                  <i class="fa-regular fa-calendar filter-icon"></i>
+                  <input type="date" id="filter-date-to" onchange="applyReportFilters()" title="To date"/>
+                </div>
+                <div class="filter-group">
+                  <i class="fa-solid fa-user-tie filter-icon"></i>
+                  <input type="text" id="filter-agent" placeholder="Agent…" oninput="applyReportFilters()"/>
+                </div>
+                <div class="filter-group">
+                  <i class="fa-solid fa-building filter-icon"></i>
+                  <input type="text" id="filter-branch" placeholder="Branch…" oninput="applyReportFilters()"/>
+                </div>
+                <button class="filter-clear-btn" onclick="clearReportFilters()">
+                  <i class="fa-solid fa-xmark"></i> Clear
+                </button>
+              </div>
+              <div class="report-filter-right">
+                <button class="view-toggle-btn active" id="viewBtn-table" onclick="setReportView('table')" title="Table view">
+                  <i class="fa-solid fa-table-list"></i>
+                </button>
+                <button class="view-toggle-btn" id="viewBtn-summary" onclick="setReportView('summary')" title="Summary view">
+                  <i class="fa-solid fa-chart-bar"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- KPI cards -->
+            <div class="sale-kpi-row">
+              <div class="sale-kpi-card">
+                <div class="sale-kpi-icon green"><i class="fa-solid fa-receipt"></i></div>
+                <div>
+                  <div class="sale-kpi-val" id="kpi-total-sales">0</div>
+                  <div class="sale-kpi-lbl">Total Sales</div>
+                </div>
+              </div>
+              <div class="sale-kpi-card">
+                <div class="sale-kpi-icon blue"><i class="fa-solid fa-hashtag"></i></div>
+                <div>
+                  <div class="sale-kpi-val" id="kpi-total-qty">0</div>
+                  <div class="sale-kpi-lbl">Unit Items</div>
+                </div>
+              </div>
+              <div class="sale-kpi-card">
+                <div class="sale-kpi-icon purple"><i class="fa-solid fa-user-tie"></i></div>
+                <div>
+                  <div class="sale-kpi-val" id="kpi-agents">0</div>
+                  <div class="sale-kpi-lbl">Agents</div>
+                </div>
+              </div>
+              <div class="sale-kpi-card">
+                <div class="sale-kpi-icon orange"><i class="fa-solid fa-dollar-sign"></i></div>
+                <div>
+                  <div class="sale-kpi-val" id="kpi-revenue">$0.00</div>
+                  <div class="sale-kpi-lbl">Revenue</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TABLE VIEW -->
+            <div id="reportView-table">
+              <div class="sale-table-card">
+                <div class="sale-table-header">
+                  <span>
+                    <i class="fa-solid fa-receipt" style="margin-right:6px;color:#1B7D3D;"></i>Sale Records
+                  </span>
+                  <span id="saleCountBadge" class="pill pill-green" style="display:none;"></span>
+                </div>
+                <div class="table-wrap">
+                  <table class="data-table" id="saleMainTable">
+                    <thead><tr id="saleTableHead"></tr></thead>
+                    <tbody id="saleTableBody"></tbody>
+                  </table>
+                </div>
+                <div class="sale-total-bar" id="saleTotalBar" style="display:none;">
+                  <div class="total-bar-groups" id="totalBarGroups"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SUMMARY VIEW -->
+            <div id="reportView-summary" style="display:none;">
+              <div class="summary-grid" id="summaryGrid"></div>
+            </div>
+
           </div>
-          <div class="sic-sub">${cur}</div>
-          <div class="sic-input-wrap">
-            <label>${cur}</label>
-            <input type="number" class="sic-input" id="sic-dollar-${it.id}"
-              min="0" step="0.01" value="" placeholder="0.00" oninput="recalcSaleModalTotals()"/>
+        </div><!-- end stab-dailySale -->
+      </div>
+    </div><!-- end page-sale -->
+
+    <!-- ══════════════════════════════════
+         CUSTOMER PAGE
+    ══════════════════════════════════ -->
+    <div id="page-customer" class="page">
+      <div class="card">
+        <div class="tab-header">
+          <button class="tab-btn active" id="ctab-newCustomer-btn" onclick="switchCustomerTab('newCustomer')">
+            <i class="fa-solid fa-user-plus"></i>New Customer
+          </button>
+          <button class="tab-btn" id="ctab-topUp-btn" onclick="switchCustomerTab('topUp')">
+            <i class="fa-solid fa-arrow-up-right-dots"></i>Top Up
+          </button>
+          <button class="tab-btn" id="ctab-termination-btn" onclick="switchCustomerTab('termination')">
+            <i class="fa-solid fa-ban"></i>Termination
+          </button>
+        </div>
+
+        <!-- New Customer tab -->
+        <div id="ctab-newCustomer" class="tab-content active">
+          <div class="page-header">
+            <div class="page-header-left">
+              <h2>New Customer</h2>
+              <p>Manage new customer leads and prospects</p>
+            </div>
+            <button class="btn-primary" onclick="openAddModal('newCustomer')">
+              <i class="fa-solid fa-user-plus"></i>Add Customer
+            </button>
           </div>
-        </div>`;
-    }).join('');
-  }
-}
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Customer Name</th><th>Phone</th><th>Agent</th>
+                  <th>Branch</th><th>Product</th><th>Status</th><th>Remark</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="newCustomerBody"></tbody>
+            </table>
+          </div>
+        </div>
 
-function recalcSaleModalTotals() {
-  const unitItems   = itemCatalogue.filter(i => i.status==='Active' && i.group==='unit');
-  const dollarItems = itemCatalogue.filter(i => i.status==='Active' && i.group==='dollar');
-  let totalUnits = 0, totalRevenue = 0, revCur = '$';
-  unitItems.forEach(it => {
-    const inp = g('sic-unit-'+it.id);
-    if(inp) totalUnits += Number(inp.value)||0;
-  });
-  dollarItems.forEach(it => {
-    const inp = g('sic-dollar-'+it.id);
-    if(inp) { totalRevenue += Number(inp.value)||0; revCur = it.currency||'$'; }
-  });
-  g('modalTotalUnits').textContent   = totalUnits;
-  g('modalTotalRevenue').textContent = revCur + totalRevenue.toFixed(2);
-}
+        <!-- Top Up tab -->
+        <div id="ctab-topUp" class="tab-content">
+          <div class="page-header">
+            <div class="page-header-left">
+              <h2>Top Up</h2>
+              <p>Active customers — manage top up &amp; status</p>
+            </div>
+            <button class="btn-primary" onclick="openAddModal('topUp')">
+              <i class="fa-solid fa-plus"></i>Add Top Up
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Customer Name</th><th>Phone</th><th>Agent</th>
+                  <th>Branch</th><th>Product</th><th>Status</th><th>Remark</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="topUpBody"></tbody>
+            </table>
+          </div>
+        </div>
 
-function submitSale(e) {
-  e.preventDefault();
-  const eid = rt('sale-edit-id'), dateRaw = rv('sale-date');
-  const unitItems   = itemCatalogue.filter(i => i.status==='Active' && i.group==='unit');
-  const dollarItems = itemCatalogue.filter(i => i.status==='Active' && i.group==='dollar');
-  const unitQtys = {}, dollarAmts = {};
-  let totalUnits = 0, totalRevenue = 0, revCur = '$';
+        <!-- Termination tab -->
+        <div id="ctab-termination" class="tab-content">
+          <div class="page-header">
+            <div class="page-header-left">
+              <h2>Termination</h2>
+              <p>Terminated customer accounts</p>
+            </div>
+            <button class="btn-primary" onclick="openAddModal('termination')">
+              <i class="fa-solid fa-plus"></i>Add Termination
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Customer Name</th><th>Phone</th><th>Agent</th>
+                  <th>Branch</th><th>Product</th><th>Terminated On</th><th>Remark</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="terminationBody"></tbody>
+            </table>
+          </div>
+        </div>
 
-  unitItems.forEach(it => {
-    const v = Number(g('sic-unit-'+it.id)?.value)||0;
-    unitQtys[it.id] = v; totalUnits += v;
-  });
-  dollarItems.forEach(it => {
-    const v = Number(g('sic-dollar-'+it.id)?.value)||0;
-    dollarAmts[it.id] = v; totalRevenue += v; revCur = it.currency||'$';
-  });
+      </div>
+    </div><!-- end page-customer -->
 
-  const d = {
-    agent       : rt('sale-agent'),
-    branch      : rt('sale-branch'),
-    dateRaw,
-    date        : dateRaw ? new Date(dateRaw).toLocaleDateString() : today(),
-    note        : rt('sale-note'),
-    unitQtys,
-    dollarAmts,
-    totalUnits,
-    totalRevenue,
-    revCur
-  };
+    <!-- ══════════════════════════════════
+         SETTINGS PAGE
+    ══════════════════════════════════ -->
+    <div id="page-settings" class="page">
+      <div class="card">
+        <div class="tab-header">
+          <button class="tab-btn active" id="tab-permission-btn" onclick="switchSettingsTab('permission')">
+            <i class="fa-solid fa-shield-halved"></i>Permission
+          </button>
+          <button class="tab-btn" id="tab-kpi-btn" onclick="switchSettingsTab('kpi')">
+            <i class="fa-solid fa-chart-line"></i>KPI Setting
+          </button>
+          <button class="tab-btn" id="tab-promotionSetting-btn" onclick="switchSettingsTab('promotionSetting')">
+            <i class="fa-solid fa-tag"></i>Promotion
+          </button>
+        </div>
 
-  if(eid) {
-    const idx = saleRecords.findIndex(s => s.id === Number(eid));
-    if(idx !== -1) { d.id = Number(eid); saleRecords[idx] = d; }
-  } else {
-    d.id = Date.now(); saleRecords.push(d);
-  }
-  applyReportFilters();
-  closeModal('newSale');
-}
+        <!-- Permission tab -->
+        <div id="tab-permission" class="tab-content active">
+          <div class="permission-page">
+            <div class="permission-header">
+              <div class="permission-header-left">
+                <h2>Staff Management</h2>
+                <p>Manage user accounts and access roles</p>
+              </div>
+              <button class="btn-primary" onclick="openAddModal('addUser')">
+                <i class="fa-solid fa-user-plus"></i>Add User
+              </button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th><th>Full Name</th><th>Username</th>
+                    <th>Role</th><th>Branch</th><th>Status</th><th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="staffTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-// ══════════════════════════════════════════════════════════
-//  SALE TABLE HEADER (two-row grouped)
-// ══════════════════════════════════════════════════════════
-function buildSaleTableHeader() {
-  const unitItems   = itemCatalogue.filter(i => i.status==='Active' && i.group==='unit');
-  const dollarItems = itemCatalogue.filter(i => i.status==='Active' && i.group==='dollar');
-  const head = g('saleTableHead'); if(!head) return;
+        <!-- KPI Setting tab -->
+        <div id="tab-kpi" class="tab-content">
+          <div class="kpi-page">
+            <div class="kpi-header">
+              <div class="kpi-header-left">
+                <h2>KPI Setting</h2>
+                <p>Define KPI metrics, targets, and measurement units</p>
+              </div>
+              <button class="btn-primary" onclick="openAddModal('kpi')">
+                <i class="fa-solid fa-plus"></i>Add KPI
+              </button>
+            </div>
+            <div class="kpi-summary" id="kpiSummaryCards"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th><th>KPI Name</th><th>Type</th><th>Target Value</th>
+                    <th>Unit / Currency</th><th>Period</th><th>Description</th><th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="kpiTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-  // Row 1
-  let r1 = `<th rowspan="2" style="min-width:32px;">#</th>
-             <th rowspan="2">Agent</th>
-             <th rowspan="2">Branch</th>
-             <th rowspan="2">Date</th>`;
-  if(unitItems.length) {
-    r1 += `<th colspan="${unitItems.length}" class="th-group-unit">
+        <!-- Promotion Setting tab -->
+        <div id="tab-promotionSetting" class="tab-content">
+          <div id="promotionSetting-content" style="padding:24px;"></div>
+        </div>
+
+      </div>
+    </div><!-- end page-settings -->
+
+  </div><!-- end content-area -->
+</div><!-- end main -->
+
+<!-- ══════════════════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════════════════ -->
+
+<!-- ══ ADD ITEM MODAL ══ -->
+<div class="modal-overlay" id="modal-addItem" onclick="handleOverlay(event,'addItem')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon purple"><i class="fa-solid fa-boxes-stacked"></i></div>
+        <div>
+          <h3 id="addItem-title">Add Item</h3>
+          <p id="addItem-sub">Create a new sale catalogue item</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('addItem')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitItem(event)">
+      <div class="modal-body">
+        <input type="hidden" id="item-edit-id"/>
+
+        <!-- Item Name -->
+        <div class="form-group full">
+          <label><i class="fa-solid fa-tag"></i>Item Name <span class="req">*</span></label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-tag input-icon"></i>
+            <input type="text" id="item-name" placeholder="e.g. Gross Ads, Recharge…" required/>
+          </div>
+        </div>
+
+        <!-- Sale Group toggle -->
+        <div class="form-group full">
+          <label><i class="fa-solid fa-layer-group"></i>Sale Group <span class="req">*</span></label>
+          <div class="group-toggle">
+            <button type="button" class="group-btn active" id="grpBtn-unit" onclick="selectItemGroup('unit')">
               <i class="fa-solid fa-hashtag"></i> Unit Group
-           </th>`;
-  }
-  if(dollarItems.length) {
-    r1 += `<th colspan="${dollarItems.length + 1}" class="th-group-dollar">
+              <span class="group-hint">Gross Ads, SIM, Fiber…</span>
+            </button>
+            <button type="button" class="group-btn" id="grpBtn-dollar" onclick="selectItemGroup('dollar')">
               <i class="fa-solid fa-dollar-sign"></i> Dollar Group
-           </th>`;
-  }
-  r1 += `<th rowspan="2">Note</th><th rowspan="2">Action</th>`;
-
-  // Row 2
-  let r2 = '';
-  unitItems.forEach(it => {
-    r2 += `<th class="th-unit" title="${it.name}">${it.shortcut||it.name}</th>`;
-  });
-  dollarItems.forEach(it => {
-    r2 += `<th class="th-dollar" title="${it.name}">${it.shortcut||it.name}</th>`;
-  });
-  if(dollarItems.length) {
-    r2 += `<th class="th-dollar" style="min-width:90px;">Revenue</th>`;
-  }
-
-  head.innerHTML = `<tr>${r1}</tr><tr>${r2}</tr>`;
-}
-
-// ══════════════════════════════════════════════════════════
-//  REPORT FILTERS
-// ══════════════════════════════════════════════════════════
-function applyReportFilters() {
-  const dateFrom = rv('filter-date-from');
-  const dateTo   = rv('filter-date-to');
-  const agentQ   = rt('filter-agent').toLowerCase();
-  const branchQ  = rt('filter-branch').toLowerCase();
-
-  filteredSales = saleRecords.filter(s => {
-    if(dateFrom && s.dateRaw && s.dateRaw < dateFrom) return false;
-    if(dateTo   && s.dateRaw && s.dateRaw > dateTo)   return false;
-    if(agentQ   && !s.agent.toLowerCase().includes(agentQ))   return false;
-    if(branchQ  && !s.branch.toLowerCase().includes(branchQ)) return false;
-    return true;
-  });
-
-  renderSaleKpiCards(filteredSales);
-  if(currentReportView === 'table') renderSaleTable(filteredSales);
-  else                              renderSaleSummary(filteredSales);
-}
-
-function clearReportFilters() {
-  g('filter-date-from').value = '';
-  g('filter-date-to').value   = '';
-  g('filter-agent').value     = '';
-  g('filter-branch').value    = '';
-  applyReportFilters();
-}
-
-function setReportView(view) {
-  currentReportView = view;
-  $$('.view-toggle-btn').forEach(b => b.classList.remove('active'));
-  g('viewBtn-'+view).classList.add('active');
-  g('reportView-table').style.display   = view==='table'   ? 'block':'none';
-  g('reportView-summary').style.display = view==='summary' ? 'block':'none';
-  applyReportFilters();
-}
-
-function renderSaleKpiCards(records) {
-  const totalSales = records.length;
-  const totalUnits = records.reduce((s,r) => s+(r.totalUnits||0), 0);
-  const agents     = new Set(records.map(r=>r.agent)).size;
-  const totalRev   = records.reduce((s,r) => s+(r.totalRevenue||0), 0);
-  const revCur     = records[0]?.revCur || '$';
-  g('kpi-total-sales').textContent = totalSales;
-  g('kpi-total-qty').textContent   = totalUnits;
-  g('kpi-agents').textContent      = agents;
-  g('kpi-revenue').textContent     = revCur + totalRev.toFixed(2);
-}
-
-// ══════════════════════════════════════════════════════════
-//  RENDER SALE TABLE
-// ══════════════════════════════════════════════════════════
-function renderSaleTable(records) {
-  if(records === undefined) records = saleRecords;
-  const tbody = g('saleTableBody');
-  const badge = g('saleCountBadge');
-  const bar   = g('saleTotalBar');
-
-  const unitItems   = itemCatalogue.filter(i => i.status==='Active' && i.group==='unit');
-  const dollarItems = itemCatalogue.filter(i => i.status==='Active' && i.group==='dollar');
-  const totalCols   = 4 + unitItems.length + dollarItems.length + (dollarItems.length?1:0) + 2;
-
-  buildSaleTableHeader();
-
-  if(!records.length) {
-    tbody.innerHTML = `<tr><td colspan="${totalCols}">
-      <div class="empty-state"><i class="fa-solid fa-receipt"></i>
-        <p>${saleRecords.length
-          ? 'No records match your filters.'
-          : 'No sales recorded yet. Click <strong>New Sale</strong> to get started.'}</p>
-      </div></td></tr>`;
-    badge.style.display = 'none';
-    bar.style.display   = 'none';
-    return;
-  }
-
-  badge.style.display = 'inline-flex';
-  badge.textContent   = records.length + ' record' + (records.length>1?'s':'');
-  bar.style.display   = 'block';
-
-  // Totals for footer
-  const colTotalsUnit   = {};
-  const colTotalsDollar = {};
-  let grandRevenue = 0;
-  const revCur = records[0]?.revCur || '$';
-
-  unitItems.forEach(it => { colTotalsUnit[it.id] = 0; });
-  dollarItems.forEach(it => { colTotalsDollar[it.id] = 0; });
-
-  tbody.innerHTML = records.map((s,i) => {
-    let row = `<tr>
-      <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-      <td><div class="name-cell">
-        <div class="avatar ${AV_CYC[i%4]}">${ini(s.agent)}</div>
-        <span class="name-text">${s.agent}</span>
-      </div></td>
-      <td style="color:#555;font-size:13px;">
-        <i class="fa-solid fa-building" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${s.branch}
-      </td>
-      <td style="color:#666;font-size:13px;">${s.date}</td>`;
-
-    // Unit cols
-    unitItems.forEach(it => {
-      const v = s.unitQtys?.[it.id] || 0;
-      colTotalsUnit[it.id] = (colTotalsUnit[it.id]||0) + v;
-      row += `<td class="td-unit">${v > 0 ? v : '<span style="color:#ddd;">—</span>'}</td>`;
-    });
-
-    // Dollar cols
-    dollarItems.forEach(it => {
-      const v = s.dollarAmts?.[it.id] || 0;
-      colTotalsDollar[it.id] = (colTotalsDollar[it.id]||0) + v;
-      row += `<td class="td-dollar">${v > 0 ? fmtMoney(v, s.revCur||'$') : '<span style="color:#ddd;">—</span>'}</td>`;
-    });
-
-    // Revenue col
-    if(dollarItems.length) {
-      grandRevenue += s.totalRevenue || 0;
-      row += `<td class="td-revenue">${s.totalRevenue > 0
-        ? `<strong>${fmtMoney(s.totalRevenue, s.revCur||'$')}</strong>`
-        : '<span style="color:#ddd;">—</span>'}</td>`;
-    }
-
-    row += `<td style="color:#888;font-size:12px;max-width:110px;overflow:hidden;
-              text-overflow:ellipsis;white-space:nowrap;" title="${s.note}">${s.note||'—'}</td>
-      <td><div class="action-btns">
-        <button class="action-btn edit"   onclick="openNewSaleModal(${s.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn delete" onclick="delRec(saleRecords,${s.id},applyReportFilters)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-      </div></td>
-    </tr>`;
-    return row;
-  }).join('');
-
-  // Footer totals row
-  let footRow = `<tr style="background:#f8f9fa;font-weight:700;">
-    <td colspan="4" style="text-align:right;font-size:12px;color:#888;padding:10px 12px;">
-      <i class="fa-solid fa-sigma" style="margin-right:4px;"></i>Totals
-    </td>`;
-  unitItems.forEach(it => {
-    footRow += `<td class="td-unit" style="background:#e8f5e9;font-size:13px;">${colTotalsUnit[it.id]||0}</td>`;
-  });
-  dollarItems.forEach(it => {
-    footRow += `<td class="td-dollar" style="background:#fff8e1;font-size:13px;">${fmtMoney(colTotalsDollar[it.id]||0, revCur)}</td>`;
-  });
-  if(dollarItems.length) {
-    footRow += `<td class="td-revenue" style="background:#fff3cd;font-size:14px;"><strong>${fmtMoney(grandRevenue, revCur)}</strong></td>`;
-  }
-  footRow += `<td colspan="2"></td></tr>`;
-  tbody.innerHTML += footRow;
-
-  // Total bar
-  let barHtml = '<div class="total-bar-groups">';
-  if(unitItems.length) {
-    const grandUnits = records.reduce((s,r) => s+(r.totalUnits||0), 0);
-    barHtml += `<div class="total-bar-item tbi-unit">
-      <span class="tbi-label"><i class="fa-solid fa-hashtag" style="margin-right:4px;"></i>Total Units</span>
-      <span class="tbi-val">${grandUnits}</span>
-    </div>`;
-    unitItems.forEach(it => {
-      barHtml += `<div class="total-bar-item tbi-unit">
-        <span class="tbi-label">${it.name}</span>
-        <span class="tbi-val" style="font-size:14px;">${colTotalsUnit[it.id]||0}</span>
-      </div>`;
-    });
-  }
-  if(dollarItems.length) {
-    barHtml += `<div class="total-bar-item tbi-dollar" style="margin-left:16px;border-left:2px solid #ffe082;padding-left:16px;">
-      <span class="tbi-label"><i class="fa-solid fa-dollar-sign" style="margin-right:4px;"></i>Total Revenue</span>
-      <span class="tbi-val">${fmtMoney(grandRevenue, revCur)}</span>
-    </div>`;
-    dollarItems.forEach(it => {
-      barHtml += `<div class="total-bar-item tbi-dollar">
-        <span class="tbi-label">${it.name}</span>
-        <span class="tbi-val" style="font-size:14px;">${fmtMoney(colTotalsDollar[it.id]||0, revCur)}</span>
-      </div>`;
-    });
-  }
-  barHtml += '</div>';
-  g('totalBarGroups').innerHTML = barHtml;
-}
-
-// ══════════════════════════════════════════════════════════
-//  RENDER SALE SUMMARY
-// ══════════════════════════════════════════════════════════
-function renderSaleSummary(records) {
-  const grid = g('summaryGrid');
-  if(!records.length) {
-    grid.innerHTML = `<div style="grid-column:1/-1;"><div class="empty-state">
-      <i class="fa-solid fa-chart-bar"></i>
-      <p>${saleRecords.length ? 'No records match your filters.' : 'No sales yet.'}</p>
-    </div></div>`; return;
-  }
-
-  const unitItems   = itemCatalogue.filter(i => i.status==='Active' && i.group==='unit');
-  const dollarItems = itemCatalogue.filter(i => i.status==='Active' && i.group==='dollar');
-
-  // Group by agent
-  const byAgent = {};
-  records.forEach(s => {
-    if(!byAgent[s.agent]) byAgent[s.agent] = {
-      agent:s.agent, branch:s.branch, records:[], totalUnits:0, totalRevenue:0,
-      unitMap:{}, dollarMap:{}, revCur: s.revCur||'$'
-    };
-    const ag = byAgent[s.agent];
-    ag.records.push(s);
-    ag.totalUnits   += s.totalUnits   || 0;
-    ag.totalRevenue += s.totalRevenue || 0;
-    ag.revCur = s.revCur || '$';
-    unitItems.forEach(it => {
-      ag.unitMap[it.id] = (ag.unitMap[it.id]||0) + (s.unitQtys?.[it.id]||0);
-    });
-    dollarItems.forEach(it => {
-      ag.dollarMap[it.id] = (ag.dollarMap[it.id]||0) + (s.dollarAmts?.[it.id]||0);
-    });
-  });
-
-  grid.innerHTML = Object.values(byAgent).map(ag => {
-    let unitRows = '', dollarRows = '';
-
-    if(unitItems.length) {
-      unitRows = `<div class="summary-group-label unit-label">
-        <i class="fa-solid fa-hashtag" style="margin-right:4px;"></i>Unit Group
-      </div>`;
-      unitRows += unitItems.map(it => {
-        const v = ag.unitMap[it.id]||0;
-        return `<div class="summary-item-row">
-          <span class="summary-item-name">
-            <span style="font-size:10px;font-weight:700;background:#1B7D3D;color:#fff;
-              padding:1px 5px;border-radius:4px;margin-right:4px;">${it.shortcut||'?'}</span>
-            ${it.name}
-          </span>
-          <div class="summary-item-right">
-            <span class="summary-item-qty">${it.unit||'pcs'}</span>
-            <span class="summary-item-val unit-val">${v}</span>
+              <span class="group-hint">Recharge, SC Shop…</span>
+            </button>
           </div>
-        </div>`;
-      }).join('');
-    }
-
-    if(dollarItems.length) {
-      dollarRows = `<div class="summary-group-label dollar-label">
-        <i class="fa-solid fa-dollar-sign" style="margin-right:4px;"></i>Dollar Group
-      </div>`;
-      dollarRows += dollarItems.map(it => {
-        const v = ag.dollarMap[it.id]||0;
-        return `<div class="summary-item-row">
-          <span class="summary-item-name">
-            <span style="font-size:10px;font-weight:700;background:#e65100;color:#fff;
-              padding:1px 5px;border-radius:4px;margin-right:4px;">${it.shortcut||'?'}</span>
-            ${it.name}
-          </span>
-          <div class="summary-item-right">
-            <span class="summary-item-qty">${ag.revCur}</span>
-            <span class="summary-item-val dollar-val">${fmtMoney(v, ag.revCur)}</span>
-          </div>
-        </div>`;
-      }).join('');
-    }
-
-    return `<div class="summary-card">
-      <div class="summary-card-header">
-        <div class="agent-name">
-          <div class="avatar" style="width:26px;height:26px;font-size:10px;">${ini(ag.agent)}</div>
-          ${ag.agent}
+          <input type="hidden" id="item-group" value="unit"/>
         </div>
-        <div class="summary-totals">
-          ${unitItems.length   ? `<span class="st-unit"><i class="fa-solid fa-hashtag" style="margin-right:3px;font-size:10px;"></i>${ag.totalUnits}</span>` : ''}
-          ${dollarItems.length ? `<span class="st-dollar"><i class="fa-solid fa-dollar-sign" style="margin-right:2px;font-size:10px;"></i>${fmtMoney(ag.totalRevenue, ag.revCur)}</span>` : ''}
+
+        <!-- Shortcut label -->
+        <div class="form-group full">
+          <label>
+            <i class="fa-solid fa-bolt"></i>Shortcut Label <span class="req">*</span>
+            <span class="opt">— shown in table header (e.g. G, S, H, R)</span>
+          </label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-bolt input-icon"></i>
+            <input type="text" id="item-shortcut" maxlength="4" placeholder="1–4 chars e.g. G" required/>
+          </div>
+        </div>
+
+        <!-- Price + Currency -->
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-dollar-sign"></i>Default Rate <span class="opt">(optional)</span></label>
+            <div class="input-wrap price-currency-wrap">
+              <select id="item-currency" class="currency-prefix-select">
+                <option value="$">$ USD</option>
+                <option value="KHR">KHR</option>
+                <option value="฿">฿ THB</option>
+                <option value="S$">S$ SGD</option>
+                <option value="€">€ EUR</option>
+                <option value="£">£ GBP</option>
+                <option value="¥">¥ JPY</option>
+                <option value="custom">✏️ Other</option>
+              </select>
+              <input type="number" id="item-price" placeholder="0.00" min="0" step="0.01" class="price-input"/>
+            </div>
+          </div>
+          <div class="form-group" id="item-custom-currency-group" style="display:none;">
+            <label><i class="fa-solid fa-pen"></i>Custom Currency Symbol</label>
+            <div class="input-wrap">
+              <i class="fa-solid fa-pen input-icon"></i>
+              <input type="text" id="item-custom-currency" placeholder="e.g. LAK, BTC…"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unit -->
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-ruler"></i>Unit <span class="opt">(optional)</span></label>
+            <div class="input-wrap">
+              <i class="fa-solid fa-ruler input-icon"></i>
+              <select id="item-unit">
+                <option value="">— No unit —</option>
+                <optgroup label="Telecom">
+                  <option value="SIM">SIM</option>
+                  <option value="Line">Line</option>
+                  <option value="Port">Port</option>
+                  <option value="Connection">Connection</option>
+                  <option value="Activation">Activation</option>
+                </optgroup>
+                <optgroup label="Data / Speed">
+                  <option value="GB">GB</option>
+                  <option value="TB">TB</option>
+                  <option value="Mbps">Mbps</option>
+                  <option value="Gbps">Gbps</option>
+                </optgroup>
+                <optgroup label="Time">
+                  <option value="Day">Day</option>
+                  <option value="Month">Month</option>
+                  <option value="Year">Year</option>
+                </optgroup>
+                <optgroup label="Physical">
+                  <option value="pcs">pcs</option>
+                  <option value="Box">Box</option>
+                  <option value="Set">Set</option>
+                  <option value="Pack">Pack</option>
+                  <option value="Bundle">Bundle</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="custom">✏️ Custom…</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" id="item-custom-unit-group" style="display:none;">
+            <label><i class="fa-solid fa-pen"></i>Custom Unit</label>
+            <div class="input-wrap">
+              <i class="fa-solid fa-pen input-icon"></i>
+              <input type="text" id="item-custom-unit" placeholder="e.g. voucher, slot…"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category + Status -->
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-layer-group"></i>Category <span class="opt">(optional)</span></label>
+            <div class="input-wrap">
+              <i class="fa-solid fa-layer-group input-icon"></i>
+              <select id="item-category">
+                <option value="">— No category —</option>
+                <option>SIM</option><option>Data</option><option>Fiber</option>
+                <option>Device</option><option>Accessory</option><option>Package</option>
+                <option>Voucher</option><option>Recharge</option><option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-circle-dot"></i>Status</label>
+            <div class="input-wrap">
+              <i class="fa-solid fa-circle-dot input-icon"></i>
+              <select id="item-status">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group full">
+          <label><i class="fa-solid fa-align-left"></i>Description <span class="opt">(optional)</span></label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-align-left input-icon" style="top:14px;"></i>
+            <textarea id="item-desc" placeholder="Optional description or notes…"></textarea>
+          </div>
         </div>
       </div>
-      <div class="summary-card-body">${unitRows}${dollarRows}</div>
-      <div class="summary-card-footer">
-        <span class="foot-label">
-          <i class="fa-solid fa-building" style="margin-right:4px;color:#ccc;"></i>${ag.branch}
-        </span>
-        <span class="foot-val">${ag.records.length} sale${ag.records.length>1?'s':''}</span>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('addItem')">
+          <i class="fa-solid fa-xmark"></i>Cancel
+        </button>
+        <button type="submit" class="btn-save">
+          <i class="fa-solid fa-floppy-disk"></i><span id="item-save-label">Save Item</span>
+        </button>
       </div>
-    </div>`;
-  }).join('');
-}
+    </form>
+  </div>
+</div>
 
-// ══════════════════════════════════════════════════════════
-//  MODAL HELPERS
-// ══════════════════════════════════════════════════════════
-function openAddModal(type) {
-  const form = $(`#modal-${type} form`); form.reset();
-  kpiTypeSelected = ''; kpiValueMode = 'unit';
+<!-- ══ NEW SALE MODAL ══ -->
+<div class="modal-overlay" id="modal-newSale" onclick="handleOverlay(event,'newSale')">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon"><i class="fa-solid fa-receipt"></i></div>
+        <div>
+          <h3 id="newSale-title">New Sale</h3>
+          <p id="newSale-sub">Record a sale for an agent</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('newSale')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitSale(event)">
+      <div class="modal-body">
+        <input type="hidden" id="sale-edit-id"/>
 
-  if(type === 'addItem') {
-    g('item-edit-id').value = '';
-    g('addItem-title').textContent   = 'Add Item';
-    g('addItem-sub').textContent     = 'Create a new sale catalogue item';
-    g('item-save-label').textContent = 'Save Item';
-    g('item-custom-currency-group').style.display = 'none';
-    g('item-custom-unit-group').style.display     = 'none';
-    selectItemGroup('unit');
+        <div class="form-divider">Agent Info</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-tie"></i>Agent Name <span class="req">*</span></label>
+            <div class="input-wrap">
+              <i class="fa-solid fa-user-tie input-icon"></i>
+              <input type="text" id="sale-agent" placeholder="Agent name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
+            <div class="input-wrap">
+              <i class="fa-solid fa-building input-icon"></i>
+              <input type="text" id="sale-branch" placeholder="e.g. Phnom Penh HQ" required/>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-regular fa-calendar"></i>Sale Date <span class="req">*</span></label>
+            <div class="input-wrap">
+              <i class="fa-regular fa-calendar input-icon"></i>
+              <input type="date" id="sale-date" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-comment"></i>Note <span class="opt">(optional)</span></label>
+            <div class="input-wrap">
+              <i class="fa-solid fa-comment input-icon"></i>
+              <input type="text" id="sale-note" placeholder="Optional note…"/>
+            </div>
+          </div>
+        </div>
 
-  } else if(type === 'kpi') {
-    g('kpi-edit-id').value = '';
-    g('kpi-modal-title').textContent = 'Add KPI';
-    g('kpi-modal-sub').textContent   = 'Define a new KPI metric and target';
-    g('kpi-save-label').textContent  = 'Save KPI';
-    $$('.kpi-chip').forEach(c => c.classList.remove('active'));
-    setValueMode('unit');
-    g('custom-currency-group').style.display = 'none';
+        <!-- UNIT GROUP section -->
+        <div class="form-divider sale-group-divider unit-divider">
+          <i class="fa-solid fa-hashtag"></i> Unit Group
+          <span class="divider-hint">Qty-based items (Gross Ads, SIM, Fiber…)</span>
+        </div>
+        <div id="saleUnitItemsWrap" class="sale-group-wrap">
+          <div class="no-group-items" id="noUnitItemsMsg">
+            <i class="fa-solid fa-circle-info"></i> No Unit items in catalogue yet.
+            <a href="#" onclick="closeModal('newSale');openAddModal('addItem');return false;">Add items</a>
+          </div>
+          <div id="saleUnitItemsGrid" class="sale-items-grid"></div>
+        </div>
 
-  } else if(type === 'newCustomer') {
-    g('nc-edit-id').value = '';
-    g('nc-modal-title').textContent = 'Add New Customer';
-    g('nc-modal-sub').textContent   = 'Fill in the customer lead details';
+        <!-- DOLLAR GROUP section -->
+        <div class="form-divider sale-group-divider dollar-divider">
+          <i class="fa-solid fa-dollar-sign"></i> Dollar Group
+          <span class="divider-hint">Enter revenue manually (Recharge, SC Shop, SC Dealer…)</span>
+        </div>
+        <div id="saleDollarItemsWrap" class="sale-group-wrap">
+          <div class="no-group-items" id="noDollarItemsMsg">
+            <i class="fa-solid fa-circle-info"></i> No Dollar items in catalogue yet.
+            <a href="#" onclick="closeModal('newSale');openAddModal('addItem');return false;">Add items</a>
+          </div>
+          <div id="saleDollarItemsGrid" class="sale-items-grid"></div>
+        </div>
 
-  } else if(type === 'topUp') {
-    g('tu-edit-id').value = '';
-    g('tu-modal-title').textContent = 'Add Top Up';
-    g('tu-modal-sub').textContent   = 'Enter top up customer details';
+        <!-- Modal totals preview -->
+        <div class="sale-modal-totals">
+          <div class="modal-total-box unit-box">
+            <span class="mt-label"><i class="fa-solid fa-hashtag"></i> Total Units</span>
+            <span class="mt-val" id="modalTotalUnits">0</span>
+          </div>
+          <div class="modal-total-box dollar-box">
+            <span class="mt-label"><i class="fa-solid fa-dollar-sign"></i> Total Revenue</span>
+            <span class="mt-val" id="modalTotalRevenue">$0.00</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('newSale')">
+          <i class="fa-solid fa-xmark"></i>Cancel
+        </button>
+        <button type="submit" class="btn-save">
+          <i class="fa-solid fa-floppy-disk"></i><span id="sale-save-label">Save Sale</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
-  } else if(type === 'termination') {
-    g('tm-edit-id').value = '';
-    g('tm-modal-title').textContent = 'Add Termination';
-    g('tm-modal-sub').textContent   = 'Record a terminated customer';
+<!-- ══ NEW CUSTOMER MODAL ══ -->
+<div class="modal-overlay" id="modal-newCustomer" onclick="handleOverlay(event,'newCustomer')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon blue"><i class="fa-solid fa-user-plus"></i></div>
+        <div>
+          <h3 id="nc-modal-title">Add New Customer</h3>
+          <p id="nc-modal-sub">Fill in the customer lead details</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('newCustomer')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitNewCustomer(event)">
+      <div class="modal-body">
+        <input type="hidden" id="nc-edit-id"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-tie"></i>Agent <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user-tie input-icon"></i>
+              <input type="text" id="nc-agent" placeholder="Agent name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i>
+              <input type="text" id="nc-branch" placeholder="e.g. Phnom Penh HQ" required/>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user"></i>Customer Name <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user input-icon"></i>
+              <input type="text" id="nc-name" placeholder="Full name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-phone"></i>Phone <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-phone input-icon"></i>
+              <input type="text" id="nc-phone" placeholder="e.g. 012 345 678" required/>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-box"></i>Product <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-box input-icon"></i>
+              <select id="nc-product" required>
+                <option value="" disabled selected>Select product</option>
+                <option>Smart@Home</option><option>Smart Fiber+</option><option>M2M</option>
+                <option>Smart Laor 6</option><option>Smart Laor 10$</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-flag"></i>Status <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-flag input-icon"></i>
+              <select id="nc-status" required>
+                <option value="" disabled selected>Select status</option>
+                <option>New Lead</option><option>Hot Prospect</option><option>Closed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-comment"></i>Remark</label>
+          <div class="input-wrap"><i class="fa-solid fa-comment input-icon" style="top:14px;"></i>
+            <textarea id="nc-remark" placeholder="Optional remarks..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('newCustomer')">
+          <i class="fa-solid fa-xmark"></i>Cancel
+        </button>
+        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i>Save</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-  } else if(type === 'addUser') {
-    g('au-edit-id').value = '';
-    g('au-modal-title').textContent  = 'Add New User';
-    g('au-modal-sub').textContent    = 'Create a staff account';
-    g('au-save-label').textContent   = 'Save User';
-    g('au-password').required        = true;
-    g('au-pwd-req').style.display    = 'inline';
-    g('au-pwd-hint').style.display   = 'none';
-  }
-  g('modal-'+type).classList.add('open');
-}
+<!-- ══ TOP UP MODAL ══ -->
+<div class="modal-overlay" id="modal-topUp" onclick="handleOverlay(event,'topUp')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon teal"><i class="fa-solid fa-arrow-up-right-dots"></i></div>
+        <div>
+          <h3 id="tu-modal-title">Add Top Up</h3>
+          <p id="tu-modal-sub">Enter top up customer details</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('topUp')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitTopUp(event)">
+      <div class="modal-body">
+        <input type="hidden" id="tu-edit-id"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-tie"></i>Agent <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user-tie input-icon"></i>
+              <input type="text" id="tu-agent" placeholder="Agent name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i>
+              <input type="text" id="tu-branch" placeholder="e.g. Phnom Penh HQ" required/>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user"></i>Customer Name <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user input-icon"></i>
+              <input type="text" id="tu-name" placeholder="Full name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-phone"></i>Phone <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-phone input-icon"></i>
+              <input type="text" id="tu-phone" placeholder="e.g. 012 345 678" required/>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-box"></i>Product <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-box input-icon"></i>
+              <select id="tu-product" required>
+                <option value="" disabled selected>Select product</option>
+                <option>Smart@Home</option><option>Smart Fiber+</option><option>M2M</option>
+                <option>Smart Laor 6</option><option>Smart Laor 10$</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-circle-dot"></i>Status <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-circle-dot input-icon"></i>
+              <select id="tu-status" required>
+                <option value="" disabled selected>Select status</option>
+                <option>Active</option><option>Termination</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-comment"></i>Remark</label>
+          <div class="input-wrap"><i class="fa-solid fa-comment input-icon" style="top:14px;"></i>
+            <textarea id="tu-remark" placeholder="Optional remarks..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('topUp')">
+          <i class="fa-solid fa-xmark"></i>Cancel
+        </button>
+        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i>Save</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-function openEditModal(type, id) {
-  const form = $(`#modal-${type} form`); form.reset(); kpiTypeSelected = '';
+<!-- ══ TERMINATION MODAL ══ -->
+<div class="modal-overlay" id="modal-termination" onclick="handleOverlay(event,'termination')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon red"><i class="fa-solid fa-ban"></i></div>
+        <div>
+          <h3 id="tm-modal-title">Add Termination</h3>
+          <p id="tm-modal-sub">Record a terminated customer</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('termination')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitTermination(event)">
+      <div class="modal-body">
+        <input type="hidden" id="tm-edit-id"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-tie"></i>Agent <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user-tie input-icon"></i>
+              <input type="text" id="tm-agent" placeholder="Agent name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i>
+              <input type="text" id="tm-branch" placeholder="e.g. Phnom Penh HQ" required/>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user"></i>Customer Name <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user input-icon"></i>
+              <input type="text" id="tm-name" placeholder="Full name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-phone"></i>Phone <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-phone input-icon"></i>
+              <input type="text" id="tm-phone" placeholder="e.g. 012 345 678" required/>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-box"></i>Product <span class="req">*</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-box input-icon"></i>
+            <select id="tm-product" required>
+              <option value="" disabled selected>Select product</option>
+              <option>Smart@Home</option><option>Smart Fiber+</option><option>M2M</option>
+              <option>Smart Laor 6</option><option>Smart Laor 10$</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-comment"></i>Remark</label>
+          <div class="input-wrap"><i class="fa-solid fa-comment input-icon" style="top:14px;"></i>
+            <textarea id="tm-remark" placeholder="Optional remarks..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('termination')">
+          <i class="fa-solid fa-xmark"></i>Cancel
+        </button>
+        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i>Save</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-  if(type === 'addItem') {
-    const r = itemCatalogue.find(i => i.id === id); if(!r) return;
-    g('item-edit-id').value  = id;
-    g('item-name').value     = r.name;
-    g('item-shortcut').value = r.shortcut||'';
-    g('item-price').value    = r.price;
-    g('item-category').value = r.category;
-    g('item-status').value   = r.status;
-    g('item-desc').value     = r.desc;
-    selectItemGroup(r.group||'unit');
-    // currency
-    if(KNOWN_CUR.includes(r.currency)) {
-      g('item-currency').value = r.currency;
-      g('item-custom-currency-group').style.display = 'none';
-    } else {
-      g('item-currency').value        = 'custom';
-      g('item-custom-currency').value = r.currency||'';
-      g('item-custom-currency-group').style.display = 'flex';
-    }
-    // unit
-    if(KNOWN_UNITS.includes(r.unit)||r.unit==='') {
-      g('item-unit').value = r.unit||'';
-      g('item-custom-unit-group').style.display = 'none';
-    } else {
-      g('item-unit').value        = 'custom';
-      g('item-custom-unit').value = r.unit||'';
-      g('item-custom-unit-group').style.display = 'flex';
-    }
-    g('addItem-title').textContent   = 'Edit Item';
-    g('addItem-sub').textContent     = 'Update catalogue item';
-    g('item-save-label').textContent = 'Update Item';
+<!-- ══ KPI MODAL ══ -->
+<div class="modal-overlay" id="modal-kpi" onclick="handleOverlay(event,'kpi')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon teal"><i class="fa-solid fa-chart-line"></i></div>
+        <div>
+          <h3 id="kpi-modal-title">Add KPI</h3>
+          <p id="kpi-modal-sub">Define a new KPI metric and target</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('kpi')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitKpi(event)">
+      <div class="modal-body">
+        <input type="hidden" id="kpi-edit-id"/>
 
-  } else if(type === 'kpi') {
-    const r = kpiList.find(k => k.id === id); if(!r) return;
-    g('kpi-edit-id').value  = id;
-    g('kpi-name').value     = r.name;
-    g('kpi-value').value    = r.value;
-    g('kpi-period').value   = r.period;
-    g('kpi-status').value   = r.status;
-    g('kpi-desc').value     = r.desc;
-    g('kpi-modal-title').textContent = 'Edit KPI';
-    g('kpi-modal-sub').textContent   = 'Update this KPI metric';
-    g('kpi-save-label').textContent  = 'Update KPI';
-    kpiTypeSelected = r.type;
-    $$('.kpi-chip').forEach(c => c.classList.toggle('active', c.textContent.includes(r.type)));
-    setValueMode(r.mode||'unit');
-    if(r.mode==='unit') {
-      g('kpi-unit-label').value = r.unitLabel||'';
-    } else {
-      g('kpi-currency').value = r.currency||'';
-      const ic = r.currency==='Custom';
-      g('custom-currency-group').style.display = ic ? 'flex' : 'none';
-      if(ic) g('kpi-custom-currency').value = r.customCurrency||'';
-    }
+        <div class="form-group full">
+          <label><i class="fa-solid fa-tag"></i>KPI Name <span class="opt">(optional)</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-tag input-icon"></i>
+            <input type="text" id="kpi-name" placeholder="e.g. Monthly Sales Target…"/>
+          </div>
+        </div>
 
-  } else if(type === 'newCustomer') {
-    const r = newCustomers.find(c => c.id === id); if(!r) return;
-    g('nc-edit-id').value = id; g('nc-agent').value = r.agent; g('nc-branch').value = r.branch;
-    g('nc-name').value = r.name; g('nc-phone').value = r.phone; g('nc-product').value = r.product;
-    g('nc-status').value = r.status; g('nc-remark').value = r.remark;
-    g('nc-modal-title').textContent = 'Edit Customer'; g('nc-modal-sub').textContent = 'Update customer details';
+        <div class="form-group full">
+          <label><i class="fa-solid fa-layer-group"></i>KPI Type <span class="opt">(optional)</span></label>
+          <div class="kpi-type-chips" id="kpiTypeChips">
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Sales')">📈 Sales</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Revenue')">💰 Revenue</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Subscribers')">👥 Subscribers</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Retention')">🔁 Retention</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Churn')">📉 Churn</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'NPS')">⭐ NPS</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Custom')">✏️ Custom</button>
+          </div>
+        </div>
 
-  } else if(type === 'topUp') {
-    const r = topUpList.find(c => c.id === id); if(!r) return;
-    g('tu-edit-id').value = id; g('tu-agent').value = r.agent; g('tu-branch').value = r.branch;
-    g('tu-name').value = r.name; g('tu-phone').value = r.phone; g('tu-product').value = r.product;
-    g('tu-status').value = r.status; g('tu-remark').value = r.remark;
-    g('tu-modal-title').textContent = 'Edit Top Up'; g('tu-modal-sub').textContent = 'Update top up record';
+        <div class="form-divider">Target &amp; Measurement</div>
 
-  } else if(type === 'termination') {
-    const r = terminationList.find(c => c.id === id); if(!r) return;
-    g('tm-edit-id').value = id; g('tm-agent').value = r.agent; g('tm-branch').value = r.branch;
-    g('tm-name').value = r.name; g('tm-phone').value = r.phone; g('tm-product').value = r.product;
-    g('tm-remark').value = r.remark;
-    g('tm-modal-title').textContent = 'Edit Termination'; g('tm-modal-sub').textContent = 'Update termination record';
+        <div class="form-group full">
+          <label><i class="fa-solid fa-bullseye"></i>Target Value <span class="opt">(optional)</span></label>
+          <div class="value-unit-row">
+            <div class="input-wrap">
+              <i class="fa-solid fa-hashtag input-icon"></i>
+              <input type="number" id="kpi-value" placeholder="e.g. 1000" min="0" step="any"/>
+            </div>
+            <div class="unit-toggle">
+              <button type="button" id="btn-unit" class="active" onclick="setValueMode('unit')">
+                <i class="fa-solid fa-ruler"></i>Unit
+              </button>
+              <button type="button" id="btn-currency" onclick="setValueMode('currency')">
+                <i class="fa-solid fa-dollar-sign"></i>Currency
+              </button>
+            </div>
+          </div>
+        </div>
 
-  } else if(type === 'addUser') {
-    const r = staffList.find(u => u.id === id); if(!r) return;
-    g('au-edit-id').value = id; g('au-fullname').value = r.fullname; g('au-username').value = r.username;
-    g('au-role').value = r.role; g('au-status').value = r.status; g('au-branch').value = r.branch;
-    g('au-modal-title').textContent  = 'Edit User';
-    g('au-modal-sub').textContent    = 'Update staff account';
-    g('au-save-label').textContent   = 'Update User';
-    g('au-password').required        = false;
-    g('au-pwd-req').style.display    = 'none';
-    g('au-pwd-hint').style.display   = 'inline';
-  }
-  g('modal-'+type).classList.add('open');
-}
+        <div class="form-group full" id="unit-label-group">
+          <label><i class="fa-solid fa-ruler"></i>Unit Label <span class="opt">(optional)</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-pen input-icon"></i>
+            <input type="text" id="kpi-unit-label" placeholder="e.g. Subscribers, Lines, %"/>
+          </div>
+        </div>
 
-function closeModal(type)       { g('modal-'+type).classList.remove('open'); }
-function handleOverlay(e,type)  { if(e.target===g('modal-'+type)) closeModal(type); }
-function togglePwd(iid,eid) {
-  const i = g(iid), ic = g(eid);
-  if(i.type==='password') { i.type='text';     ic.className='fa-regular fa-eye-slash'; }
-  else                    { i.type='password'; ic.className='fa-regular fa-eye'; }
-}
+        <div class="currency-select-wrap" id="currency-group">
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fa-solid fa-coins"></i>Currency <span class="opt">(optional)</span></label>
+              <div class="input-wrap"><i class="fa-solid fa-coins input-icon"></i>
+                <select id="kpi-currency">
+                  <option value="" disabled selected>Select currency</option>
+                  <option value="USD">🇺🇸 USD</option>
+                  <option value="KHR">🇰🇭 KHR</option>
+                  <option value="THB">🇹🇭 THB</option>
+                  <option value="SGD">🇸🇬 SGD</option>
+                  <option value="EUR">🇪🇺 EUR</option>
+                  <option value="GBP">🇬🇧 GBP</option>
+                  <option value="Custom">✏️ Custom</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group" id="custom-currency-group" style="display:none;">
+              <label><i class="fa-solid fa-pen"></i>Custom Symbol</label>
+              <div class="input-wrap"><i class="fa-solid fa-pen input-icon"></i>
+                <input type="text" id="kpi-custom-currency" placeholder="e.g. BTC…"/>
+              </div>
+            </div>
+          </div>
+        </div>
 
-// ══════════════════════════════════════════════════════════
-//  KPI
-// ══════════════════════════════════════════════════════════
-function setValueMode(mode) {
-  kpiValueMode = mode;
-  g('btn-unit').classList.toggle('active', mode==='unit');
-  g('btn-currency').classList.toggle('active', mode==='currency');
-  g('unit-label-group').style.display = mode==='unit' ? 'flex' : 'none';
-  g('currency-group').classList.toggle('visible', mode==='currency');
-}
-function selectKpiType(btn, type) {
-  $$('.kpi-chip').forEach(c => c.classList.remove('active'));
-  if(kpiTypeSelected===type) { kpiTypeSelected=''; }
-  else { btn.classList.add('active'); kpiTypeSelected=type; }
-}
-g('kpi-currency').addEventListener('change', function() {
-  g('custom-currency-group').style.display = this.value==='Custom' ? 'flex' : 'none';
-});
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-regular fa-calendar"></i>Period <span class="opt">(optional)</span></label>
+            <div class="input-wrap"><i class="fa-regular fa-calendar input-icon"></i>
+              <select id="kpi-period">
+                <option value="">— No period —</option>
+                <option>Daily</option><option>Weekly</option><option>Monthly</option>
+                <option>Quarterly</option><option>Half-Yearly</option><option>Yearly</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-circle-dot"></i>Status <span class="opt">(optional)</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-circle-dot input-icon"></i>
+              <select id="kpi-status">
+                <option value="">— No status —</option>
+                <option>Active</option><option>Inactive</option><option>Draft</option>
+              </select>
+            </div>
+          </div>
+        </div>
 
-function submitKpi(e) {
-  e.preventDefault();
-  const eid = rt('kpi-edit-id'), cur = rv('kpi-currency');
-  const d = {
-    name:rt('kpi-name')||kpiTypeSelected||'KPI', type:kpiTypeSelected||'—',
-    value:rv('kpi-value'), mode:kpiValueMode, unitLabel:rt('kpi-unit-label'),
-    currency:cur, customCurrency:rt('kpi-custom-currency'),
-    period:rv('kpi-period'), status:rv('kpi-status'), desc:rt('kpi-desc')
-  };
-  if(eid) {
-    const idx = kpiList.findIndex(k => k.id===Number(eid));
-    if(idx!==-1) { d.id=Number(eid); kpiList[idx]=d; }
-  } else { d.id=Date.now(); kpiList.push(d); }
-  renderKpi(); closeModal('kpi');
-}
+        <div class="form-group full">
+          <label><i class="fa-solid fa-align-left"></i>Description <span class="opt">(optional)</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-align-left input-icon" style="top:14px;"></i>
+            <textarea id="kpi-desc" placeholder="Describe this KPI metric…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('kpi')">
+          <i class="fa-solid fa-xmark"></i>Cancel
+        </button>
+        <button type="submit" class="btn-save">
+          <i class="fa-solid fa-floppy-disk"></i><span id="kpi-save-label">Save KPI</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
-function renderKpi() {
-  g('kpiSummaryCards').innerHTML = kpiList.slice(0,6).map(k => {
-    const du = k.mode==='currency'
-      ? (k.currency==='Custom' ? k.customCurrency : k.currency)
-      : k.unitLabel;
-    return `<div class="kpi-summary-card">
-      <div class="kpi-card-label">${k.name}</div>
-      <div class="kpi-card-value">${k.value||'—'}</div>
-      <div class="kpi-card-unit">${du||''} ${k.period?'· '+k.period:''}</div>
-    </div>`;
-  }).join('');
-  const tbody = g('kpiTableBody');
-  if(!kpiList.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
-      <i class="fa-solid fa-chart-line"></i>
-      <p>No KPIs defined yet. Click <strong>Add KPI</strong> to get started.</p>
-    </div></td></tr>`; return;
-  }
-  const TP = {
-    'Sales':'pill-green','Revenue':'pill-teal','Subscribers':'pill-blue',
-    'Retention':'pill-purple','Churn':'pill-red','NPS':'pill-yellow',
-    'Custom':'pill-gray','—':'pill-gray'
-  };
-  tbody.innerHTML = kpiList.map((k,i) => {
-    const du = k.mode==='currency'
-      ? (k.currency==='Custom' ? `✏️ ${k.customCurrency}` : `💰 ${k.currency}`)
-      : (k.unitLabel ? `📏 ${k.unitLabel}` : '—');
-    return `<tr>
-      <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-      <td><span class="name-text">${k.name}</span></td>
-      <td><span class="pill ${TP[k.type]||'pill-gray'}">${k.type}</span></td>
-      <td style="font-weight:600;color:#1B7D3D;">${k.value||'—'}</td>
-      <td style="font-size:13px;color:#555;">${du}</td>
-      <td>${k.period?`<span class="pill pill-teal">${k.period}</span>`:'<span style="color:#ccc;font-size:12px;">—</span>'}</td>
-      <td style="color:#888;font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-          title="${k.desc}">${k.desc||'—'}</td>
-      <td><div class="action-btns">
-        <button class="action-btn edit"   onclick="openEditModal('kpi',${k.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn delete" onclick="delRec(kpiList,${k.id},renderKpi)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-      </div></td>
-    </tr>`;
-  }).join('');
-}
+<!-- ══ ADD USER MODAL ══ -->
+<div class="modal-overlay" id="modal-addUser" onclick="handleOverlay(event,'addUser')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon"><i class="fa-solid fa-user-plus"></i></div>
+        <div>
+          <h3 id="au-modal-title">Add New User</h3>
+          <p id="au-modal-sub">Create a staff account</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('addUser')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitUser(event)">
+      <div class="modal-body">
+        <input type="hidden" id="au-edit-id"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-regular fa-id-card"></i>Full Name <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-regular fa-id-card input-icon"></i>
+              <input type="text" id="au-fullname" placeholder="e.g. John Smith" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-at"></i>Username <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-at input-icon"></i>
+              <input type="text" id="au-username" placeholder="e.g. john.smith" required/>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-lock"></i>Password <span class="req" id="au-pwd-req">*</span></label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-lock input-icon"></i>
+            <input type="password" id="au-password" placeholder="Enter password"/>
+            <button type="button" class="password-eye" onclick="togglePwd('au-password','au-eye')">
+              <i class="fa-regular fa-eye" id="au-eye"></i>
+            </button>
+          </div>
+          <span id="au-pwd-hint" style="font-size:11px;color:#aaa;display:none;">
+            Leave blank to keep current password
+          </span>
+        </div>
+        <div class="form-divider">Account Details</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-shield"></i>Role <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user-shield input-icon"></i>
+              <select id="au-role" required>
+                <option value="" disabled selected>Select role</option>
+                <option>Admin</option><option>Supervisor</option><option>User</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-circle-dot"></i>Status <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-circle-dot input-icon"></i>
+              <select id="au-status" required>
+                <option value="" disabled selected>Select status</option>
+                <option>Active</option><option>Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i>
+            <input type="text" id="au-branch" placeholder="e.g. Phnom Penh HQ" required/>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('addUser')">
+          <i class="fa-solid fa-xmark"></i>Cancel
+        </button>
+        <button type="submit" class="btn-save">
+          <i class="fa-solid fa-floppy-disk"></i><span id="au-save-label">Save User</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
-// ═══════════════���══════════════════════════════════════════
-//  CUSTOMER
-// ══════════════════════════════════════════════════════════
-function submitNewCustomer(e) {
-  e.preventDefault();
-  const eid=rt('nc-edit-id'), status=rv('nc-status');
-  const d = {
-    agent:rt('nc-agent'), branch:rt('nc-branch'), name:rt('nc-name'),
-    phone:rt('nc-phone'), product:rv('nc-product'), status, remark:rt('nc-remark'), date:today()
-  };
-  if(eid) {
-    const idx=newCustomers.findIndex(c=>c.id===Number(eid));
-    if(idx!==-1) {
-      d.id=Number(eid);
-      if(status==='Closed') { newCustomers.splice(idx,1); topUpList.push({...d,status:'Active'}); renderTopUp(); }
-      else newCustomers[idx]=d;
-    }
-  } else {
-    d.id=Date.now();
-    if(status==='Closed') { topUpList.push({...d,status:'Active'}); renderTopUp(); }
-    else newCustomers.push(d);
-  }
-  renderNewCustomers(); closeModal('newCustomer');
-}
+<!-- ══ ROLE SWITCHER (Demo) ══ -->
+<div class="role-selector">
+  <div class="role-selector-title">Demo — Switch Role</div>
+  <div class="role-selector-row">
+    <i class="fa-solid fa-masks-theater" style="color:#aaa;font-size:13px;"></i>
+    <select id="roleSelect" onchange="switchRole(this.value)">
+      <option value="admin">Admin</option>
+      <option value="supervisor">Supervisor</option>
+      <option value="user">User</option>
+    </select>
+  </div>
+</div>
 
-function submitTopUp(e) {
-  e.preventDefault();
-  const eid=rt('tu-edit-id'), status=rv('tu-status');
-  const d = {
-    agent:rt('tu-agent'), branch:rt('tu-branch'), name:rt('tu-name'),
-    phone:rt('tu-phone'), product:rv('tu-product'), status, remark:rt('tu-remark'), date:today()
-  };
-  if(eid) {
-    const idx=topUpList.findIndex(c=>c.id===Number(eid));
-    if(idx!==-1) {
-      d.id=Number(eid);
-      if(status==='Termination') { topUpList.splice(idx,1); terminationList.push({...d,terminatedOn:today()}); renderTermination(); }
-      else topUpList[idx]=d;
-    }
-  } else {
-    d.id=Date.now();
-    if(status==='Termination') { terminationList.push({...d,terminatedOn:today()}); renderTermination(); }
-    else topUpList.push(d);
-  }
-  renderTopUp(); closeModal('topUp');
-}
-
-function submitTermination(e) {
-  e.preventDefault();
-  const eid=rt('tm-edit-id');
-  const d = {
-    agent:rt('tm-agent'), branch:rt('tm-branch'), name:rt('tm-name'),
-    phone:rt('tm-phone'), product:rv('tm-product'), remark:rt('tm-remark'), terminatedOn:today()
-  };
-  if(eid) {
-    const idx=terminationList.findIndex(c=>c.id===Number(eid));
-    if(idx!==-1) { d.id=Number(eid); terminationList[idx]=d; }
-  } else { d.id=Date.now(); terminationList.push(d); }
-  renderTermination(); closeModal('termination');
-}
-
-function changeNcStatus(id, st) {
-  const idx=newCustomers.findIndex(c=>c.id===id); if(idx===-1) return;
-  const rec={...newCustomers[idx],status:st};
-  if(st==='Closed') { newCustomers.splice(idx,1); topUpList.push({...rec,status:'Active'}); renderTopUp(); }
-  else newCustomers[idx].status=st;
-  renderNewCustomers();
-}
-function changeTuStatus(id, st) {
-  const idx=topUpList.findIndex(c=>c.id===id); if(idx===-1) return;
-  const rec={...topUpList[idx],status:st};
-  if(st==='Termination') { topUpList.splice(idx,1); terminationList.push({...rec,terminatedOn:today()}); renderTermination(); }
-  else topUpList[idx].status=st;
-  renderTopUp();
-}
-function delRec(list, id, fn) {
-  if(!confirm('Delete this record?')) return;
-  const idx=list.findIndex(c=>c.id===id);
-  if(idx!==-1) { list.splice(idx,1); fn(); }
-}
-
-function renderNewCustomers() {
-  const tbody=g('newCustomerBody');
-  if(!newCustomers.length) {
-    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state">
-      <i class="fa-solid fa-user-plus"></i>
-      <p>No customers yet. Click <strong>Add Customer</strong> to get started.</p>
-    </div></td></tr>`; return;
-  }
-  tbody.innerHTML=newCustomers.map((c,i)=>`
-    <tr>
-      <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-      <td><div class="name-cell"><div class="avatar ${AV_CYC[i%4]}">${ini(c.name)}</div><span class="name-text">${c.name}</span></div></td>
-      <td style="color:#666;font-size:13px;"><i class="fa-solid fa-phone" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${c.phone}</td>
-      <td style="color:#555;font-size:13px;">${c.agent}</td>
-      <td style="color:#555;font-size:13px;"><i class="fa-solid fa-building" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${c.branch}</td>
-      <td><span class="pill ${PROD_COL[c.product]||'pill-gray'}">${c.product}</span></td>
-      <td>
-        <select class="pill ${NC_COL[c.status]||'pill-gray'}" onchange="changeNcStatus(${c.id},this.value)"
-          style="border:none;cursor:pointer;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:20px;outline:none;background:inherit;color:inherit;">
-          <option ${c.status==='New Lead'    ?'selected':''}>New Lead</option>
-          <option ${c.status==='Hot Prospect'?'selected':''}>Hot Prospect</option>
-          <option ${c.status==='Closed'      ?'selected':''}>Closed</option>
-        </select>
-      </td>
-      <td style="color:#888;font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${c.remark}">${c.remark||'—'}</td>
-      <td><div class="action-btns">
-        <button class="action-btn edit"   onclick="openEditModal('newCustomer',${c.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn delete" onclick="delRec(newCustomers,${c.id},renderNewCustomers)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-      </div></td>
-    </tr>`).join('');
-}
-
-function renderTopUp() {
-  const tbody=g('topUpBody');
-  if(!topUpList.length) {
-    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state">
-      <i class="fa-solid fa-arrow-up-right-dots"></i><p>No top up records yet.</p>
-    </div></td></tr>`; return;
-  }
-  tbody.innerHTML=topUpList.map((c,i)=>`
-    <tr>
-      <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-      <td><div class="name-cell"><div class="avatar ${AV_CYC[i%4]}">${ini(c.name)}</div><span class="name-text">${c.name}</span></div></td>
-      <td style="color:#666;font-size:13px;"><i class="fa-solid fa-phone" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${c.phone}</td>
-      <td style="color:#555;font-size:13px;">${c.agent}</td>
-      <td style="color:#555;font-size:13px;"><i class="fa-solid fa-building" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${c.branch}</td>
-      <td><span class="pill ${PROD_COL[c.product]||'pill-gray'}">${c.product}</span></td>
-      <td>
-        <select class="pill ${c.status==='Active'?'pill-green':'pill-red'}" onchange="changeTuStatus(${c.id},this.value)"
-          style="border:none;cursor:pointer;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:20px;outline:none;background:inherit;color:inherit;">
-          <option ${c.status==='Active'     ?'selected':''}>Active</option>
-          <option ${c.status==='Termination'?'selected':''}>Termination</option>
-        </select>
-      </td>
-      <td style="color:#888;font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${c.remark}">${c.remark||'—'}</td>
-      <td><div class="action-btns">
-        <button class="action-btn edit"   onclick="openEditModal('topUp',${c.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn delete" onclick="delRec(topUpList,${c.id},renderTopUp)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-      </div></td>
-    </tr>`).join('');
-}
-
-function renderTermination() {
-  const tbody=g('terminationBody');
-  if(!terminationList.length) {
-    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state">
-      <i class="fa-solid fa-ban"></i><p>No terminated customers yet.</p>
-    </div></td></tr>`; return;
-  }
-  tbody.innerHTML=terminationList.map((c,i)=>`
-    <tr>
-      <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-      <td><div class="name-cell"><div class="avatar orange">${ini(c.name)}</div><span class="name-text">${c.name}</span></div></td>
-      <td style="color:#666;font-size:13px;"><i class="fa-solid fa-phone" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${c.phone}</td>
-      <td style="color:#555;font-size:13px;">${c.agent}</td>
-      <td style="color:#555;font-size:13px;"><i class="fa-solid fa-building" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${c.branch}</td>
-      <td><span class="pill ${PROD_COL[c.product]||'pill-gray'}">${c.product}</span></td>
-      <td style="color:#888;font-size:13px;">${c.terminatedOn}</td>
-      <td style="color:#888;font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${c.remark}">${c.remark||'—'}</td>
-      <td><div class="action-btns">
-        <button class="action-btn edit"   onclick="openEditModal('termination',${c.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn delete" onclick="delRec(terminationList,${c.id},renderTermination)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-      </div></td>
-    </tr>`).join('');
-}
-
-// ══════════════════════════════════════════════════════════
-//  STAFF / USER
-// ══════════════════════════════════════════════════════════
-function submitUser(e) {
-  e.preventDefault();
-  const eid=rt('au-edit-id'), pwd=rv('au-password');
-  const d = {
-    fullname:rt('au-fullname'), username:rt('au-username'),
-    role:rv('au-role'), status:rv('au-status'), branch:rt('au-branch')
-  };
-  if(eid) {
-    const idx=staffList.findIndex(u=>u.id===Number(eid));
-    if(idx!==-1) { d.id=Number(eid); d.password=pwd||staffList[idx].password; staffList[idx]=d; }
-  } else { d.id=Date.now(); d.password=pwd; staffList.push(d); }
-  renderStaff(); closeModal('addUser');
-}
-
-function renderStaff() {
-  const tbody=g('staffTableBody');
-  if(!staffList.length) {
-    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state">
-      <i class="fa-regular fa-user"></i>
-      <p>No staff added yet. Click <strong>Add User</strong> to get started.</p>
-    </div></td></tr>`; return;
-  }
-  tbody.innerHTML=staffList.map((u,i)=>{
-    const roleCls  = {Admin:'pill-green',Supervisor:'pill-yellow',User:'pill-blue'}[u.role]||'pill-gray';
-    const roleIcon = {Admin:'fa-user-shield',Supervisor:'fa-user-tie',User:'fa-user'}[u.role]||'fa-user';
-    const stsCls   = u.status==='Active' ? 'pill-green pill-dot':'pill-red pill-dot';
-    return `<tr>
-      <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-      <td><div class="name-cell"><div class="avatar">${ini(u.fullname)}</div><span class="name-text">${u.fullname}</span></div></td>
-      <td style="color:#888;font-size:13px;"><i class="fa-solid fa-at" style="font-size:11px;color:#ccc;margin-right:3px;"></i>${u.username}</td>
-      <td><span class="pill ${roleCls}"><i class="fa-solid ${roleIcon}" style="font-size:10px;"></i> ${u.role}</span></td>
-      <td style="color:#555;font-size:13px;"><i class="fa-solid fa-building" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${u.branch}</td>
-      <td><span class="pill ${stsCls}">${u.status}</span></td>
-      <td><div class="action-btns">
-        <button class="action-btn edit"   onclick="openEditModal('addUser',${u.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn delete" onclick="delRec(staffList,${u.id},renderStaff)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-      </div></td>
-    </tr>`;
-  }).join('');
-}
-
-// ══════════════════════════════════════════════════════════
-//  ROLE SWITCHER
-// ══════════════════════════════════════════════════════════
-function switchRole(role) {
-  currentRole = role;
-  const map = {admin:'Admin', supervisor:'Supervisor', user:'User'};
-  g('userNameDisplay').textContent  = map[role]+' User';
-  g('roleBadgeDisplay').textContent = map[role];
-  g('userAvatar').textContent       = map[role].slice(0,2).toUpperCase();
-}
-
-// ══════════════════════════════════════════════════════════
-//  LISTENERS
-// ══════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  const itemCurSel = g('item-currency');
-  if(itemCurSel) itemCurSel.addEventListener('change', function() {
-    g('item-custom-currency-group').style.display = this.value==='custom' ? 'flex':'none';
-  });
-  const itemUnitSel = g('item-unit');
-  if(itemUnitSel) itemUnitSel.addEventListener('change', function() {
-    g('item-custom-unit-group').style.display = this.value==='custom' ? 'flex':'none';
-  });
-});
-
-// ══════════════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════════════
-renderNewCustomers();
-renderTopUp();
-renderTermination();
-renderStaff();
-renderKpi();
-renderItemChips();
-buildSaleTableHeader();
-applyReportFilters();
-setValueMode('unit');
+<script src="app.js"></script>
+</body>
+</html>
