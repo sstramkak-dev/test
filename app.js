@@ -6,6 +6,8 @@ let currentPage        = 'dashboard';
 let currentCustomerTab = 'newCustomer';
 let currentSettingsTab = 'permission';
 let currentSaleTab     = 'dailySale';
+let currentReportView  = 'table';
+let filteredSales      = [];
 
 let itemCatalogue   = [];
 let saleRecords     = [];
@@ -18,40 +20,35 @@ let kpiList         = [];
 let kpiValueMode    = 'unit';
 let kpiTypeSelected = '';
 
-// ── Constants ─────────────────────────────────────────────
 const TAB_PERM = {
   permission:      ['admin'],
   kpi:             ['admin','supervisor'],
   promotionSetting:['admin']
 };
 const TAB_LBL = {
-  permission:'Permission',
-  kpi:'KPI Setting',
-  promotionSetting:'Promotion'
+  permission:'Permission', kpi:'KPI Setting', promotionSetting:'Promotion'
 };
 const PROD_COL = {
-  'Smart@Home' :'pill-blue',
-  'Smart Fiber+':'pill-purple',
-  'M2M'        :'pill-orange',
-  'Smart Laor 6':'pill-yellow',
-  'Smart Laor 10$':'pill-green'
+  'Smart@Home':'pill-blue','Smart Fiber+':'pill-purple',
+  'M2M':'pill-orange','Smart Laor 6':'pill-yellow','Smart Laor 10$':'pill-green'
 };
 const NC_COL = {
-  'New Lead'    :'pill-yellow',
-  'Hot Prospect':'pill-orange',
-  'Closed'      :'pill-green'
+  'New Lead':'pill-yellow','Hot Prospect':'pill-orange','Closed':'pill-green'
 };
-const AV_CYC = ['','blue','orange','purple'];
+const AV_CYC      = ['','blue','orange','purple'];
+const KNOWN_CUR   = ['$','KHR','฿','S$','€','£','¥'];
+const KNOWN_UNITS = ['SIM','Line','Port','Connection','Activation',
+  'GB','TB','Mbps','Gbps','Day','Month','Year','pcs','Box','Set','Pack','Bundle'];
 
 // ── DOM Helpers ───────────────────────────────────────────
-const g    = id       => document.getElementById(id);
-const rv   = id       => g(id).value;
-const rt   = id       => g(id).value.trim();
-const $    = (s,c=document) => c.querySelector(s);
-const $$   = (s,c=document) => [...c.querySelectorAll(s)];
-const today = ()      => new Date().toLocaleDateString();
-const ini   = n       => n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-const pad   = i       => String(i+1).padStart(2,'0');
+const g   = id => document.getElementById(id);
+const rv  = id => g(id).value;
+const rt  = id => g(id).value.trim();
+const $   = (s,c=document) => c.querySelector(s);
+const $$  = (s,c=document) => [...c.querySelectorAll(s)];
+const today = () => new Date().toLocaleDateString();
+const ini   = n  => n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const pad   = i  => String(i+1).padStart(2,'0');
 
 // ══════════════════════════════════════════════════════════
 //  NAVIGATION
@@ -65,27 +62,22 @@ function navigateTo(page, btn) {
   btn.classList.add('active');
   g('page-'+page).classList.add('active');
   g('pageTitle').textContent = {
-    dashboard   :'Dashboard',
-    promotionPage:'Promotion',
-    deposit     :'Deposit'
+    dashboard:'Dashboard', promotionPage:'Promotion', deposit:'Deposit'
   }[page] || page;
   currentPage = page;
 }
 
 function toggleSubmenu(id, btn) {
-  const sub = g(id);
-  const isOpen = sub.classList.contains('open');
+  const sub = g(id), isOpen = sub.classList.contains('open');
   $$('.submenu').forEach(s => s.classList.remove('open'));
   $$('.nav-item.has-submenu').forEach(b => b.classList.remove('open'));
   if(!isOpen) {
-    sub.classList.add('open');
-    btn.classList.add('open');
+    sub.classList.add('open'); btn.classList.add('open');
     $$('.nav-item').forEach(e => e.classList.remove('active'));
     btn.classList.add('active');
   }
 }
 
-// ── Sale nav ──────────────────────────────────────────────
 function openSaleTab(tab, submenuBtn) {
   $$('.page').forEach(p => p.classList.remove('active'));
   g('page-sale').classList.add('active');
@@ -97,7 +89,6 @@ function openSaleTab(tab, submenuBtn) {
   switchSaleTab(tab);
   currentPage = 'sale';
 }
-
 function switchSaleTab(tab) {
   currentSaleTab = tab;
   $$('#page-sale .tab-btn').forEach(b => b.classList.remove('active'));
@@ -107,7 +98,6 @@ function switchSaleTab(tab) {
   g('pageTitle').textContent = 'Sale — Daily Sale';
 }
 
-// ── Customer nav ──────────────────────────────────────────
 function openCustomerTab(tab, submenuBtn) {
   $$('.page').forEach(p => p.classList.remove('active'));
   g('page-customer').classList.add('active');
@@ -119,7 +109,6 @@ function openCustomerTab(tab, submenuBtn) {
   switchCustomerTab(tab);
   currentPage = 'customer';
 }
-
 function switchCustomerTab(tab) {
   currentCustomerTab = tab;
   $$('#page-customer .tab-btn').forEach(b => b.classList.remove('active'));
@@ -127,13 +116,12 @@ function switchCustomerTab(tab) {
   g('ctab-'+tab+'-btn').classList.add('active');
   g('ctab-'+tab).classList.add('active');
   g('pageTitle').textContent = {
-    newCustomer :'Customer — New Customer',
-    topUp       :'Customer — Top Up',
-    termination :'Customer — Termination'
+    newCustomer:'Customer — New Customer',
+    topUp:'Customer — Top Up',
+    termination:'Customer — Termination'
   }[tab] || tab;
 }
 
-// ── Settings nav ──────────────────────────────────────────
 function openSettingsTab(tab, submenuBtn) {
   $$('.page').forEach(p => p.classList.remove('active'));
   g('page-settings').classList.add('active');
@@ -145,7 +133,6 @@ function openSettingsTab(tab, submenuBtn) {
   switchSettingsTab(tab);
   currentPage = 'settings';
 }
-
 function switchSettingsTab(tab) {
   currentSettingsTab = tab;
   $$('#page-settings .tab-btn').forEach(b => b.classList.remove('active'));
@@ -155,15 +142,12 @@ function switchSettingsTab(tab) {
   if(tab !== 'permission' && tab !== 'kpi') renderAccessContent(tab);
   g('pageTitle').textContent = 'Settings — ' + TAB_LBL[tab];
 }
-
 function renderAccessContent(tab) {
-  const el = g(tab+'-content');
-  if(!el) return;
+  const el = g(tab+'-content'); if(!el) return;
   const ok = TAB_PERM[tab].includes(currentRole);
   el.innerHTML = ok ? '' : `
     <div class="access-denied">
-      <i class="fa-solid fa-lock"></i>
-      <h3>Access Denied</h3>
+      <i class="fa-solid fa-lock"></i><h3>Access Denied</h3>
       <p>Required: <strong>${TAB_PERM[tab].map(r=>r[0].toUpperCase()+r.slice(1)).join(' or ')}</strong></p>
     </div>`;
 }
@@ -173,11 +157,14 @@ function renderAccessContent(tab) {
 // ══════════════════════════════════════════════════════════
 function submitItem(e) {
   e.preventDefault();
-  const eid = rt('item-edit-id');
+  const eid     = rt('item-edit-id');
+  const unitSel = rv('item-unit');
+  const curSel  = rv('item-currency');
   const d = {
     name    : rt('item-name'),
     price   : rv('item-price'),
-    unit    : rt('item-unit'),
+    currency: curSel  === 'custom' ? rt('item-custom-currency') : curSel,
+    unit    : unitSel === 'custom' ? rt('item-custom-unit')     : unitSel,
     category: rv('item-category'),
     status  : rv('item-status'),
     desc    : rt('item-desc')
@@ -186,11 +173,11 @@ function submitItem(e) {
     const idx = itemCatalogue.findIndex(i => i.id === Number(eid));
     if(idx !== -1) { d.id = Number(eid); itemCatalogue[idx] = d; }
   } else {
-    d.id = Date.now();
-    itemCatalogue.push(d);
+    d.id = Date.now(); itemCatalogue.push(d);
   }
   renderItemChips();
   refreshSaleSelect();
+  refreshFilterItemSelect();
   closeModal('addItem');
 }
 
@@ -203,13 +190,16 @@ function renderItemChips() {
       <strong style="margin:0 3px;">Add Items</strong> to build your catalogue.</span>`;
     return;
   }
-  con.innerHTML = active.map(it => `
-    <div class="item-chip" onclick="quickAddItem(${it.id})" title="${it.desc||''}">
-      <i class="fa-solid fa-tag" style="font-size:11px;color:#1B7D3D;"></i>
-      <span>${it.name}</span>
-      ${it.price ? `<span class="chip-price">$${Number(it.price).toFixed(2)}</span>` : ''}
-      ${it.unit  ? `<span class="chip-unit">${it.unit}</span>` : ''}
-    </div>`).join('');
+  con.innerHTML = active.map(it => {
+    const cur = it.currency || '$';
+    return `
+      <div class="item-chip" onclick="quickAddItem(${it.id})" title="${it.desc||''}">
+        <i class="fa-solid fa-tag" style="font-size:11px;color:#1B7D3D;"></i>
+        <span>${it.name}</span>
+        ${it.price ? `<span class="chip-price">${cur}${Number(it.price).toFixed(2)}</span>` : ''}
+        ${it.unit  ? `<span class="chip-unit">/${it.unit}</span>` : ''}
+      </div>`;
+  }).join('');
 }
 
 function refreshSaleSelect() {
@@ -218,7 +208,7 @@ function refreshSaleSelect() {
   sel.innerHTML = '<option value="">— Select an item —</option>' +
     active.map(i =>
       `<option value="${i.id}">${i.name}` +
-      `${i.price ? ' — $'+Number(i.price).toFixed(2) : ''}` +
+      `${i.price ? ' — '+(i.currency||'$')+Number(i.price).toFixed(2) : ''}` +
       `${i.unit  ? ' ('+i.unit+')' : ''}</option>`
     ).join('');
 }
@@ -226,15 +216,11 @@ function refreshSaleSelect() {
 function quickAddItem(itemId) {
   if(g('modal-newSale').classList.contains('open')) {
     const ex = newSaleItems.find(i => i.itemId === itemId);
-    if(ex) ex.qty++;
-    else   newSaleItems.push({itemId, qty:1});
+    if(ex) ex.qty++; else newSaleItems.push({itemId, qty:1});
     renderSaleItemsList();
   } else {
     openNewSaleModal();
-    setTimeout(() => {
-      newSaleItems.push({itemId, qty:1});
-      renderSaleItemsList();
-    }, 60);
+    setTimeout(() => { newSaleItems.push({itemId, qty:1}); renderSaleItemsList(); }, 60);
   }
 }
 
@@ -245,7 +231,6 @@ function openNewSaleModal(editId) {
   $('#modal-newSale form').reset();
   newSaleItems = [];
   g('sale-date').value = new Date().toISOString().split('T')[0];
-
   if(editId) {
     const rec = saleRecords.find(s => s.id === editId);
     if(rec) {
@@ -271,12 +256,10 @@ function openNewSaleModal(editId) {
 }
 
 function addItemToSale() {
-  const sel    = g('sale-item-select');
-  const itemId = Number(sel.value);
+  const sel = g('sale-item-select'), itemId = Number(sel.value);
   if(!itemId) return;
   const ex = newSaleItems.find(i => i.itemId === itemId);
-  if(ex) ex.qty++;
-  else   newSaleItems.push({itemId, qty:1});
+  if(ex) ex.qty++; else newSaleItems.push({itemId, qty:1});
   sel.value = '';
   renderSaleItemsList();
 }
@@ -295,27 +278,20 @@ function renderSaleItemsList() {
   const con    = g('saleItemsList');
   const noMsg  = g('noItemsMsg');
   const totDiv = g('saleModalTotal');
-
   if(!newSaleItems.length) {
-    con.innerHTML = '';
-    con.appendChild(noMsg);
-    noMsg.style.display  = 'block';
-    totDiv.style.display = 'none';
-    return;
+    con.innerHTML = ''; con.appendChild(noMsg);
+    noMsg.style.display = 'block'; totDiv.style.display = 'none'; return;
   }
-  noMsg.style.display  = 'none';
-  totDiv.style.display = 'flex';
-
+  noMsg.style.display = 'none'; totDiv.style.display = 'flex';
   con.innerHTML = newSaleItems.map(en => {
-    const it = itemCatalogue.find(i => i.id === en.itemId);
-    if(!it) return '';
+    const it = itemCatalogue.find(i => i.id === en.itemId); if(!it) return '';
+    const cur = it.currency || '$';
     return `
       <div class="sale-item-row">
         <div class="item-name">${it.name}</div>
         ${it.unit  ? `<span class="item-unit-badge">${it.unit}</span>` : ''}
-        ${it.price
-          ? `<span class="item-price">$${(Number(it.price)*en.qty).toFixed(2)}</span>`
-          : `<span class="item-price" style="color:#ccc;">—</span>`}
+        ${it.price ? `<span class="item-price">${cur}${(Number(it.price)*en.qty).toFixed(2)}</span>`
+                   : `<span class="item-price" style="color:#ccc;">—</span>`}
         <input class="sale-item-qty" type="number" value="${en.qty}" min="1"
           onchange="updateQty(${en.itemId},this.value)" title="Qty"/>
         <button type="button" class="sale-item-remove" onclick="removeFromSale(${en.itemId})">
@@ -327,18 +303,17 @@ function renderSaleItemsList() {
 }
 
 function recalcTotal() {
-  let t = 0;
+  let t = 0, cur = '$';
   newSaleItems.forEach(en => {
     const it = itemCatalogue.find(i => i.id === en.itemId);
-    if(it && it.price) t += Number(it.price) * en.qty;
+    if(it && it.price) { t += Number(it.price)*en.qty; cur = it.currency||'$'; }
   });
-  g('saleModalTotalVal').textContent = '$' + t.toFixed(2);
+  g('saleModalTotalVal').textContent = cur + t.toFixed(2);
 }
 
 function submitSale(e) {
   e.preventDefault();
-  const eid     = rt('sale-edit-id');
-  const dateRaw = rv('sale-date');
+  const eid = rt('sale-edit-id'), dateRaw = rv('sale-date');
   const d = {
     agent  : rt('sale-agent'),
     branch : rt('sale-branch'),
@@ -351,90 +326,199 @@ function submitSale(e) {
     const it = itemCatalogue.find(i => i.id === en.itemId);
     return s + (it && it.price ? Number(it.price)*en.qty : 0);
   }, 0);
-
   if(eid) {
     const idx = saleRecords.findIndex(s => s.id === Number(eid));
     if(idx !== -1) { d.id = Number(eid); saleRecords[idx] = d; }
   } else {
-    d.id = Date.now();
-    saleRecords.push(d);
+    d.id = Date.now(); saleRecords.push(d);
   }
-  renderSaleTable();
+  applyReportFilters();
   closeModal('newSale');
 }
 
-function renderSaleTable() {
-  const tbody = g('saleTableBody');
-  const badge = g('saleCountBadge');
-  const bar   = g('saleTotalBar');
+// ══════════════════════════════════════════════════════════
+//  REPORT
+// ══════════════════════════════════════════════════════════
+function refreshFilterItemSelect() {
+  const sel = g('filter-item'); if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Items</option>' +
+    itemCatalogue.filter(i => i.status === 'Active')
+      .map(i => `<option value="${i.id}" ${cur==i.id?'selected':''}>${i.name}</option>`).join('');
+}
 
-  if(!saleRecords.length) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
+function applyReportFilters() {
+  const dateFrom = rv('filter-date-from');
+  const dateTo   = rv('filter-date-to');
+  const agentQ   = rt('filter-agent').toLowerCase();
+  const branchQ  = rt('filter-branch').toLowerCase();
+  const itemIdQ  = rv('filter-item');
+  filteredSales = saleRecords.filter(s => {
+    if(dateFrom && s.dateRaw && s.dateRaw < dateFrom) return false;
+    if(dateTo   && s.dateRaw && s.dateRaw > dateTo)   return false;
+    if(agentQ   && !s.agent.toLowerCase().includes(agentQ))   return false;
+    if(branchQ  && !s.branch.toLowerCase().includes(branchQ)) return false;
+    if(itemIdQ  && !s.items.some(en => en.itemId === Number(itemIdQ))) return false;
+    return true;
+  });
+  renderSaleKpiCards(filteredSales);
+  if(currentReportView === 'table') renderSaleTable(filteredSales);
+  else                              renderSaleSummary(filteredSales);
+}
+
+function clearReportFilters() {
+  g('filter-date-from').value = '';
+  g('filter-date-to').value   = '';
+  g('filter-agent').value     = '';
+  g('filter-branch').value    = '';
+  g('filter-item').value      = '';
+  applyReportFilters();
+}
+
+function setReportView(view) {
+  currentReportView = view;
+  $$('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+  g('viewBtn-'+view).classList.add('active');
+  g('reportView-table').style.display   = view === 'table'   ? 'block' : 'none';
+  g('reportView-summary').style.display = view === 'summary' ? 'block' : 'none';
+  applyReportFilters();
+}
+
+function renderSaleKpiCards(records) {
+  const totalSales = records.length;
+  const totalQty   = records.reduce((s,r) => s + r.items.reduce((q,en)=>q+en.qty,0), 0);
+  const agents     = new Set(records.map(r => r.agent)).size;
+  const revenue    = records.reduce((s,r) => s+(r.total||0), 0);
+  const firstItem  = records[0]?.items[0];
+  const firstIt    = firstItem ? itemCatalogue.find(i => i.id===firstItem.itemId) : null;
+  const curSymbol  = firstIt?.currency || '$';
+  g('kpi-total-sales').textContent = totalSales;
+  g('kpi-total-qty').textContent   = totalQty;
+  g('kpi-agents').textContent      = agents;
+  g('kpi-revenue').textContent     = curSymbol + revenue.toFixed(2);
+}
+
+function renderSaleTable(records) {
+  if(records === undefined) records = saleRecords;
+  const tbody = g('saleTableBody'), badge = g('saleCountBadge'), bar = g('saleTotalBar');
+  if(!records.length) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state">
       <i class="fa-solid fa-receipt"></i>
-      <p>No sales recorded yet. Click <strong>New Sale</strong> to get started.</p>
+      <p>${saleRecords.length
+        ? 'No records match your filters.'
+        : 'No sales recorded yet. Click <strong>New Sale</strong> to get started.'}</p>
     </div></td></tr>`;
-    badge.style.display = 'none';
-    bar.style.display   = 'none';
-    return;
+    badge.style.display = 'none'; bar.style.display = 'none'; return;
   }
-
   badge.style.display = 'inline-flex';
-  badge.textContent   = saleRecords.length + ' record' + (saleRecords.length > 1 ? 's' : '');
+  badge.textContent   = records.length + ' record' + (records.length>1?'s':'');
   bar.style.display   = 'flex';
-
-  let grand = 0;
-  tbody.innerHTML = saleRecords.map((s,i) => {
+  let grand = 0, grandCur = '$';
+  tbody.innerHTML = records.map((s,i) => {
     grand += s.total || 0;
+    const firstIt = s.items[0] ? itemCatalogue.find(x=>x.id===s.items[0].itemId) : null;
+    const curSym  = firstIt?.currency || '$';
+    if(i===0) grandCur = curSym;
     const chips = s.items.map(en => {
       const it = itemCatalogue.find(x => x.id === en.itemId);
       return it
         ? `<span class="pill pill-teal" style="margin:1px 2px;font-size:11px;">${it.name}×${en.qty}</span>`
         : '';
     }).join('');
-    const qty = s.items.reduce((sum,en) => sum + en.qty, 0);
+    const qty = s.items.reduce((sum,en) => sum+en.qty, 0);
     return `<tr>
       <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-      <td>
-        <div class="name-cell">
-          <div class="avatar ${AV_CYC[i%4]}">${ini(s.agent)}</div>
-          <span class="name-text">${s.agent}</span>
-        </div>
-      </td>
+      <td><div class="name-cell">
+        <div class="avatar ${AV_CYC[i%4]}">${ini(s.agent)}</div>
+        <span class="name-text">${s.agent}</span>
+      </div></td>
       <td style="color:#555;font-size:13px;">
         <i class="fa-solid fa-building" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${s.branch}
       </td>
       <td style="color:#666;font-size:13px;">${s.date}</td>
-      <td style="max-width:200px;">${chips || '<span style="color:#ccc;">—</span>'}</td>
+      <td style="max-width:200px;">${chips||'<span style="color:#ccc;">—</span>'}</td>
       <td style="color:#555;font-size:13px;text-align:center;">${qty}</td>
-      <td style="font-weight:700;color:#1B7D3D;">${s.total ? '$'+s.total.toFixed(2) : '—'}</td>
+      <td><span class="pill pill-gray" style="font-size:11px;">${curSym}</span></td>
+      <td style="font-weight:700;color:#1B7D3D;">${s.total ? curSym+s.total.toFixed(2) : '—'}</td>
       <td style="color:#888;font-size:13px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${s.note}">${s.note||'—'}</td>
-      <td>
-        <div class="action-btns">
-          <button class="action-btn edit"   onclick="openNewSaleModal(${s.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-          <button class="action-btn delete" onclick="delRec(saleRecords,${s.id},renderSaleTable)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-        </div>
-      </td>
+      <td><div class="action-btns">
+        <button class="action-btn edit"   onclick="openNewSaleModal(${s.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+        <button class="action-btn delete" onclick="delRec(saleRecords,${s.id},applyReportFilters)" title="Delete"><i class="fa-solid fa-trash"></i></button>
+      </div></td>
     </tr>`;
   }).join('');
-  g('grandTotal').textContent = '$' + grand.toFixed(2);
+  g('grandTotal').textContent = grandCur + grand.toFixed(2);
+}
+
+function renderSaleSummary(records) {
+  const grid = g('summaryGrid');
+  if(!records.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;"><div class="empty-state">
+      <i class="fa-solid fa-chart-bar"></i>
+      <p>${saleRecords.length ? 'No records match your filters.' : 'No sales yet.'}</p>
+    </div></div>`; return;
+  }
+  const byAgent = {};
+  records.forEach(s => {
+    if(!byAgent[s.agent]) byAgent[s.agent] = {agent:s.agent, branch:s.branch, records:[], total:0};
+    byAgent[s.agent].records.push(s);
+    byAgent[s.agent].total += s.total || 0;
+  });
+  grid.innerHTML = Object.values(byAgent).map(ag => {
+    const itemMap = {};
+    ag.records.forEach(s => {
+      s.items.forEach(en => {
+        const it = itemCatalogue.find(i => i.id === en.itemId); if(!it) return;
+        if(!itemMap[it.id]) itemMap[it.id] = {name:it.name, qty:0, value:0, currency:it.currency||'$', unit:it.unit||''};
+        itemMap[it.id].qty   += en.qty;
+        itemMap[it.id].value += it.price ? Number(it.price)*en.qty : 0;
+      });
+    });
+    const itemRows = Object.values(itemMap).map(im => `
+      <div class="summary-item-row">
+        <span class="summary-item-name"><i class="fa-solid fa-tag"></i>${im.name}</span>
+        <div class="summary-item-right">
+          <span class="summary-item-qty">${im.qty} ${im.unit||'pcs'}</span>
+          <span class="summary-item-val">${im.value ? im.currency+im.value.toFixed(2) : '—'}</span>
+        </div>
+      </div>`).join('');
+    const curSym = Object.values(itemMap)[0]?.currency || '$';
+    return `
+      <div class="summary-card">
+        <div class="summary-card-header">
+          <div class="agent-name">
+            <div class="avatar" style="width:26px;height:26px;font-size:10px;">${ini(ag.agent)}</div>
+            ${ag.agent}
+          </div>
+          <div class="agent-total">${curSym}${ag.total.toFixed(2)}</div>
+        </div>
+        <div class="summary-card-body">
+          ${itemRows||'<span style="color:#ccc;font-size:13px;">No items</span>'}
+        </div>
+        <div class="summary-card-footer">
+          <span class="foot-label">
+            <i class="fa-solid fa-building" style="margin-right:4px;color:#ccc;"></i>${ag.branch}
+          </span>
+          <span class="foot-val">${ag.records.length} sale${ag.records.length>1?'s':''}</span>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ══════════════════════════════════════════════════════════
 //  MODAL HELPERS
 // ══════════════════════════════════════════════════════════
 function openAddModal(type) {
-  const form = $(`#modal-${type} form`);
-  form.reset();
-  kpiTypeSelected = '';
-  kpiValueMode    = 'unit';
-
+  const form = $(`#modal-${type} form`); form.reset();
+  kpiTypeSelected = ''; kpiValueMode = 'unit';
   if(type === 'addItem') {
     g('item-edit-id').value = '';
     g('addItem-title').textContent   = 'Add Item';
     g('addItem-sub').textContent     = 'Create a new sale catalogue item';
     g('item-save-label').textContent = 'Save Item';
-
+    g('item-custom-currency-group').style.display = 'none';
+    g('item-custom-unit-group').style.display     = 'none';
   } else if(type === 'kpi') {
     g('kpi-edit-id').value = '';
     g('kpi-modal-title').textContent = 'Add KPI';
@@ -443,22 +527,18 @@ function openAddModal(type) {
     $$('.kpi-chip').forEach(c => c.classList.remove('active'));
     setValueMode('unit');
     g('custom-currency-group').style.display = 'none';
-
   } else if(type === 'newCustomer') {
     g('nc-edit-id').value = '';
     g('nc-modal-title').textContent = 'Add New Customer';
     g('nc-modal-sub').textContent   = 'Fill in the customer lead details';
-
   } else if(type === 'topUp') {
     g('tu-edit-id').value = '';
     g('tu-modal-title').textContent = 'Add Top Up';
     g('tu-modal-sub').textContent   = 'Enter top up customer details';
-
   } else if(type === 'termination') {
     g('tm-edit-id').value = '';
     g('tm-modal-title').textContent = 'Add Termination';
     g('tm-modal-sub').textContent   = 'Record a terminated customer';
-
   } else if(type === 'addUser') {
     g('au-edit-id').value = '';
     g('au-modal-title').textContent  = 'Add New User';
@@ -472,19 +552,33 @@ function openAddModal(type) {
 }
 
 function openEditModal(type, id) {
-  const form = $(`#modal-${type} form`);
-  form.reset();
-  kpiTypeSelected = '';
-
+  const form = $(`#modal-${type} form`); form.reset(); kpiTypeSelected = '';
   if(type === 'addItem') {
     const r = itemCatalogue.find(i => i.id === id); if(!r) return;
-    g('item-edit-id').value   = id;
-    g('item-name').value      = r.name;
-    g('item-price').value     = r.price;
-    g('item-unit').value      = r.unit;
-    g('item-category').value  = r.category;
-    g('item-status').value    = r.status;
-    g('item-desc').value      = r.desc;
+    g('item-edit-id').value  = id;
+    g('item-name').value     = r.name;
+    g('item-price').value    = r.price;
+    g('item-category').value = r.category;
+    g('item-status').value   = r.status;
+    g('item-desc').value     = r.desc;
+    // currency
+    if(KNOWN_CUR.includes(r.currency)) {
+      g('item-currency').value = r.currency;
+      g('item-custom-currency-group').style.display = 'none';
+    } else {
+      g('item-currency').value        = 'custom';
+      g('item-custom-currency').value = r.currency || '';
+      g('item-custom-currency-group').style.display = 'flex';
+    }
+    // unit
+    if(KNOWN_UNITS.includes(r.unit) || r.unit === '') {
+      g('item-unit').value = r.unit || '';
+      g('item-custom-unit-group').style.display = 'none';
+    } else {
+      g('item-unit').value        = 'custom';
+      g('item-custom-unit').value = r.unit || '';
+      g('item-custom-unit-group').style.display = 'flex';
+    }
     g('addItem-title').textContent   = 'Edit Item';
     g('addItem-sub').textContent     = 'Update catalogue item';
     g('item-save-label').textContent = 'Update Item';
@@ -568,8 +662,8 @@ function openEditModal(type, id) {
   g('modal-'+type).classList.add('open');
 }
 
-function closeModal(type)         { g('modal-'+type).classList.remove('open'); }
-function handleOverlay(e, type)   { if(e.target === g('modal-'+type)) closeModal(type); }
+function closeModal(type)       { g('modal-'+type).classList.remove('open'); }
+function handleOverlay(e, type) { if(e.target === g('modal-'+type)) closeModal(type); }
 function togglePwd(iid, eid) {
   const i = g(iid), ic = g(eid);
   if(i.type === 'password') { i.type = 'text';     ic.className = 'fa-regular fa-eye-slash'; }
@@ -578,7 +672,7 @@ function togglePwd(iid, eid) {
 
 // ══════════════════════════════════════════════════════════
 //  KPI
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════���══════════════
 function setValueMode(mode) {
   kpiValueMode = mode;
   g('btn-unit').classList.toggle('active', mode === 'unit');
@@ -586,21 +680,18 @@ function setValueMode(mode) {
   g('unit-label-group').style.display = mode === 'unit' ? 'flex' : 'none';
   g('currency-group').classList.toggle('visible', mode === 'currency');
 }
-
 function selectKpiType(btn, type) {
   $$('.kpi-chip').forEach(c => c.classList.remove('active'));
   if(kpiTypeSelected === type) { kpiTypeSelected = ''; }
   else { btn.classList.add('active'); kpiTypeSelected = type; }
 }
-
 g('kpi-currency').addEventListener('change', function() {
   g('custom-currency-group').style.display = this.value === 'Custom' ? 'flex' : 'none';
 });
 
 function submitKpi(e) {
   e.preventDefault();
-  const eid = rt('kpi-edit-id');
-  const cur = rv('kpi-currency');
+  const eid = rt('kpi-edit-id'), cur = rv('kpi-currency');
   const d = {
     name          : rt('kpi-name') || kpiTypeSelected || 'KPI',
     type          : kpiTypeSelected || '—',
@@ -617,11 +708,9 @@ function submitKpi(e) {
     const idx = kpiList.findIndex(k => k.id === Number(eid));
     if(idx !== -1) { d.id = Number(eid); kpiList[idx] = d; }
   } else {
-    d.id = Date.now();
-    kpiList.push(d);
+    d.id = Date.now(); kpiList.push(d);
   }
-  renderKpi();
-  closeModal('kpi');
+  renderKpi(); closeModal('kpi');
 }
 
 function renderKpi() {
@@ -635,14 +724,12 @@ function renderKpi() {
       <div class="kpi-card-unit">${du||''} ${k.period ? '· '+k.period : ''}</div>
     </div>`;
   }).join('');
-
   const tbody = g('kpiTableBody');
   if(!kpiList.length) {
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
       <i class="fa-solid fa-chart-line"></i>
       <p>No KPIs defined yet. Click <strong>Add KPI</strong> to get started.</p>
-    </div></td></tr>`;
-    return;
+    </div></td></tr>`; return;
   }
   const TP = {
     'Sales':'pill-green','Revenue':'pill-teal','Subscribers':'pill-blue',
@@ -650,29 +737,24 @@ function renderKpi() {
     'Custom':'pill-gray','—':'pill-gray'
   };
   const SP = { Active:'pill-green', Inactive:'pill-red', Draft:'pill-yellow' };
-
   tbody.innerHTML = kpiList.map((k,i) => {
     const du = k.mode === 'currency'
       ? (k.currency === 'Custom' ? `✏️ ${k.customCurrency}` : `💰 ${k.currency}`)
       : (k.unitLabel ? `📏 ${k.unitLabel}` : '—');
-    const st = k.status
-      ? `<span class="pill ${SP[k.status]||'pill-gray'}">${k.status}</span>`
-      : '<span style="color:#ccc;font-size:12px;">—</span>';
     return `<tr>
       <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
       <td><span class="name-text">${k.name}</span></td>
       <td><span class="pill ${TP[k.type]||'pill-gray'}">${k.type}</span></td>
       <td style="font-weight:600;color:#1B7D3D;">${k.value||'—'}</td>
       <td style="font-size:13px;color:#555;">${du}</td>
-      <td>${k.period ? `<span class="pill pill-teal">${k.period}</span>` : '<span style="color:#ccc;font-size:12px;">—</span>'}</td>
+      <td>${k.period ? `<span class="pill pill-teal">${k.period}</span>`
+        : '<span style="color:#ccc;font-size:12px;">—</span>'}</td>
       <td style="color:#888;font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${k.desc}">${k.desc||'—'}</td>
-      <td>
-        <div class="action-btns">
-          <button class="action-btn edit"   onclick="openEditModal('kpi',${k.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-          <button class="action-btn delete" onclick="delRec(kpiList,${k.id},renderKpi)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-        </div>
-      </td>
+      <td><div class="action-btns">
+        <button class="action-btn edit"   onclick="openEditModal('kpi',${k.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+        <button class="action-btn delete" onclick="delRec(kpiList,${k.id},renderKpi)" title="Delete"><i class="fa-solid fa-trash"></i></button>
+      </div></td>
     </tr>`;
   }).join('');
 }
@@ -682,130 +764,74 @@ function renderKpi() {
 // ══════════════════════════════════════════════════════════
 function submitNewCustomer(e) {
   e.preventDefault();
-  const eid    = rt('nc-edit-id');
-  const status = rv('nc-status');
+  const eid = rt('nc-edit-id'), status = rv('nc-status');
   const d = {
-    agent  : rt('nc-agent'),
-    branch : rt('nc-branch'),
-    name   : rt('nc-name'),
-    phone  : rt('nc-phone'),
-    product: rv('nc-product'),
-    status,
-    remark : rt('nc-remark'),
-    date   : today()
+    agent:rt('nc-agent'), branch:rt('nc-branch'), name:rt('nc-name'),
+    phone:rt('nc-phone'), product:rv('nc-product'), status, remark:rt('nc-remark'), date:today()
   };
   if(eid) {
     const idx = newCustomers.findIndex(c => c.id === Number(eid));
     if(idx !== -1) {
       d.id = Number(eid);
-      if(status === 'Closed') {
-        newCustomers.splice(idx,1);
-        topUpList.push({...d, status:'Active'});
-        renderTopUp();
-      } else {
-        newCustomers[idx] = d;
-      }
+      if(status === 'Closed') { newCustomers.splice(idx,1); topUpList.push({...d,status:'Active'}); renderTopUp(); }
+      else newCustomers[idx] = d;
     }
   } else {
     d.id = Date.now();
-    if(status === 'Closed') {
-      topUpList.push({...d, status:'Active'});
-      renderTopUp();
-    } else {
-      newCustomers.push(d);
-    }
+    if(status === 'Closed') { topUpList.push({...d,status:'Active'}); renderTopUp(); }
+    else newCustomers.push(d);
   }
-  renderNewCustomers();
-  closeModal('newCustomer');
+  renderNewCustomers(); closeModal('newCustomer');
 }
 
 function submitTopUp(e) {
   e.preventDefault();
-  const eid    = rt('tu-edit-id');
-  const status = rv('tu-status');
+  const eid = rt('tu-edit-id'), status = rv('tu-status');
   const d = {
-    agent  : rt('tu-agent'),
-    branch : rt('tu-branch'),
-    name   : rt('tu-name'),
-    phone  : rt('tu-phone'),
-    product: rv('tu-product'),
-    status,
-    remark : rt('tu-remark'),
-    date   : today()
+    agent:rt('tu-agent'), branch:rt('tu-branch'), name:rt('tu-name'),
+    phone:rt('tu-phone'), product:rv('tu-product'), status, remark:rt('tu-remark'), date:today()
   };
   if(eid) {
     const idx = topUpList.findIndex(c => c.id === Number(eid));
     if(idx !== -1) {
       d.id = Number(eid);
-      if(status === 'Termination') {
-        topUpList.splice(idx,1);
-        terminationList.push({...d, terminatedOn:today()});
-        renderTermination();
-      } else {
-        topUpList[idx] = d;
-      }
+      if(status === 'Termination') { topUpList.splice(idx,1); terminationList.push({...d,terminatedOn:today()}); renderTermination(); }
+      else topUpList[idx] = d;
     }
   } else {
     d.id = Date.now();
-    if(status === 'Termination') {
-      terminationList.push({...d, terminatedOn:today()});
-      renderTermination();
-    } else {
-      topUpList.push(d);
-    }
+    if(status === 'Termination') { terminationList.push({...d,terminatedOn:today()}); renderTermination(); }
+    else topUpList.push(d);
   }
-  renderTopUp();
-  closeModal('topUp');
+  renderTopUp(); closeModal('topUp');
 }
 
 function submitTermination(e) {
   e.preventDefault();
   const eid = rt('tm-edit-id');
   const d = {
-    agent      : rt('tm-agent'),
-    branch     : rt('tm-branch'),
-    name       : rt('tm-name'),
-    phone      : rt('tm-phone'),
-    product    : rv('tm-product'),
-    remark     : rt('tm-remark'),
-    terminatedOn: today()
+    agent:rt('tm-agent'), branch:rt('tm-branch'), name:rt('tm-name'),
+    phone:rt('tm-phone'), product:rv('tm-product'), remark:rt('tm-remark'), terminatedOn:today()
   };
   if(eid) {
     const idx = terminationList.findIndex(c => c.id === Number(eid));
     if(idx !== -1) { d.id = Number(eid); terminationList[idx] = d; }
-  } else {
-    d.id = Date.now();
-    terminationList.push(d);
-  }
-  renderTermination();
-  closeModal('termination');
+  } else { d.id = Date.now(); terminationList.push(d); }
+  renderTermination(); closeModal('termination');
 }
 
 function changeNcStatus(id, st) {
-  const idx = newCustomers.findIndex(c => c.id === id);
-  if(idx === -1) return;
+  const idx = newCustomers.findIndex(c => c.id === id); if(idx === -1) return;
   const rec = {...newCustomers[idx], status:st};
-  if(st === 'Closed') {
-    newCustomers.splice(idx,1);
-    topUpList.push({...rec, status:'Active'});
-    renderTopUp();
-  } else {
-    newCustomers[idx].status = st;
-  }
+  if(st === 'Closed') { newCustomers.splice(idx,1); topUpList.push({...rec,status:'Active'}); renderTopUp(); }
+  else newCustomers[idx].status = st;
   renderNewCustomers();
 }
-
 function changeTuStatus(id, st) {
-  const idx = topUpList.findIndex(c => c.id === id);
-  if(idx === -1) return;
+  const idx = topUpList.findIndex(c => c.id === id); if(idx === -1) return;
   const rec = {...topUpList[idx], status:st};
-  if(st === 'Termination') {
-    topUpList.splice(idx,1);
-    terminationList.push({...rec, terminatedOn:today()});
-    renderTermination();
-  } else {
-    topUpList[idx].status = st;
-  }
+  if(st === 'Termination') { topUpList.splice(idx,1); terminationList.push({...rec,terminatedOn:today()}); renderTermination(); }
+  else topUpList[idx].status = st;
   renderTopUp();
 }
 
@@ -822,18 +848,15 @@ function renderNewCustomers() {
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
       <i class="fa-solid fa-user-plus"></i>
       <p>No customers yet. Click <strong>Add Customer</strong> to get started.</p>
-    </div></td></tr>`;
-    return;
+    </div></td></tr>`; return;
   }
   tbody.innerHTML = newCustomers.map((c,i) => `
     <tr>
       <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-      <td>
-        <div class="name-cell">
-          <div class="avatar ${AV_CYC[i%4]}">${ini(c.name)}</div>
-          <span class="name-text">${c.name}</span>
-        </div>
-      </td>
+      <td><div class="name-cell">
+        <div class="avatar ${AV_CYC[i%4]}">${ini(c.name)}</div>
+        <span class="name-text">${c.name}</span>
+      </div></td>
       <td style="color:#666;font-size:13px;">
         <i class="fa-solid fa-phone" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${c.phone}
       </td>
@@ -843,23 +866,20 @@ function renderNewCustomers() {
       </td>
       <td><span class="pill ${PROD_COL[c.product]||'pill-gray'}">${c.product}</span></td>
       <td>
-        <select class="pill ${NC_COL[c.status]||'pill-gray'}"
-          onchange="changeNcStatus(${c.id},this.value)"
+        <select class="pill ${NC_COL[c.status]||'pill-gray'}" onchange="changeNcStatus(${c.id},this.value)"
           style="border:none;cursor:pointer;font-size:11.5px;font-weight:600;padding:3px 8px;
                  border-radius:20px;outline:none;background:inherit;color:inherit;">
-          <option ${c.status==='New Lead'     ?'selected':''}>New Lead</option>
-          <option ${c.status==='Hot Prospect' ?'selected':''}>Hot Prospect</option>
-          <option ${c.status==='Closed'       ?'selected':''}>Closed</option>
+          <option ${c.status==='New Lead'    ?'selected':''}>New Lead</option>
+          <option ${c.status==='Hot Prospect'?'selected':''}>Hot Prospect</option>
+          <option ${c.status==='Closed'      ?'selected':''}>Closed</option>
         </select>
       </td>
       <td style="color:#888;font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${c.remark}">${c.remark||'—'}</td>
-      <td>
-        <div class="action-btns">
-          <button class="action-btn edit"   onclick="openEditModal('newCustomer',${c.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-          <button class="action-btn delete" onclick="delRec(newCustomers,${c.id},renderNewCustomers)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-        </div>
-      </td>
+      <td><div class="action-btns">
+        <button class="action-btn edit"   onclick="openEditModal('newCustomer',${c.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+        <button class="action-btn delete" onclick="delRec(newCustomers,${c.id},renderNewCustomers)" title="Delete"><i class="fa-solid fa-trash"></i></button>
+      </div></td>
     </tr>`).join('');
 }
 
@@ -870,18 +890,15 @@ function renderTopUp() {
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
       <i class="fa-solid fa-arrow-up-right-dots"></i>
       <p>No top up records yet.</p>
-    </div></td></tr>`;
-    return;
+    </div></td></tr>`; return;
   }
   tbody.innerHTML = topUpList.map((c,i) => `
     <tr>
       <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-      <td>
-        <div class="name-cell">
-          <div class="avatar ${AV_CYC[i%4]}">${ini(c.name)}</div>
-          <span class="name-text">${c.name}</span>
-        </div>
-      </td>
+      <td><div class="name-cell">
+        <div class="avatar ${AV_CYC[i%4]}">${ini(c.name)}</div>
+        <span class="name-text">${c.name}</span>
+      </div></td>
       <td style="color:#666;font-size:13px;">
         <i class="fa-solid fa-phone" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${c.phone}
       </td>
@@ -891,8 +908,7 @@ function renderTopUp() {
       </td>
       <td><span class="pill ${PROD_COL[c.product]||'pill-gray'}">${c.product}</span></td>
       <td>
-        <select class="pill ${c.status==='Active'?'pill-green':'pill-red'}"
-          onchange="changeTuStatus(${c.id},this.value)"
+        <select class="pill ${c.status==='Active'?'pill-green':'pill-red'}" onchange="changeTuStatus(${c.id},this.value)"
           style="border:none;cursor:pointer;font-size:11.5px;font-weight:600;padding:3px 8px;
                  border-radius:20px;outline:none;background:inherit;color:inherit;">
           <option ${c.status==='Active'     ?'selected':''}>Active</option>
@@ -901,12 +917,10 @@ function renderTopUp() {
       </td>
       <td style="color:#888;font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${c.remark}">${c.remark||'—'}</td>
-      <td>
-        <div class="action-btns">
-          <button class="action-btn edit"   onclick="openEditModal('topUp',${c.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-          <button class="action-btn delete" onclick="delRec(topUpList,${c.id},renderTopUp)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-        </div>
-      </td>
+      <td><div class="action-btns">
+        <button class="action-btn edit"   onclick="openEditModal('topUp',${c.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+        <button class="action-btn delete" onclick="delRec(topUpList,${c.id},renderTopUp)" title="Delete"><i class="fa-solid fa-trash"></i></button>
+      </div></td>
     </tr>`).join('');
 }
 
@@ -917,18 +931,15 @@ function renderTermination() {
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
       <i class="fa-solid fa-ban"></i>
       <p>No terminated customers yet.</p>
-    </div></td></tr>`;
-    return;
+    </div></td></tr>`; return;
   }
   tbody.innerHTML = terminationList.map((c,i) => `
     <tr>
       <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-      <td>
-        <div class="name-cell">
-          <div class="avatar orange">${ini(c.name)}</div>
-          <span class="name-text">${c.name}</span>
-        </div>
-      </td>
+      <td><div class="name-cell">
+        <div class="avatar orange">${ini(c.name)}</div>
+        <span class="name-text">${c.name}</span>
+      </div></td>
       <td style="color:#666;font-size:13px;">
         <i class="fa-solid fa-phone" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${c.phone}
       </td>
@@ -940,12 +951,10 @@ function renderTermination() {
       <td style="color:#888;font-size:13px;">${c.terminatedOn}</td>
       <td style="color:#888;font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
           title="${c.remark}">${c.remark||'—'}</td>
-      <td>
-        <div class="action-btns">
-          <button class="action-btn edit"   onclick="openEditModal('termination',${c.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-          <button class="action-btn delete" onclick="delRec(terminationList,${c.id},renderTermination)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-        </div>
-      </td>
+      <td><div class="action-btns">
+        <button class="action-btn edit"   onclick="openEditModal('termination',${c.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+        <button class="action-btn delete" onclick="delRec(terminationList,${c.id},renderTermination)" title="Delete"><i class="fa-solid fa-trash"></i></button>
+      </div></td>
     </tr>`).join('');
 }
 
@@ -954,29 +963,18 @@ function renderTermination() {
 // ══════════════════════════════════════════════════════════
 function submitUser(e) {
   e.preventDefault();
-  const eid = rt('au-edit-id');
-  const pwd = rv('au-password');
+  const eid = rt('au-edit-id'), pwd = rv('au-password');
   const d = {
-    fullname: rt('au-fullname'),
-    username: rt('au-username'),
-    role    : rv('au-role'),
-    status  : rv('au-status'),
-    branch  : rt('au-branch')
+    fullname: rt('au-fullname'), username: rt('au-username'),
+    role: rv('au-role'), status: rv('au-status'), branch: rt('au-branch')
   };
   if(eid) {
     const idx = staffList.findIndex(u => u.id === Number(eid));
-    if(idx !== -1) {
-      d.id       = Number(eid);
-      d.password = pwd || staffList[idx].password;
-      staffList[idx] = d;
-    }
+    if(idx !== -1) { d.id = Number(eid); d.password = pwd || staffList[idx].password; staffList[idx] = d; }
   } else {
-    d.id       = Date.now();
-    d.password = pwd;
-    staffList.push(d);
+    d.id = Date.now(); d.password = pwd; staffList.push(d);
   }
-  renderStaff();
-  closeModal('addUser');
+  renderStaff(); closeModal('addUser');
 }
 
 function renderStaff() {
@@ -985,40 +983,33 @@ function renderStaff() {
     tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
       <i class="fa-regular fa-user"></i>
       <p>No staff added yet. Click <strong>Add User</strong> to get started.</p>
-    </div></td></tr>`;
-    return;
+    </div></td></tr>`; return;
   }
   tbody.innerHTML = staffList.map((u,i) => {
-    const roleCls  = {Admin:'pill-green', Supervisor:'pill-yellow', User:'pill-blue'}[u.role] || 'pill-gray';
-    const roleIcon = {Admin:'fa-user-shield', Supervisor:'fa-user-tie', User:'fa-user'}[u.role] || 'fa-user';
+    const roleCls  = {Admin:'pill-green',Supervisor:'pill-yellow',User:'pill-blue'}[u.role]||'pill-gray';
+    const roleIcon = {Admin:'fa-user-shield',Supervisor:'fa-user-tie',User:'fa-user'}[u.role]||'fa-user';
     const stsCls   = u.status === 'Active' ? 'pill-green pill-dot' : 'pill-red pill-dot';
     return `
       <tr>
         <td style="color:#aaa;font-size:12px;font-weight:600;">${pad(i)}</td>
-        <td>
-          <div class="name-cell">
-            <div class="avatar">${ini(u.fullname)}</div>
-            <span class="name-text">${u.fullname}</span>
-          </div>
-        </td>
+        <td><div class="name-cell">
+          <div class="avatar">${ini(u.fullname)}</div>
+          <span class="name-text">${u.fullname}</span>
+        </div></td>
         <td style="color:#888;font-size:13px;">
           <i class="fa-solid fa-at" style="font-size:11px;color:#ccc;margin-right:3px;"></i>${u.username}
         </td>
-        <td>
-          <span class="pill ${roleCls}">
-            <i class="fa-solid ${roleIcon}" style="font-size:10px;"></i> ${u.role}
-          </span>
-        </td>
+        <td><span class="pill ${roleCls}">
+          <i class="fa-solid ${roleIcon}" style="font-size:10px;"></i> ${u.role}
+        </span></td>
         <td style="color:#555;font-size:13px;">
           <i class="fa-solid fa-building" style="color:#ccc;font-size:11px;margin-right:4px;"></i>${u.branch}
         </td>
         <td><span class="pill ${stsCls}">${u.status}</span></td>
-        <td>
-          <div class="action-btns">
-            <button class="action-btn edit"   onclick="openEditModal('addUser',${u.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
-            <button class="action-btn delete" onclick="delRec(staffList,${u.id},renderStaff)" title="Delete"><i class="fa-solid fa-trash"></i></button>
-          </div>
-        </td>
+        <td><div class="action-btns">
+          <button class="action-btn edit"   onclick="openEditModal('addUser',${u.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+          <button class="action-btn delete" onclick="delRec(staffList,${u.id},renderStaff)" title="Delete"><i class="fa-solid fa-trash"></i></button>
+        </div></td>
       </tr>`;
   }).join('');
 }
@@ -1035,13 +1026,32 @@ function switchRole(role) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  INIT
+//  CURRENCY & UNIT TOGGLE LISTENERS
 // ══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const itemCurSel = g('item-currency');
+  if(itemCurSel) {
+    itemCurSel.addEventListener('change', function() {
+      g('item-custom-currency-group').style.display = this.value === 'custom' ? 'flex' : 'none';
+    });
+  }
+  const itemUnitSel = g('item-unit');
+  if(itemUnitSel) {
+    itemUnitSel.addEventListener('change', function() {
+      g('item-custom-unit-group').style.display = this.value === 'custom' ? 'flex' : 'none';
+    });
+  }
+});
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════���═
 renderNewCustomers();
 renderTopUp();
 renderTermination();
 renderStaff();
 renderKpi();
-renderSaleTable();
 renderItemChips();
+refreshFilterItemSelect();
+applyReportFilters();
 setValueMode('unit');
