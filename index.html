@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart 5G Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Smart_Communications_logo.svg/800px-Smart_Communications_logo.svg.png"
+         alt="Smart 5G"
+         onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex';"/>
+    <div id="logoFallback" class="logo-fallback">
+      <span class="logo-title">SMART</span><span class="logo-sub">· Axiata ·</span>
+    </div>
+  </div>
+
+  <div class="nav-section-label">Main Menu</div>
+  <button class="nav-item active" onclick="navigateTo('dashboard',this)">
+    <span class="nav-icon"><i class="fa-solid fa-gauge-high"></i></span>Dashboard
+  </button>
+  <button class="nav-item" onclick="navigateTo('promotionPage',this)">
+    <span class="nav-icon"><i class="fa-solid fa-bullhorn"></i></span>Promotion
+  </button>
+
+  <!-- Sale -->
+  <button class="nav-item has-submenu" id="saleNavBtn" onclick="toggleSubmenu('saleSubmenu',this)">
+    <span class="nav-icon"><i class="fa-solid fa-chart-bar"></i></span>Sale
+    <span class="nav-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+  </button>
+  <div class="submenu" id="saleSubmenu">
+    <button class="submenu-item" onclick="openSaleTab('dailySale',this)">
+      <span class="sub-icon"><i class="fa-solid fa-calendar-day"></i></span>Daily Sale
+    </button>
+  </div>
+
+  <!-- Deposit -->
+  <button class="nav-item" onclick="navigateTo('deposit',this)">
+    <span class="nav-icon"><i class="fa-solid fa-vault"></i></span>Deposit
+  </button>
+
+  <!-- Customer -->
+  <button class="nav-item has-submenu" id="customerNavBtn" onclick="toggleSubmenu('customerSubmenu',this)">
+    <span class="nav-icon"><i class="fa-solid fa-users"></i></span>Customer
+    <span class="nav-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+  </button>
+  <div class="submenu" id="customerSubmenu">
+    <button class="submenu-item" onclick="openCustomerTab('newCustomer',this)">
+      <span class="sub-icon"><i class="fa-solid fa-user-plus"></i></span>New Customer
+    </button>
+    <button class="submenu-item" onclick="openCustomerTab('topUp',this)">
+      <span class="sub-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></span>Top Up
+    </button>
+    <button class="submenu-item" onclick="openCustomerTab('termination',this)">
+      <span class="sub-icon"><i class="fa-solid fa-ban"></i></span>Termination
+    </button>
+  </div>
+
+  <div class="nav-section-label">Configuration</div>
+  <button class="nav-item has-submenu" id="settingsNavBtn" onclick="toggleSubmenu('settingsSubmenu',this)">
+    <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>Settings
+    <span class="nav-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+  </button>
+  <div class="submenu" id="settingsSubmenu">
+    <button class="submenu-item" onclick="openSettingsTab('permission',this)">
+      <span class="sub-icon"><i class="fa-solid fa-shield-halved"></i></span>Permission
+    </button>
+    <button class="submenu-item" onclick="openSettingsTab('kpi',this)">
+      <span class="sub-icon"><i class="fa-solid fa-chart-line"></i></span>KPI Setting
+    </button>
+    <button class="submenu-item" onclick="openSettingsTab('promotionSetting',this)">
+      <span class="sub-icon"><i class="fa-solid fa-tag"></i></span>Promotion
+    </button>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+  <div class="topbar">
+    <h1 id="pageTitle">Dashboard</h1>
+    <div class="topbar-right">
+      <button class="topbar-icon-btn"><i class="fa-regular fa-bell"></i></button>
+      <div class="user-pill">
+        <div class="user-avatar" id="userAvatar">AU</div>
+        <div>
+          <div class="user-pill-name" id="userNameDisplay">Admin User</div>
+          <div class="user-pill-role" id="roleBadgeDisplay">Admin</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-area">
+
+    <!-- Dashboard -->
+    <div id="page-dashboard" class="page active">
+      <div class="blank-placeholder">
+        <i class="fa-solid fa-gauge-high"></i>
+        <h2>Dashboard</h2><p>Your dashboard content will appear here.</p>
+      </div>
+    </div>
+
+    <!-- Promotion -->
+    <div id="page-promotionPage" class="page">
+      <div class="blank-placeholder">
+        <i class="fa-solid fa-bullhorn"></i>
+        <h2>Promotion</h2><p>Your promotion content will appear here.</p>
+      </div>
+    </div>
+
+    <!-- Deposit -->
+    <div id="page-deposit" class="page">
+      <div class="blank-placeholder">
+        <i class="fa-solid fa-vault"></i>
+        <h2>Deposit</h2><p>Your deposit content will appear here.</p>
+      </div>
+    </div>
+
+    <!-- ══ SALE PAGE ══ -->
+    <div id="page-sale" class="page">
+      <div class="card">
+        <div class="tab-header">
+          <button class="tab-btn active" id="stab-dailySale-btn" onclick="switchSaleTab('dailySale')">
+            <i class="fa-solid fa-calendar-day"></i>Daily Sale
+          </button>
+        </div>
+        <div id="stab-dailySale" class="tab-content active">
+          <div class="daily-sale-wrapper">
+            <div class="page-header" style="padding:0 0 18px 0;">
+              <div class="page-header-left">
+                <h2>Daily Sale</h2>
+                <p>Record daily sales per agent and manage sale items</p>
+              </div>
+              <div class="page-header-right">
+                <button class="btn-secondary" onclick="openAddModal('addItem')">
+                  <i class="fa-solid fa-boxes-stacked"></i>Add Items
+                </button>
+                <button class="btn-primary" onclick="openNewSaleModal()">
+                  <i class="fa-solid fa-plus"></i>New Sale
+                </button>
+              </div>
+            </div>
+            <!-- Item catalogue strip -->
+            <div class="items-strip">
+              <div class="items-strip-label">Item Catalogue — click chip to quick-add to a sale</div>
+              <div id="itemChipsContainer" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <span class="no-items-hint"><i class="fa-solid fa-circle-info"></i>&nbsp;No items yet — click <strong style="margin:0 3px;">Add Items</strong> to build your catalogue.</span>
+              </div>
+            </div>
+            <!-- Sale records table -->
+            <div class="sale-table-card">
+              <div class="sale-table-header">
+                <span><i class="fa-solid fa-receipt" style="margin-right:6px;color:#1B7D3D;"></i>Sale Records</span>
+                <span id="saleCountBadge" class="pill pill-green" style="display:none;"></span>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr>
+                    <th>#</th><th>Agent</th><th>Branch</th><th>Date</th>
+                    <th>Items</th><th>Qty</th><th>Total</th><th>Note</th><th>Action</th>
+                  </tr></thead>
+                  <tbody id="saleTableBody"></tbody>
+                </table>
+              </div>
+              <div class="sale-total-bar" id="saleTotalBar" style="display:none;">
+                <span class="total-label"><i class="fa-solid fa-sigma" style="margin-right:4px;"></i>Grand Total</span>
+                <span class="total-value" id="grandTotal">$0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CUSTOMER PAGE ══ -->
+    <div id="page-customer" class="page">
+      <div class="card">
+        <div class="tab-header">
+          <button class="tab-btn active" id="ctab-newCustomer-btn" onclick="switchCustomerTab('newCustomer')">
+            <i class="fa-solid fa-user-plus"></i>New Customer
+          </button>
+          <button class="tab-btn" id="ctab-topUp-btn" onclick="switchCustomerTab('topUp')">
+            <i class="fa-solid fa-arrow-up-right-dots"></i>Top Up
+          </button>
+          <button class="tab-btn" id="ctab-termination-btn" onclick="switchCustomerTab('termination')">
+            <i class="fa-solid fa-ban"></i>Termination
+          </button>
+        </div>
+        <!-- New Customer -->
+        <div id="ctab-newCustomer" class="tab-content active">
+          <div class="page-header">
+            <div class="page-header-left"><h2>New Customer</h2><p>Manage new customer leads and prospects</p></div>
+            <button class="btn-primary" onclick="openAddModal('newCustomer')"><i class="fa-solid fa-user-plus"></i>Add Customer</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Customer Name</th><th>Phone</th><th>Agent</th><th>Branch</th><th>Product</th><th>Status</th><th>Remark</th><th>Action</th></tr></thead>
+              <tbody id="newCustomerBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Top Up -->
+        <div id="ctab-topUp" class="tab-content">
+          <div class="page-header">
+            <div class="page-header-left"><h2>Top Up</h2><p>Active customers — manage top up &amp; status</p></div>
+            <button class="btn-primary" onclick="openAddModal('topUp')"><i class="fa-solid fa-plus"></i>Add Top Up</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Customer Name</th><th>Phone</th><th>Agent</th><th>Branch</th><th>Product</th><th>Status</th><th>Remark</th><th>Action</th></tr></thead>
+              <tbody id="topUpBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Termination -->
+        <div id="ctab-termination" class="tab-content">
+          <div class="page-header">
+            <div class="page-header-left"><h2>Termination</h2><p>Terminated customer accounts</p></div>
+            <button class="btn-primary" onclick="openAddModal('termination')"><i class="fa-solid fa-plus"></i>Add Termination</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>#</th><th>Customer Name</th><th>Phone</th><th>Agent</th><th>Branch</th><th>Product</th><th>Terminated On</th><th>Remark</th><th>Action</th></tr></thead>
+              <tbody id="terminationBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SETTINGS PAGE ══ -->
+    <div id="page-settings" class="page">
+      <div class="card">
+        <div class="tab-header">
+          <button class="tab-btn active" id="tab-permission-btn" onclick="switchSettingsTab('permission')"><i class="fa-solid fa-shield-halved"></i>Permission</button>
+          <button class="tab-btn" id="tab-kpi-btn" onclick="switchSettingsTab('kpi')"><i class="fa-solid fa-chart-line"></i>KPI Setting</button>
+          <button class="tab-btn" id="tab-promotionSetting-btn" onclick="switchSettingsTab('promotionSetting')"><i class="fa-solid fa-tag"></i>Promotion</button>
+        </div>
+        <!-- Permission -->
+        <div id="tab-permission" class="tab-content active">
+          <div class="permission-page">
+            <div class="permission-header">
+              <div class="permission-header-left"><h2>Staff Management</h2><p>Manage user accounts and access roles</p></div>
+              <button class="btn-primary" onclick="openAddModal('addUser')"><i class="fa-solid fa-user-plus"></i>Add User</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>Full Name</th><th>Username</th><th>Role</th><th>Branch</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="staffTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- KPI -->
+        <div id="tab-kpi" class="tab-content">
+          <div class="kpi-page">
+            <div class="kpi-header">
+              <div class="kpi-header-left"><h2>KPI Setting</h2><p>Define KPI metrics, targets, and measurement units</p></div>
+              <button class="btn-primary" onclick="openAddModal('kpi')"><i class="fa-solid fa-plus"></i>Add KPI</button>
+            </div>
+            <div class="kpi-summary" id="kpiSummaryCards"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>KPI Name</th><th>Type</th><th>Target Value</th><th>Unit / Currency</th><th>Period</th><th>Description</th><th>Action</th></tr></thead>
+                <tbody id="kpiTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- Promotion Setting -->
+        <div id="tab-promotionSetting" class="tab-content">
+          <div id="promotionSetting-content" style="padding:24px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+</div><!-- /main -->
+
+<!-- ══════════════ MODALS ══════════════ -->
+
+<!-- ADD ITEM -->
+<div class="modal-overlay" id="modal-addItem" onclick="handleOverlay(event,'addItem')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon purple"><i class="fa-solid fa-boxes-stacked"></i></div>
+        <div><h3 id="addItem-title">Add Item</h3><p id="addItem-sub">Create a new sale catalogue item</p></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('addItem')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitItem(event)">
+      <div class="modal-body">
+        <input type="hidden" id="item-edit-id"/>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-tag"></i>Item Name <span class="req">*</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-tag input-icon"></i>
+            <input type="text" id="item-name" placeholder="e.g. SIM Card, Fiber Plan…" required/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-dollar-sign"></i>Price <span class="opt">(optional)</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-dollar-sign input-icon"></i>
+              <input type="number" id="item-price" placeholder="0.00" min="0" step="0.01"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-ruler"></i>Unit <span class="opt">(optional)</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-ruler input-icon"></i>
+              <input type="text" id="item-unit" placeholder="e.g. pcs, line, pkg…"/>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-layer-group"></i>Category <span class="opt">(optional)</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-layer-group input-icon"></i>
+              <select id="item-category">
+                <option value="">— No category —</option>
+                <option>SIM</option><option>Data</option><option>Fiber</option>
+                <option>Device</option><option>Accessory</option><option>Package</option><option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-circle-dot"></i>Status</label>
+            <div class="input-wrap"><i class="fa-solid fa-circle-dot input-icon"></i>
+              <select id="item-status">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-align-left"></i>Description <span class="opt">(optional)</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-align-left input-icon" style="top:14px;"></i>
+            <textarea id="item-desc" placeholder="Optional description…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('addItem')"><i class="fa-solid fa-xmark"></i>Cancel</button>
+        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i><span id="item-save-label">Save Item</span></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- NEW SALE -->
+<div class="modal-overlay" id="modal-newSale" onclick="handleOverlay(event,'newSale')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon"><i class="fa-solid fa-receipt"></i></div>
+        <div><h3 id="newSale-title">New Sale</h3><p id="newSale-sub">Record a sale for an agent</p></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('newSale')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitSale(event)">
+      <div class="modal-body">
+        <input type="hidden" id="sale-edit-id"/>
+        <div class="form-divider">Agent Info</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-tie"></i>Agent Name <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user-tie input-icon"></i>
+              <input type="text" id="sale-agent" placeholder="Agent name" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i>
+              <input type="text" id="sale-branch" placeholder="e.g. Phnom Penh HQ" required/>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-regular fa-calendar"></i>Sale Date <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-regular fa-calendar input-icon"></i>
+              <input type="date" id="sale-date" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-comment"></i>Note <span class="opt">(optional)</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-comment input-icon"></i>
+              <input type="text" id="sale-note" placeholder="Optional note…"/>
+            </div>
+          </div>
+        </div>
+        <div class="form-divider">Sale Items</div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-boxes-stacked"></i>Add Item from Catalogue</label>
+          <div style="display:flex;gap:10px;">
+            <div class="input-wrap" style="flex:1;">
+              <i class="fa-solid fa-magnifying-glass input-icon"></i>
+              <select id="sale-item-select"><option value="">— Select an item —</option></select>
+            </div>
+            <button type="button" class="btn-primary" style="white-space:nowrap;" onclick="addItemToSale()">
+              <i class="fa-solid fa-plus"></i>Add
+            </button>
+          </div>
+        </div>
+        <div id="saleItemsList" class="sale-items-list">
+          <div class="no-items-selected" id="noItemsMsg">
+            <i class="fa-solid fa-cart-shopping"></i>
+            No items added yet. Select from the dropdown above.
+          </div>
+        </div>
+        <div class="sale-modal-total" id="saleModalTotal" style="display:none;">
+          <span class="label"><i class="fa-solid fa-sigma" style="margin-right:6px;"></i>Sale Total</span>
+          <span class="value" id="saleModalTotalVal">$0.00</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('newSale')"><i class="fa-solid fa-xmark"></i>Cancel</button>
+        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i><span id="sale-save-label">Save Sale</span></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- NEW CUSTOMER -->
+<div class="modal-overlay" id="modal-newCustomer" onclick="handleOverlay(event,'newCustomer')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon blue"><i class="fa-solid fa-user-plus"></i></div>
+        <div><h3 id="nc-modal-title">Add New Customer</h3><p id="nc-modal-sub">Fill in the customer lead details</p></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('newCustomer')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitNewCustomer(event)">
+      <div class="modal-body">
+        <input type="hidden" id="nc-edit-id"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-tie"></i>Agent <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user-tie input-icon"></i><input type="text" id="nc-agent" placeholder="Agent name" required/></div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i><input type="text" id="nc-branch" placeholder="e.g. Phnom Penh HQ" required/></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user"></i>Customer Name <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user input-icon"></i><input type="text" id="nc-name" placeholder="Full name" required/></div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-phone"></i>Phone <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-phone input-icon"></i><input type="text" id="nc-phone" placeholder="e.g. 012 345 678" required/></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-box"></i>Product <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-box input-icon"></i>
+              <select id="nc-product" required>
+                <option value="" disabled selected>Select product</option>
+                <option>Smart@Home</option><option>Smart Fiber+</option><option>M2M</option><option>Smart Laor 6</option><option>Smart Laor 10$</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-flag"></i>Status <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-flag input-icon"></i>
+              <select id="nc-status" required>
+                <option value="" disabled selected>Select status</option>
+                <option>New Lead</option><option>Hot Prospect</option><option>Closed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-comment"></i>Remark</label>
+          <div class="input-wrap"><i class="fa-solid fa-comment input-icon" style="top:14px;"></i><textarea id="nc-remark" placeholder="Optional remarks..."></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('newCustomer')"><i class="fa-solid fa-xmark"></i>Cancel</button>
+        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i>Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TOP UP -->
+<div class="modal-overlay" id="modal-topUp" onclick="handleOverlay(event,'topUp')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon teal"><i class="fa-solid fa-arrow-up-right-dots"></i></div>
+        <div><h3 id="tu-modal-title">Add Top Up</h3><p id="tu-modal-sub">Enter top up customer details</p></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('topUp')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitTopUp(event)">
+      <div class="modal-body">
+        <input type="hidden" id="tu-edit-id"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-tie"></i>Agent <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user-tie input-icon"></i><input type="text" id="tu-agent" placeholder="Agent name" required/></div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i><input type="text" id="tu-branch" placeholder="e.g. Phnom Penh HQ" required/></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user"></i>Customer Name <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user input-icon"></i><input type="text" id="tu-name" placeholder="Full name" required/></div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-phone"></i>Phone <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-phone input-icon"></i><input type="text" id="tu-phone" placeholder="e.g. 012 345 678" required/></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-box"></i>Product <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-box input-icon"></i>
+              <select id="tu-product" required>
+                <option value="" disabled selected>Select product</option>
+                <option>Smart@Home</option><option>Smart Fiber+</option><option>M2M</option><option>Smart Laor 6</option><option>Smart Laor 10$</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-circle-dot"></i>Status <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-circle-dot input-icon"></i>
+              <select id="tu-status" required>
+                <option value="" disabled selected>Select status</option>
+                <option>Active</option><option>Termination</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-comment"></i>Remark</label>
+          <div class="input-wrap"><i class="fa-solid fa-comment input-icon" style="top:14px;"></i><textarea id="tu-remark" placeholder="Optional remarks..."></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('topUp')"><i class="fa-solid fa-xmark"></i>Cancel</button>
+        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i>Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TERMINATION -->
+<div class="modal-overlay" id="modal-termination" onclick="handleOverlay(event,'termination')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon red"><i class="fa-solid fa-ban"></i></div>
+        <div><h3 id="tm-modal-title">Add Termination</h3><p id="tm-modal-sub">Record a terminated customer</p></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('termination')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitTermination(event)">
+      <div class="modal-body">
+        <input type="hidden" id="tm-edit-id"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-tie"></i>Agent <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user-tie input-icon"></i><input type="text" id="tm-agent" placeholder="Agent name" required/></div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i><input type="text" id="tm-branch" placeholder="e.g. Phnom Penh HQ" required/></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user"></i>Customer Name <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user input-icon"></i><input type="text" id="tm-name" placeholder="Full name" required/></div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-phone"></i>Phone <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-phone input-icon"></i><input type="text" id="tm-phone" placeholder="e.g. 012 345 678" required/></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-box"></i>Product <span class="req">*</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-box input-icon"></i>
+            <select id="tm-product" required>
+              <option value="" disabled selected>Select product</option>
+              <option>Smart@Home</option><option>Smart Fiber+</option><option>M2M</option><option>Smart Laor 6</option><option>Smart Laor 10$</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-comment"></i>Remark</label>
+          <div class="input-wrap"><i class="fa-solid fa-comment input-icon" style="top:14px;"></i><textarea id="tm-remark" placeholder="Optional remarks..."></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('termination')"><i class="fa-solid fa-xmark"></i>Cancel</button>
+        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i>Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="modal-overlay" id="modal-kpi" onclick="handleOverlay(event,'kpi')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon teal"><i class="fa-solid fa-chart-line"></i></div>
+        <div><h3 id="kpi-modal-title">Add KPI</h3><p id="kpi-modal-sub">Define a new KPI metric and target</p></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('kpi')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitKpi(event)">
+      <div class="modal-body">
+        <input type="hidden" id="kpi-edit-id"/>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-tag"></i>KPI Name <span class="opt">(optional)</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-tag input-icon"></i>
+            <input type="text" id="kpi-name" placeholder="e.g. Monthly Sales Target…"/>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-layer-group"></i>KPI Type <span class="opt">(optional)</span></label>
+          <div class="kpi-type-chips" id="kpiTypeChips">
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Sales')">📈 Sales</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Revenue')">💰 Revenue</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Subscribers')">👥 Subscribers</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Retention')">🔁 Retention</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Churn')">📉 Churn</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'NPS')">⭐ NPS</button>
+            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Custom')">✏️ Custom</button>
+          </div>
+        </div>
+        <div class="form-divider">Target &amp; Measurement</div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-bullseye"></i>Target Value <span class="opt">(optional)</span></label>
+          <div class="value-unit-row">
+            <div class="input-wrap"><i class="fa-solid fa-hashtag input-icon"></i>
+              <input type="number" id="kpi-value" placeholder="e.g. 1000" min="0" step="any"/>
+            </div>
+            <div class="unit-toggle">
+              <button type="button" id="btn-unit" class="active" onclick="setValueMode('unit')"><i class="fa-solid fa-ruler"></i>Unit</button>
+              <button type="button" id="btn-currency" onclick="setValueMode('currency')"><i class="fa-solid fa-dollar-sign"></i>Currency</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full" id="unit-label-group">
+          <label><i class="fa-solid fa-ruler"></i>Unit Label <span class="opt">(optional)</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-pen input-icon"></i>
+            <input type="text" id="kpi-unit-label" placeholder="e.g. Subscribers, Lines, %"/>
+          </div>
+        </div>
+        <div class="currency-select-wrap" id="currency-group">
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fa-solid fa-coins"></i>Currency <span class="opt">(optional)</span></label>
+              <div class="input-wrap"><i class="fa-solid fa-coins input-icon"></i>
+                <select id="kpi-currency">
+                  <option value="" disabled selected>Select currency</option>
+                  <option value="USD">🇺🇸 USD</option><option value="KHR">🇰🇭 KHR</option>
+                  <option value="THB">🇹🇭 THB</option><option value="SGD">🇸🇬 SGD</option>
+                  <option value="EUR">🇪🇺 EUR</option><option value="GBP">🇬🇧 GBP</option>
+                  <option value="Custom">✏️ Custom</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group" id="custom-currency-group" style="display:none;">
+              <label><i class="fa-solid fa-pen"></i>Custom Symbol</label>
+              <div class="input-wrap"><i class="fa-solid fa-pen input-icon"></i>
+                <input type="text" id="kpi-custom-currency" placeholder="e.g. BTC…"/>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-regular fa-calendar"></i>Period <span class="opt">(optional)</span></label>
+            <div class="input-wrap"><i class="fa-regular fa-calendar input-icon"></i>
+              <select id="kpi-period">
+                <option value="">— No period —</option>
+                <option>Daily</option><option>Weekly</option><option>Monthly</option>
+                <option>Quarterly</option><option>Half-Yearly</option><option>Yearly</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-circle-dot"></i>Status <span class="opt">(optional)</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-circle-dot input-icon"></i>
+              <select id="kpi-status">
+                <option value="">— No status —</option>
+                <option>Active</option><option>Inactive</option><option>Draft</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label><i class="fa-solid fa-align-left"></i>Description <span class="opt">(optional)</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-align-left input-icon" style="top:14px;"></i>
+            <textarea id="kpi-desc" placeholder="Describe this KPI metric…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('kpi')"><i class="fa-solid fa-xmark"></i>Cancel</button>
+        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i><span id="kpi-save-label">Save KPI</span></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ADD USER -->
+<div class="modal-overlay" id="modal-addUser" onclick="handleOverlay(event,'addUser')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-header-icon"><i class="fa-solid fa-user-plus"></i></div>
+        <div><h3 id="au-modal-title">Add New User</h3><p id="au-modal-sub">Create a staff account</p></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('addUser')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form onsubmit="submitUser(event)">
+      <div class="modal-body">
+        <input type="hidden" id="au-edit-id"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-regular fa-id-card"></i>Full Name <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-regular fa-id-card input-icon"></i><input type="text" id="au-fullname" placeholder="e.g. John Smith" required/></div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-at"></i>Username <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-at input-icon"></i><input type="text" id="au-username" placeholder="e.g. john.smith" required/></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-lock"></i>Password <span class="req" id="au-pwd-req">*</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-lock input-icon"></i>
+            <input type="password" id="au-password" placeholder="Enter password"/>
+            <button type="button" class="password-eye" onclick="togglePwd('au-password','au-eye')"><i class="fa-regular fa-eye" id="au-eye"></i></button>
+          </div>
+          <span id="au-pwd-hint" style="font-size:11px;color:#aaa;display:none;">Leave blank to keep current password</span>
+        </div>
+        <div class="form-divider">Account Details</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-shield"></i>Role <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-user-shield input-icon"></i>
+              <select id="au-role" required>
+                <option value="" disabled selected>Select role</option>
+                <option>Admin</option><option>Supervisor</option><option>User</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-circle-dot"></i>Status <span class="req">*</span></label>
+            <div class="input-wrap"><i class="fa-solid fa-circle-dot input-icon"></i>
+              <select id="au-status" required>
+                <option value="" disabled selected>Select status</option>
+                <option>Active</option><option>Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
+          <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i><input type="text" id="au-branch" placeholder="e.g. Phnom Penh HQ" required/></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeModal('addUser')"><i class="fa-solid fa-xmark"></i>Cancel</button>
+        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i><span id="au-save-label">Save User</span></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ROLE SWITCHER -->
+<div class="role-selector">
+  <div class="role-selector-title">Demo — Switch Role</div>
+  <div class="role-selector-row">
+    <i class="fa-solid fa-masks-theater" style="color:#aaa;font-size:13px;"></i>
+    <select id="roleSelect" onchange="switchRole(this.value)">
+      <option value="admin">Admin</option>
+      <option value="supervisor">Supervisor</option>
+      <option value="user">User</option>
+    </select>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
