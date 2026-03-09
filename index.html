@@ -1,1191 +1,1467 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Smart 5G Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <link rel="stylesheet" href="style.css"/>
+  <!-- Google Sheets Sync
+       Web App : https://script.google.com/macros/s/AKfycbzg57wCoKKUgeoZKXCftikpJPVusz4U-1mIymDSUa1q_Op-RNzO7ZJnlB9SDfz7J6XL/exec
+       Sheet   : https://docs.google.com/spreadsheets/d/1olDtHW2temS2qee-OfCRYsJs4Ub_OJBADncCsibILHc/edit
+       Sync is performed automatically from app.js whenever data is saved or deleted.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" crossorigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Professional overrides ── */
+    :root {
+      --color-primary: #1B7D3D;
+      --color-primary-dark: #155f2e;
+      --sidebar-width: 240px;
+      --topbar-height: 60px;
+    }
+
+    /* Sidebar logo */
+    .sidebar-logo { display:flex; align-items:center; gap:10px; padding:20px 18px 16px; border-bottom:1px solid rgba(255,255,255,.18); }
+    .sidebar-logo-icon { width:40px; height:40px; min-width:40px; background:rgba(255,255,255,.2); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; color:#fff; flex-shrink:0; box-shadow:0 0 10px rgba(255,255,255,.25); }
+    .sidebar-logo-text { font-size:1rem; font-weight:700; color:#fff; letter-spacing:.02em; }
+
+    /* Nav section label */
+    .nav-section-label { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.45); padding:14px 20px 5px; pointer-events:none; list-style:none; user-select:none; }
+
+    /* Nav items */
+    .nav-item { display:flex; flex-direction:row; align-items:center; gap:10px; padding:9px 14px; margin:1px 8px; border-radius:8px; cursor:pointer; color:rgba(255,255,255,.85); font-size:.875rem; font-weight:500; transition:background .15s,color .15s; position:relative; user-select:none; list-style:none; }
+    .nav-item:hover { background:rgba(255,255,255,.12); color:#fff; }
+    .nav-item.active { background:rgba(255,255,255,.18); color:#fff; font-weight:600; }
+    .nav-item.active::before { content:''; position:absolute; left:0; top:4px; bottom:4px; width:3px; background:#fff; border-radius:0 3px 3px 0; }
+    .nav-icon { font-size:1rem; min-width:20px; text-align:center; flex-shrink:0; }
+    .nav-item.active .nav-icon { color:#fff; }
+    .nav-label { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .nav-chevron { font-size:.65rem; opacity:.6; transition:transform .2s; flex-shrink:0; }
+    .nav-item:hover .nav-chevron { opacity:1; }
+    .nav-item.submenu-open .nav-chevron { transform:rotate(180deg); opacity:1; }
+
+    /* Submenu */
+    .submenu { display:none; flex-direction:column; list-style:none; padding:3px 0 5px; margin:0 8px; background:rgba(0,0,0,.15); border-radius:0 0 8px 8px; }
+    .submenu.open { display:flex; }
+    .submenu-item { display:flex; align-items:center; gap:8px; padding:8px 14px 8px 40px; cursor:pointer; color:rgba(255,255,255,.7); font-size:.8rem; font-weight:500; transition:background .12s,color .12s; }
+    .submenu-item:hover { background:rgba(255,255,255,.1); color:#fff; }
+    .submenu-item.active { color:#fff; font-weight:600; }
+    .submenu-icon { font-size:.875rem; min-width:16px; }
+
+    /* Topbar */
+    #topbar { height:60px; min-height:60px; background:#fff; display:flex; align-items:center; justify-content:space-between; padding:0 20px; box-shadow:0 1px 4px rgba(0,0,0,.1); z-index:50; flex-shrink:0; }
+    .topbar-left { display:flex; align-items:center; gap:12px; }
+    .topbar-right { display:flex; align-items:center; gap:10px; }
+    .topbar-menu-btn { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:none; border:none; cursor:pointer; color:#555; font-size:1.05rem; transition:background .15s; }
+    .topbar-menu-btn:hover { background:#F0F2F5; }
+    .topbar-title { font-size:1rem; font-weight:600; color:#1A1A2E; }
+    .topbar-icon-btn { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:none; border:none; cursor:pointer; color:#555; font-size:.95rem; position:relative; transition:background .15s; }
+    .topbar-icon-btn:hover { background:#F0F2F5; }
+    .topbar-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; background:#e53935; border-radius:50%; border:2px solid #fff; font-size:.58rem; font-weight:700; color:#fff; display:none; align-items:center; justify-content:center; padding:0 2px; }
+    .topbar-user-pill { display:flex; align-items:center; gap:8px; padding:4px 10px 4px 4px; border-radius:24px; background:#F0F2F5; }
+    .topbar-avatar { width:32px; height:32px; border-radius:50%; background:#1B7D3D; color:#fff; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; flex-shrink:0; }
+    .topbar-name { font-size:.8125rem; font-weight:600; color:#1A1A2E; white-space:nowrap; }
+    .topbar-role-badge { font-size:.65rem; font-weight:700; color:#1B7D3D; background:#E8F5E9; border-radius:20px; padding:3px 10px; white-space:nowrap; }
+
+    /* Main content padding */
+    #main-content { flex:1; overflow-y:auto; padding:20px; scrollbar-width:thin; scrollbar-color:#ccc transparent; }
+    #main-content::-webkit-scrollbar { width:6px; }
+    #main-content::-webkit-scrollbar-thumb { background:#ccc; border-radius:4px; }
+
+    /* Page toolbar */
+    .page-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+    .toolbar-left,.toolbar-right { display:flex; align-items:center; gap:8px; }
+    .toolbar-label { font-size:.8125rem; font-weight:600; color:#555; white-space:nowrap; }
+    .toolbar-select { padding:7px 28px 7px 10px; border:1.5px solid #D0D0D0; border-radius:8px; font-size:.8125rem; background:#fff; cursor:pointer; }
+
+    /* KPI Grid */
+    .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+    .kpi-card { background:#fff; border-radius:12px; padding:18px 20px; box-shadow:0 2px 8px rgba(0,0,0,.07); display:flex; align-items:center; gap:14px; transition:box-shadow .2s,transform .2s; }
+    .kpi-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.11); transform:translateY(-2px); }
+    .kpi-card-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
+    .kpi-icon-blue { background:#E3F2FD; color:#1565C0; }
+    .kpi-icon-green { background:#E8F5E9; color:#1B7D3D; }
+    .kpi-icon-purple { background:#F3E5F5; color:#6A1B9A; }
+    .kpi-icon-orange { background:#FFF3E0; color:#E65100; }
+    .kpi-card-body { flex:1; min-width:0; }
+    .kpi-label { font-size:.72rem; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
+    .kpi-value { font-size:1.6rem; font-weight:800; color:#1A1A2E; line-height:1.1; }
+    .trend-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:.72rem; font-weight:600; white-space:nowrap; flex-shrink:0; }
+    .trend-up { background:#E8F5E9; color:#1B7D3D; }
+    .trend-down { background:#FFEBEE; color:#C62828; }
+    .trend-flat { background:#F5F5F5; color:#757575; }
+
+    /* Chart cards */
+    .chart-row { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:20px; }
+    .chart-card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.07); display:flex; flex-direction:column; gap:12px; }
+    .chart-card-header { display:flex; align-items:center; justify-content:space-between; }
+    .chart-card-title { font-size:.9375rem; font-weight:700; color:#1A1A2E; }
+    .chart-card-body { position:relative; min-height:200px; }
+    .chart-card-body canvas { width:100%!important; }
+
+    /* Table card */
+    .table-card { background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.07); margin-bottom:16px; }
+    .table-card-header { padding:16px 20px; border-bottom:1px solid #EEEEEE; display:flex; align-items:center; justify-content:space-between; }
+    .table-card-title { font-size:.9375rem; font-weight:700; color:#1A1A2E; }
+    .table-responsive { overflow-x:auto; }
+    .data-table { width:100%; border-collapse:collapse; font-size:.8125rem; }
+    .data-table thead th { background:#1B7D3D; color:#fff; font-weight:600; padding:11px 14px; text-align:left; white-space:nowrap; font-size:.75rem; letter-spacing:.03em; }
+    .data-table thead th:first-child { border-radius:0; }
+    .data-table tbody td { padding:10px 14px; color:#333; border-bottom:1px solid #F0F0F0; vertical-align:middle; }
+    .data-table tbody tr:last-child td { border-bottom:none; }
+    .data-table tbody tr:hover td { background:#FAFAFA; }
+    .th-group-unit { background:#E8F5E9!important; color:#1B7D3D!important; text-align:center; font-weight:700; }
+    .th-group-dollar { background:#FFF3E0!important; color:#E65100!important; text-align:center; font-weight:700; }
+    .th-unit { background:#C8E6C9!important; color:#1B5E20!important; }
+    .th-dollar { background:#FFE0B2!important; color:#BF360C!important; }
+    .td-unit { background:#F1F8E9!important; color:#2E7D32; }
+    .td-dollar { background:#FFF8E1!important; color:#E65100; }
+    .td-revenue { font-weight:700; color:#1B7D3D; }
+
+    /* Avatar */
+    .avatar { width:32px; height:32px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:700; text-transform:uppercase; flex-shrink:0; color:#fff; }
+    .av-0{background:#1B7D3D} .av-1{background:#1565C0} .av-2{background:#6A1B9A} .av-3{background:#C62828}
+    .av-4{background:#E65100} .av-5{background:#00695C} .av-6{background:#AD1457} .av-7{background:#4527A0}
+    .name-cell { display:flex; align-items:center; gap:8px; }
+
+    /* Pills */
+    .pill { display:inline-flex; align-items:center; padding:2px 10px; border-radius:20px; font-size:.72rem; font-weight:600; }
+    .pill-green{background:#E8F5E9;color:#1B7D3D} .pill-blue{background:#E3F2FD;color:#1565C0}
+    .pill-red{background:#FFEBEE;color:#C62828} .pill-gray{background:#F5F5F5;color:#757575}
+    .pill-orange{background:#FFF3E0;color:#E65100} .pill-purple{background:#F3E5F5;color:#6A1B9A}
+
+    /* Buttons */
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; font-size:.875rem; font-weight:600; cursor:pointer; border:none; transition:background .15s,box-shadow .15s; white-space:nowrap; }
+    .btn-primary { background:#1B7D3D; color:#fff; }
+    .btn-primary:hover { background:#155f2e; box-shadow:0 2px 8px rgba(27,125,61,.3); }
+    .btn-outline { background:#fff; color:#555; border:1.5px solid #D0D0D0; }
+    .btn-outline:hover { border-color:#999; color:#1A1A2E; }
+    .btn-edit { display:inline-flex; align-items:center; gap:4px; padding:4px 9px; border-radius:6px; font-size:.75rem; font-weight:600; cursor:pointer; background:#E3F2FD; color:#1565C0; border:1px solid #BBDEFB; transition:background .15s; }
+    .btn-edit:hover { background:#BBDEFB; }
+    .btn-delete { display:inline-flex; align-items:center; gap:4px; padding:4px 9px; border-radius:6px; font-size:.75rem; font-weight:600; cursor:pointer; background:#FFEBEE; color:#C62828; border:1px solid #FFCDD2; transition:background .15s; }
+    .btn-delete:hover { background:#FFCDD2; }
+
+    /* Tab header */
+    .tab-header { display:flex; gap:0; border-bottom:2px solid #E0E0E0; margin-bottom:20px; overflow-x:auto; scrollbar-width:none; }
+    .tab-header::-webkit-scrollbar { display:none; }
+    .tab-btn { padding:10px 18px; font-size:.875rem; font-weight:500; color:#666; background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer; white-space:nowrap; transition:color .15s,border-color .15s; display:flex; align-items:center; gap:6px; }
+    .tab-btn:hover { color:#1B7D3D; }
+    .tab-btn.active { color:#1B7D3D; border-bottom-color:#1B7D3D; font-weight:600; }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; animation:fadeInPage .15s ease; }
+
+    /* Page header */
+    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+    .page-header-title { font-size:1.1rem; font-weight:700; color:#1A1A2E; }
+
+    /* Filter bar */
+    .filter-bar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding:14px 16px; background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.06); margin-bottom:16px; }
+    .filter-group { display:flex; align-items:center; gap:6px; }
+    .filter-label { font-size:.8125rem; font-weight:600; color:#555; white-space:nowrap; }
+    .form-input,.form-select { padding:8px 12px; border:1.5px solid #D0D0D0; border-radius:8px; font-size:.875rem; color:#333; background:#FAFAFA; transition:border-color .15s; outline:none; font-family:inherit; }
+    .form-input:focus,.form-select:focus { border-color:#1B7D3D; background:#fff; box-shadow:0 0 0 3px rgba(27,125,61,.1); }
+    .form-select { appearance:none; padding-right:28px; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%23888' d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; }
+    .form-textarea { padding:9px 12px; border:1.5px solid #D0D0D0; border-radius:8px; font-size:.875rem; color:#333; background:#FAFAFA; transition:border-color .15s; outline:none; font-family:inherit; resize:vertical; min-height:80px; width:100%; }
+    .form-textarea:focus { border-color:#1B7D3D; background:#fff; }
+
+    /* View toggle bar */
+    .view-toggle-bar { display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+    .view-toggle-btn { padding:7px 14px; font-size:.8125rem; font-weight:500; color:#666; background:#fff; border:1.5px solid #D0D0D0; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:background .15s,color .15s,border-color .15s; }
+    .view-toggle-btn:hover { background:#F5F5F5; color:#1A1A2E; }
+    .view-toggle-btn.active { background:#1B7D3D; color:#fff; border-color:#1B7D3D; font-weight:600; }
+    .view-toggle-spacer { flex:1; }
+
+    /* Items strip */
+    .items-strip-wrapper { margin-bottom:12px; }
+    .items-strip { display:flex; gap:8px; overflow-x:auto; padding:6px 0; scrollbar-width:thin; scrollbar-color:#ccc transparent; align-items:center; flex-wrap:nowrap; }
+    .items-strip::-webkit-scrollbar { height:4px; }
+    .items-strip::-webkit-scrollbar-thumb { background:#ccc; border-radius:4px; }
+    .item-chip { display:inline-flex; align-items:center; gap:5px; padding:6px 14px; border-radius:20px; font-size:.8125rem; font-weight:500; white-space:nowrap; cursor:pointer; border:1.5px solid #D0D0D0; background:#fff; color:#444; transition:border-color .15s,background .15s,color .15s; }
+    .item-chip-unit { border-color:#81C784; background:#F1F8E9; color:#2E7D32; }
+    .item-chip-unit:hover { background:#C8E6C9; }
+    .item-chip-dollar { border-color:#FFCC80; background:#FFF8E1; color:#E65100; }
+    .item-chip-dollar:hover { background:#FFE0B2; }
+    .empty-chips { font-size:.8125rem; color:#aaa; }
+
+    /* Total bar */
+    #sale-total-bar { display:flex; justify-content:flex-end; gap:20px; padding:12px 20px; background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.07); margin-top:8px; flex-wrap:wrap; }
+    .total-label { font-size:.8125rem; color:#555; }
+    .total-label strong { color:#1A1A2E; }
+
+    /* Sale items section */
+    .sale-items-section { margin-bottom:16px; }
+    .sale-section-title { font-size:.875rem; font-weight:700; color:#444; margin-bottom:8px; display:flex; align-items:center; gap:6px; padding:8px 12px; background:#F5F5F5; border-radius:8px; }
+    .sale-items-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .sic-card { border-radius:10px; padding:12px; border:1.5px solid #E0E0E0; background:#fff; }
+    .sic-card-unit { border-color:#81C784; background:#F9FBF9; }
+    .sic-card-dollar { border-color:#FFCC80; background:#FFFDF8; }
+    .sic-label { font-size:.75rem; font-weight:600; color:#444; margin-bottom:6px; }
+    .sic-card-unit .sic-label { color:#2E7D32; }
+    .sic-card-dollar .sic-label { color:#E65100; }
+    .sic-sub { font-size:.7rem; color:#999; margin-bottom:6px; }
+    .sic-input { width:100%; padding:7px 10px; border:1.5px solid #D0D0D0; border-radius:7px; font-size:.875rem; font-weight:600; text-align:center; outline:none; font-family:inherit; }
+    .sic-card-unit .sic-input:focus { border-color:#1B7D3D; }
+    .sic-card-dollar .sic-input:focus { border-color:#FB8C00; }
+
+    /* Sale totals footer */
+    .sale-totals-footer { display:flex; gap:20px; padding:14px 24px; background:#F8FAF8; border-top:1px solid #EEEEEE; flex-wrap:wrap; }
+    .sale-total-item { display:flex; flex-direction:column; gap:2px; }
+    .sale-total-label { font-size:.7rem; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:.05em; }
+    .sale-total-value { font-size:1.2rem; font-weight:700; color:#1B7D3D; }
+
+    /* Modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:none; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.active { display:flex; }
+    .modal { background:#fff; border-radius:14px; box-shadow:0 8px 40px rgba(0,0,0,.2); max-height:90vh; overflow-y:auto; width:100%; animation:slideUpModal .22s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; scrollbar-width:thin; }
+    .modal::-webkit-scrollbar { width:5px; }
+    .modal::-webkit-scrollbar-thumb { background:#ccc; border-radius:4px; }
+    .modal-md { max-width:480px; }
+    .modal-lg { max-width:640px; }
+    @keyframes slideUpModal { from{opacity:0;transform:translateY(20px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+    .modal-header { position:sticky; top:0; display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid #EEEEEE; background:#fff; z-index:5; border-radius:14px 14px 0 0; }
+    .modal-title { font-size:1rem; font-weight:700; color:#1A1A2E; }
+    .modal-close-btn { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:none; border:none; cursor:pointer; color:#888; font-size:1rem; transition:background .15s,color .15s; }
+    .modal-close-btn:hover { background:#F0F2F5; color:#1A1A2E; }
+    .modal-body { padding:20px 24px; flex:1; }
+    .modal-footer { position:sticky; bottom:0; display:flex; justify-content:flex-end; gap:10px; padding:14px 24px; border-top:1px solid #EEEEEE; background:#fff; border-radius:0 0 14px 14px; }
+
+    /* Form */
+    .form-group { display:flex; flex-direction:column; gap:4px; margin-bottom:14px; }
+    .form-group:last-child { margin-bottom:0; }
+    .form-label { font-size:.8125rem; font-weight:600; color:#444; }
+    .required { color:#e53935; margin-left:2px; }
+    .form-row { display:flex; gap:14px; margin-bottom:14px; }
+    .form-row .form-group { flex:1; min-width:0; margin-bottom:0; }
+    .form-col { flex:1; min-width:0; }
+
+    /* Toggle btn group */
+    .toggle-btn-group { display:inline-flex; border-radius:8px; overflow:hidden; border:1.5px solid #D0D0D0; }
+    .toggle-btn { padding:8px 16px; font-size:.8125rem; font-weight:500; color:#666; background:#fff; border:none; cursor:pointer; transition:background .15s,color .15s; display:inline-flex; align-items:center; gap:5px; }
+    .toggle-btn:not(:last-child) { border-right:1.5px solid #D0D0D0; }
+    .toggle-btn:hover { background:#F5F5F5; }
+    .toggle-btn.active { background:#1B7D3D; color:#fff; font-weight:600; }
+
+    /* KPI modal chips */
+    .chip-group { display:flex; flex-wrap:wrap; gap:6px; }
+    .chip { display:inline-flex; align-items:center; padding:5px 14px; border-radius:20px; font-size:.8125rem; font-weight:500; border:1.5px solid #D0D0D0; background:#fff; color:#555; cursor:pointer; transition:border-color .15s,background .15s,color .15s; }
+    .chip:hover { border-color:#1B7D3D; color:#1B7D3D; }
+    .chip.active { border-color:#1B7D3D; background:#1B7D3D; color:#fff; font-weight:600; }
+
+    /* Role widget */
+    #role-widget { position:fixed; bottom:20px; right:20px; z-index:2000; display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+    #role-widget-btn { display:flex; align-items:center; gap:8px; padding:8px 14px; background:#1B7D3D; color:#fff; border:none; border-radius:24px; cursor:pointer; font-size:.8125rem; font-weight:600; box-shadow:0 4px 14px rgba(27,125,61,.35); transition:background .15s; }
+    #role-widget-btn:hover { background:#155f2e; }
+    #role-widget-dropdown { background:#fff; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.15); padding:8px 0; min-width:180px; display:none; flex-direction:column; }
+    .role-widget-header { font-size:.7rem; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:.08em; padding:6px 16px 4px; }
+    .role-widget-option { display:flex; align-items:center; gap:10px; padding:10px 16px; font-size:.875rem; font-weight:500; color:#333; cursor:pointer; transition:background .12s; border:none; background:none; width:100%; text-align:left; }
+    .role-widget-option:hover { background:#F5F5F5; }
+
+    /* Access denied */
+    .access-denied { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; text-align:center; gap:12px; }
+    .access-denied h3 { font-size:1rem; font-weight:700; color:#555; }
+    .access-denied p { font-size:.8125rem; color:#999; }
+    .access-denied i { color:#ccc; }
+
+    /* Summary cards */
+    .summary-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+    .summary-card { background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.08); overflow:hidden; }
+    .summary-card-header { display:flex; align-items:center; gap:10px; padding:14px 18px; background:#1B7D3D; color:#fff; }
+    .summary-card-body { padding:14px 18px; display:flex; flex-direction:column; gap:8px; }
+    .summary-row { display:flex; justify-content:space-between; font-size:.8125rem; padding:5px 0; border-bottom:1px solid #F0F0F0; }
+    .summary-row:last-child { border-bottom:none; }
+    .badge-unit { background:#E8F5E9; color:#1B7D3D; border-radius:12px; padding:2px 10px; font-size:.75rem; font-weight:600; }
+    .badge-dollar { background:#FFF3E0; color:#E65100; border-radius:12px; padding:2px 10px; font-size:.75rem; font-weight:600; }
+
+    /* Input with icon */
+    .input-with-icon { position:relative; display:flex; align-items:center; }
+    .input-with-icon .form-input { padding-right:40px; width:100%; }
+    .input-icon-btn { position:absolute; right:8px; background:none; border:none; cursor:pointer; color:#999; font-size:.9rem; padding:4px; transition:color .15s; }
+    .input-icon-btn:hover { color:#555; }
+
+    /* Responsive */
+    @media(max-width:1100px) { .kpi-grid{grid-template-columns:repeat(2,1fr)} .chart-row{grid-template-columns:1fr} }
+    @media(max-width:768px) { .kpi-grid{grid-template-columns:repeat(2,1fr)} .sale-items-grid{grid-template-columns:repeat(2,1fr)} }
+    @media(max-width:520px) { .kpi-grid{grid-template-columns:1fr 1fr} .form-row{flex-direction:column;gap:0} .modal-overlay{padding:0;align-items:flex-end} .modal{border-radius:18px 18px 0 0;max-height:92vh} }
+
+  </style>
 </head>
 <body>
 
-<!-- ══ SIDEBAR ══ -->
-<aside class="sidebar">
-  <div class="sidebar-logo">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Smart_Communications_logo.svg/800px-Smart_Communications_logo.svg.png"
-         alt="Smart 5G"
-         onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex';"/>
-    <div id="logoFallback" class="logo-fallback">
-      <span class="logo-title">SMART</span><span class="logo-sub">· Axiata ·</span>
-    </div>
-  </div>
-
-  <div class="nav-section-label">Main Menu</div>
-
-  <button class="nav-item active" onclick="navigateTo('dashboard',this)">
-    <span class="nav-icon"><i class="fa-solid fa-gauge-high"></i></span>Dashboard
-  </button>
-
-  <button class="nav-item" onclick="navigateTo('promotionPage',this)">
-    <span class="nav-icon"><i class="fa-solid fa-bullhorn"></i></span>Promotion
-  </button>
-
-  <!-- Sale submenu -->
-  <button class="nav-item has-submenu" id="saleNavBtn" onclick="toggleSubmenu('saleSubmenu',this)">
-    <span class="nav-icon"><i class="fa-solid fa-chart-bar"></i></span>Sale
-    <span class="nav-arrow"><i class="fa-solid fa-chevron-down"></i></span>
-  </button>
-  <div class="submenu" id="saleSubmenu">
-    <button class="submenu-item" onclick="openSaleTab('dailySale',this)">
-      <span class="sub-icon"><i class="fa-solid fa-calendar-day"></i></span>Daily Sale
-    </button>
-  </div>
-
-  <button class="nav-item" onclick="navigateTo('deposit',this)">
-    <span class="nav-icon"><i class="fa-solid fa-vault"></i></span>Deposit
-  </button>
-
-  <!-- Customer submenu -->
-  <button class="nav-item has-submenu" id="customerNavBtn" onclick="toggleSubmenu('customerSubmenu',this)">
-    <span class="nav-icon"><i class="fa-solid fa-users"></i></span>Customer
-    <span class="nav-arrow"><i class="fa-solid fa-chevron-down"></i></span>
-  </button>
-  <div class="submenu" id="customerSubmenu">
-    <button class="submenu-item" onclick="openCustomerTab('newCustomer',this)">
-      <span class="sub-icon"><i class="fa-solid fa-user-plus"></i></span>New Customer
-    </button>
-    <button class="submenu-item" onclick="openCustomerTab('topUp',this)">
-      <span class="sub-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></span>Top Up
-    </button>
-    <button class="submenu-item" onclick="openCustomerTab('termination',this)">
-      <span class="sub-icon"><i class="fa-solid fa-ban"></i></span>Termination
-    </button>
-  </div>
-
-  <div class="nav-section-label">Configuration</div>
-
-  <!-- Settings submenu -->
-  <button class="nav-item has-submenu" id="settingsNavBtn" onclick="toggleSubmenu('settingsSubmenu',this)">
-    <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>Settings
-    <span class="nav-arrow"><i class="fa-solid fa-chevron-down"></i></span>
-  </button>
-  <div class="submenu" id="settingsSubmenu">
-    <button class="submenu-item" onclick="openSettingsTab('permission',this)">
-      <span class="sub-icon"><i class="fa-solid fa-shield-halved"></i></span>Permission
-    </button>
-    <button class="submenu-item" onclick="openSettingsTab('kpi',this)">
-      <span class="sub-icon"><i class="fa-solid fa-chart-line"></i></span>KPI Setting
-    </button>
-    <button class="submenu-item" onclick="openSettingsTab('promotionSetting',this)">
-      <span class="sub-icon"><i class="fa-solid fa-tag"></i></span>Promotion
-    </button>
-  </div>
-</aside>
-
-<!-- ══ MAIN ══ -->
-<div class="main">
-
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <h1 id="pageTitle">Dashboard</h1>
-    <div class="topbar-right">
-      <button class="topbar-icon-btn"><i class="fa-regular fa-bell"></i></button>
-      <div class="user-pill">
-        <div class="user-avatar" id="userAvatar">AU</div>
-        <div>
-          <div class="user-pill-name" id="userNameDisplay">Admin User</div>
-          <div class="user-pill-role" id="roleBadgeDisplay">Admin</div>
-        </div>
+  <!-- ===================== LOGIN SCREEN ===================== -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <i class="fas fa-tower-broadcast"></i>
+        <span>Smart 5G</span>
       </div>
-    </div>
-  </div>
-
-  <!-- CONTENT AREA -->
-  <div class="content-area">
-
-    <!-- ══ DASHBOARD ══ -->
-    <div id="page-dashboard" class="page active">
-      <div class="blank-placeholder">
-        <i class="fa-solid fa-gauge-high"></i>
-        <h2>Dashboard</h2>
-        <p>Your dashboard content will appear here.</p>
-      </div>
-    </div>
-
-    <!-- ══ PROMOTION ══ -->
-    <div id="page-promotionPage" class="page">
-      <div class="blank-placeholder">
-        <i class="fa-solid fa-bullhorn"></i>
-        <h2>Promotion</h2>
-        <p>Your promotion content will appear here.</p>
-      </div>
-    </div>
-
-    <!-- ══ DEPOSIT ══ -->
-    <div id="page-deposit" class="page">
-      <div class="blank-placeholder">
-        <i class="fa-solid fa-vault"></i>
-        <h2>Deposit</h2>
-        <p>Your deposit content will appear here.</p>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════
-         SALE PAGE
-    ══════════════════════════════════ -->
-    <div id="page-sale" class="page">
-      <div class="card">
-        <div class="tab-header">
-          <button class="tab-btn active" id="stab-dailySale-btn" onclick="switchSaleTab('dailySale')">
-            <i class="fa-solid fa-calendar-day"></i>Daily Sale
-          </button>
-        </div>
-
-        <!-- DAILY SALE TAB -->
-        <div id="stab-dailySale" class="tab-content active">
-          <div class="daily-sale-wrapper">
-
-            <!-- Page header -->
-            <div class="page-header" style="padding:0 0 18px 0;">
-              <div class="page-header-left">
-                <h2>Daily Sale</h2>
-                <p>Record daily sales per agent — Unit &amp; Dollar groups</p>
-              </div>
-              <div class="page-header-right">
-                <button class="btn-secondary" onclick="openAddModal('addItem')">
-                  <i class="fa-solid fa-boxes-stacked"></i>Add Items
-                </button>
-                <button class="btn-primary" onclick="openNewSaleModal()">
-                  <i class="fa-solid fa-plus"></i>New Sale
-                </button>
-              </div>
-            </div>
-
-            <!-- Item catalogue chips -->
-            <div class="items-strip">
-              <div class="items-strip-label">Item Catalogue</div>
-              <div id="itemChipsContainer" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-                <span class="no-items-hint">
-                  <i class="fa-solid fa-circle-info"></i>&nbsp;No items yet — click
-                  <strong style="margin:0 3px;">Add Items</strong> to build your catalogue.
-                </span>
-              </div>
-            </div>
-
-            <!-- Report filter bar -->
-            <div class="report-filter-bar">
-              <div class="report-filter-left">
-                <div class="filter-group">
-                  <i class="fa-regular fa-calendar filter-icon"></i>
-                  <input type="date" id="filter-date-from" onchange="applyReportFilters()" title="From date"/>
-                </div>
-                <span style="color:#ccc;font-size:13px;">—</span>
-                <div class="filter-group">
-                  <i class="fa-regular fa-calendar filter-icon"></i>
-                  <input type="date" id="filter-date-to" onchange="applyReportFilters()" title="To date"/>
-                </div>
-                <div class="filter-group">
-                  <i class="fa-solid fa-user-tie filter-icon"></i>
-                  <input type="text" id="filter-agent" placeholder="Agent…" oninput="applyReportFilters()"/>
-                </div>
-                <div class="filter-group">
-                  <i class="fa-solid fa-building filter-icon"></i>
-                  <input type="text" id="filter-branch" placeholder="Branch…" oninput="applyReportFilters()"/>
-                </div>
-                <button class="filter-clear-btn" onclick="clearReportFilters()">
-                  <i class="fa-solid fa-xmark"></i> Clear
-                </button>
-              </div>
-              <div class="report-filter-right">
-                <button class="view-toggle-btn active" id="viewBtn-table" onclick="setReportView('table')" title="Table view">
-                  <i class="fa-solid fa-table-list"></i>
-                </button>
-                <button class="view-toggle-btn" id="viewBtn-summary" onclick="setReportView('summary')" title="Summary view">
-                  <i class="fa-solid fa-chart-bar"></i>
-                </button>
-              </div>
-            </div>
-
-            <!-- KPI cards -->
-            <div class="sale-kpi-row">
-              <div class="sale-kpi-card">
-                <div class="sale-kpi-icon green"><i class="fa-solid fa-receipt"></i></div>
-                <div>
-                  <div class="sale-kpi-val" id="kpi-total-sales">0</div>
-                  <div class="sale-kpi-lbl">Total Sales</div>
-                </div>
-              </div>
-              <div class="sale-kpi-card">
-                <div class="sale-kpi-icon blue"><i class="fa-solid fa-hashtag"></i></div>
-                <div>
-                  <div class="sale-kpi-val" id="kpi-total-qty">0</div>
-                  <div class="sale-kpi-lbl">Unit Items</div>
-                </div>
-              </div>
-              <div class="sale-kpi-card">
-                <div class="sale-kpi-icon purple"><i class="fa-solid fa-user-tie"></i></div>
-                <div>
-                  <div class="sale-kpi-val" id="kpi-agents">0</div>
-                  <div class="sale-kpi-lbl">Agents</div>
-                </div>
-              </div>
-              <div class="sale-kpi-card">
-                <div class="sale-kpi-icon orange"><i class="fa-solid fa-dollar-sign"></i></div>
-                <div>
-                  <div class="sale-kpi-val" id="kpi-revenue">$0.00</div>
-                  <div class="sale-kpi-lbl">Revenue</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- TABLE VIEW -->
-            <div id="reportView-table">
-              <div class="sale-table-card">
-                <div class="sale-table-header">
-                  <span>
-                    <i class="fa-solid fa-receipt" style="margin-right:6px;color:#1B7D3D;"></i>Sale Records
-                  </span>
-                  <span id="saleCountBadge" class="pill pill-green" style="display:none;"></span>
-                </div>
-                <div class="table-wrap">
-                  <table class="data-table" id="saleMainTable">
-                    <thead><tr id="saleTableHead"></tr></thead>
-                    <tbody id="saleTableBody"></tbody>
-                  </table>
-                </div>
-                <div class="sale-total-bar" id="saleTotalBar" style="display:none;">
-                  <div class="total-bar-groups" id="totalBarGroups"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- SUMMARY VIEW -->
-            <div id="reportView-summary" style="display:none;">
-              <div class="summary-grid" id="summaryGrid"></div>
-            </div>
-
-          </div>
-        </div><!-- end stab-dailySale -->
-      </div>
-    </div><!-- end page-sale -->
-
-    <!-- ══════════════════════════════════
-         CUSTOMER PAGE
-    ══════════════════════════════════ -->
-    <div id="page-customer" class="page">
-      <div class="card">
-        <div class="tab-header">
-          <button class="tab-btn active" id="ctab-newCustomer-btn" onclick="switchCustomerTab('newCustomer')">
-            <i class="fa-solid fa-user-plus"></i>New Customer
-          </button>
-          <button class="tab-btn" id="ctab-topUp-btn" onclick="switchCustomerTab('topUp')">
-            <i class="fa-solid fa-arrow-up-right-dots"></i>Top Up
-          </button>
-          <button class="tab-btn" id="ctab-termination-btn" onclick="switchCustomerTab('termination')">
-            <i class="fa-solid fa-ban"></i>Termination
-          </button>
-        </div>
-
-        <!-- New Customer tab -->
-        <div id="ctab-newCustomer" class="tab-content active">
-          <div class="page-header">
-            <div class="page-header-left">
-              <h2>New Customer</h2>
-              <p>Manage new customer leads and prospects</p>
-            </div>
-            <button class="btn-primary" onclick="openAddModal('newCustomer')">
-              <i class="fa-solid fa-user-plus"></i>Add Customer
-            </button>
-          </div>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>#</th><th>Customer Name</th><th>Phone</th><th>Agent</th>
-                  <th>Branch</th><th>Product</th><th>Status</th><th>Remark</th><th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="newCustomerBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Top Up tab -->
-        <div id="ctab-topUp" class="tab-content">
-          <div class="page-header">
-            <div class="page-header-left">
-              <h2>Top Up</h2>
-              <p>Active customers — manage top up &amp; status</p>
-            </div>
-            <button class="btn-primary" onclick="openAddModal('topUp')">
-              <i class="fa-solid fa-plus"></i>Add Top Up
-            </button>
-          </div>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>#</th><th>Customer Name</th><th>Phone</th><th>Agent</th>
-                  <th>Branch</th><th>Product</th><th>Status</th><th>Remark</th><th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="topUpBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Termination tab -->
-        <div id="ctab-termination" class="tab-content">
-          <div class="page-header">
-            <div class="page-header-left">
-              <h2>Termination</h2>
-              <p>Terminated customer accounts</p>
-            </div>
-            <button class="btn-primary" onclick="openAddModal('termination')">
-              <i class="fa-solid fa-plus"></i>Add Termination
-            </button>
-          </div>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>#</th><th>Customer Name</th><th>Phone</th><th>Agent</th>
-                  <th>Branch</th><th>Product</th><th>Terminated On</th><th>Remark</th><th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="terminationBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-    </div><!-- end page-customer -->
-
-    <!-- ══════════════════════════════════
-         SETTINGS PAGE
-    ══════════════════════════════════ -->
-    <div id="page-settings" class="page">
-      <div class="card">
-        <div class="tab-header">
-          <button class="tab-btn active" id="tab-permission-btn" onclick="switchSettingsTab('permission')">
-            <i class="fa-solid fa-shield-halved"></i>Permission
-          </button>
-          <button class="tab-btn" id="tab-kpi-btn" onclick="switchSettingsTab('kpi')">
-            <i class="fa-solid fa-chart-line"></i>KPI Setting
-          </button>
-          <button class="tab-btn" id="tab-promotionSetting-btn" onclick="switchSettingsTab('promotionSetting')">
-            <i class="fa-solid fa-tag"></i>Promotion
-          </button>
-        </div>
-
-        <!-- Permission tab -->
-        <div id="tab-permission" class="tab-content active">
-          <div class="permission-page">
-            <div class="permission-header">
-              <div class="permission-header-left">
-                <h2>Staff Management</h2>
-                <p>Manage user accounts and access roles</p>
-              </div>
-              <button class="btn-primary" onclick="openAddModal('addUser')">
-                <i class="fa-solid fa-user-plus"></i>Add User
-              </button>
-            </div>
-            <div class="table-wrap">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>#</th><th>Full Name</th><th>Username</th>
-                    <th>Role</th><th>Branch</th><th>Status</th><th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="staffTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- KPI Setting tab -->
-        <div id="tab-kpi" class="tab-content">
-          <div class="kpi-page">
-            <div class="kpi-header">
-              <div class="kpi-header-left">
-                <h2>KPI Setting</h2>
-                <p>Define KPI metrics, targets, and measurement units</p>
-              </div>
-              <button class="btn-primary" onclick="openAddModal('kpi')">
-                <i class="fa-solid fa-plus"></i>Add KPI
-              </button>
-            </div>
-            <div class="kpi-summary" id="kpiSummaryCards"></div>
-            <div class="table-wrap">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>#</th><th>KPI Name</th><th>Type</th><th>Target Value</th>
-                    <th>Unit / Currency</th><th>Period</th><th>Description</th><th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="kpiTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Promotion Setting tab -->
-        <div id="tab-promotionSetting" class="tab-content">
-          <div id="promotionSetting-content" style="padding:24px;"></div>
-        </div>
-
-      </div>
-    </div><!-- end page-settings -->
-
-  </div><!-- end content-area -->
-</div><!-- end main -->
-
-<!-- ══════════════════════════════════════════════════════
-     MODALS
-══════════════════════════════════════════════════════ -->
-
-<!-- ══ ADD ITEM MODAL ══ -->
-<div class="modal-overlay" id="modal-addItem" onclick="handleOverlay(event,'addItem')">
-  <div class="modal modal-lg">
-    <div class="modal-header">
-      <div class="modal-header-left">
-        <div class="modal-header-icon purple"><i class="fa-solid fa-boxes-stacked"></i></div>
-        <div>
-          <h3 id="addItem-title">Add Item</h3>
-          <p id="addItem-sub">Create a new sale catalogue item</p>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeModal('addItem')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <form onsubmit="submitItem(event)">
-      <div class="modal-body">
-        <input type="hidden" id="item-edit-id"/>
-
-        <!-- Item Name -->
-        <div class="form-group full">
-          <label><i class="fa-solid fa-tag"></i>Item Name <span class="req">*</span></label>
-          <div class="input-wrap">
-            <i class="fa-solid fa-tag input-icon"></i>
-            <input type="text" id="item-name" placeholder="e.g. Gross Ads, Recharge…" required/>
-          </div>
-        </div>
-
-        <!-- Sale Group toggle -->
-        <div class="form-group full">
-          <label><i class="fa-solid fa-layer-group"></i>Sale Group <span class="req">*</span></label>
-          <div class="group-toggle">
-            <button type="button" class="group-btn active" id="grpBtn-unit" onclick="selectItemGroup('unit')">
-              <i class="fa-solid fa-hashtag"></i> Unit Group
-              <span class="group-hint">Gross Ads, SIM, Fiber…</span>
-            </button>
-            <button type="button" class="group-btn" id="grpBtn-dollar" onclick="selectItemGroup('dollar')">
-              <i class="fa-solid fa-dollar-sign"></i> Dollar Group
-              <span class="group-hint">Recharge, SC Shop…</span>
-            </button>
-          </div>
-          <input type="hidden" id="item-group" value="unit"/>
-        </div>
-
-        <!-- Shortcut label -->
-        <div class="form-group full">
-          <label>
-            <i class="fa-solid fa-bolt"></i>Shortcut Label <span class="req">*</span>
-            <span class="opt">— shown in table header (e.g. G, S, H, R)</span>
-          </label>
-          <div class="input-wrap">
-            <i class="fa-solid fa-bolt input-icon"></i>
-            <input type="text" id="item-shortcut" maxlength="4" placeholder="1–4 chars e.g. G" required/>
-          </div>
-        </div>
-
-        <!-- Price + Currency -->
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-dollar-sign"></i>Default Rate <span class="opt">(optional)</span></label>
-            <div class="input-wrap price-currency-wrap">
-              <select id="item-currency" class="currency-prefix-select">
-                <option value="$">$ USD</option>
-                <option value="KHR">KHR</option>
-                <option value="฿">฿ THB</option>
-                <option value="S$">S$ SGD</option>
-                <option value="€">€ EUR</option>
-                <option value="£">£ GBP</option>
-                <option value="¥">¥ JPY</option>
-                <option value="custom">✏️ Other</option>
-              </select>
-              <input type="number" id="item-price" placeholder="0.00" min="0" step="0.01" class="price-input"/>
-            </div>
-          </div>
-          <div class="form-group" id="item-custom-currency-group" style="display:none;">
-            <label><i class="fa-solid fa-pen"></i>Custom Currency Symbol</label>
-            <div class="input-wrap">
-              <i class="fa-solid fa-pen input-icon"></i>
-              <input type="text" id="item-custom-currency" placeholder="e.g. LAK, BTC…"/>
-            </div>
-          </div>
-        </div>
-
-        <!-- Unit -->
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-ruler"></i>Unit <span class="opt">(optional)</span></label>
-            <div class="input-wrap">
-              <i class="fa-solid fa-ruler input-icon"></i>
-              <select id="item-unit">
-                <option value="">— No unit —</option>
-                <optgroup label="Telecom">
-                  <option value="SIM">SIM</option>
-                  <option value="Line">Line</option>
-                  <option value="Port">Port</option>
-                  <option value="Connection">Connection</option>
-                  <option value="Activation">Activation</option>
-                </optgroup>
-                <optgroup label="Data / Speed">
-                  <option value="GB">GB</option>
-                  <option value="TB">TB</option>
-                  <option value="Mbps">Mbps</option>
-                  <option value="Gbps">Gbps</option>
-                </optgroup>
-                <optgroup label="Time">
-                  <option value="Day">Day</option>
-                  <option value="Month">Month</option>
-                  <option value="Year">Year</option>
-                </optgroup>
-                <optgroup label="Physical">
-                  <option value="pcs">pcs</option>
-                  <option value="Box">Box</option>
-                  <option value="Set">Set</option>
-                  <option value="Pack">Pack</option>
-                  <option value="Bundle">Bundle</option>
-                </optgroup>
-                <optgroup label="Other">
-                  <option value="custom">✏️ Custom…</option>
-                </optgroup>
-              </select>
-            </div>
-          </div>
-          <div class="form-group" id="item-custom-unit-group" style="display:none;">
-            <label><i class="fa-solid fa-pen"></i>Custom Unit</label>
-            <div class="input-wrap">
-              <i class="fa-solid fa-pen input-icon"></i>
-              <input type="text" id="item-custom-unit" placeholder="e.g. voucher, slot…"/>
-            </div>
-          </div>
-        </div>
-
-        <!-- Category + Status -->
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-layer-group"></i>Category <span class="opt">(optional)</span></label>
-            <div class="input-wrap">
-              <i class="fa-solid fa-layer-group input-icon"></i>
-              <select id="item-category">
-                <option value="">— No category —</option>
-                <option>SIM</option><option>Data</option><option>Fiber</option>
-                <option>Device</option><option>Accessory</option><option>Package</option>
-                <option>Voucher</option><option>Recharge</option><option>Other</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-circle-dot"></i>Status</label>
-            <div class="input-wrap">
-              <i class="fa-solid fa-circle-dot input-icon"></i>
-              <select id="item-status">
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Description -->
-        <div class="form-group full">
-          <label><i class="fa-solid fa-align-left"></i>Description <span class="opt">(optional)</span></label>
-          <div class="input-wrap">
-            <i class="fa-solid fa-align-left input-icon" style="top:14px;"></i>
-            <textarea id="item-desc" placeholder="Optional description or notes…"></textarea>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-cancel" onclick="closeModal('addItem')">
-          <i class="fa-solid fa-xmark"></i>Cancel
-        </button>
-        <button type="submit" class="btn-save">
-          <i class="fa-solid fa-floppy-disk"></i><span id="item-save-label">Save Item</span>
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ══ NEW SALE MODAL ══ -->
-<div class="modal-overlay" id="modal-newSale" onclick="handleOverlay(event,'newSale')">
-  <div class="modal modal-xl">
-    <div class="modal-header">
-      <div class="modal-header-left">
-        <div class="modal-header-icon"><i class="fa-solid fa-receipt"></i></div>
-        <div>
-          <h3 id="newSale-title">New Sale</h3>
-          <p id="newSale-sub">Record a sale for an agent</p>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeModal('newSale')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <form onsubmit="submitSale(event)">
-      <div class="modal-body">
-        <input type="hidden" id="sale-edit-id"/>
-
-        <div class="form-divider">Agent Info</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-user-tie"></i>Agent Name <span class="req">*</span></label>
-            <div class="input-wrap">
-              <i class="fa-solid fa-user-tie input-icon"></i>
-              <input type="text" id="sale-agent" placeholder="Agent name" required/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
-            <div class="input-wrap">
-              <i class="fa-solid fa-building input-icon"></i>
-              <input type="text" id="sale-branch" placeholder="e.g. Phnom Penh HQ" required/>
-            </div>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-regular fa-calendar"></i>Sale Date <span class="req">*</span></label>
-            <div class="input-wrap">
-              <i class="fa-regular fa-calendar input-icon"></i>
-              <input type="date" id="sale-date" required/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-comment"></i>Note <span class="opt">(optional)</span></label>
-            <div class="input-wrap">
-              <i class="fa-solid fa-comment input-icon"></i>
-              <input type="text" id="sale-note" placeholder="Optional note…"/>
-            </div>
-          </div>
-        </div>
-
-        <!-- UNIT GROUP section -->
-        <div class="form-divider sale-group-divider unit-divider">
-          <i class="fa-solid fa-hashtag"></i> Unit Group
-          <span class="divider-hint">Qty-based items (Gross Ads, SIM, Fiber…)</span>
-        </div>
-        <div id="saleUnitItemsWrap" class="sale-group-wrap">
-          <div class="no-group-items" id="noUnitItemsMsg">
-            <i class="fa-solid fa-circle-info"></i> No Unit items in catalogue yet.
-            <a href="#" onclick="closeModal('newSale');openAddModal('addItem');return false;">Add items</a>
-          </div>
-          <div id="saleUnitItemsGrid" class="sale-items-grid"></div>
-        </div>
-
-        <!-- DOLLAR GROUP section -->
-        <div class="form-divider sale-group-divider dollar-divider">
-          <i class="fa-solid fa-dollar-sign"></i> Dollar Group
-          <span class="divider-hint">Enter revenue manually (Recharge, SC Shop, SC Dealer…)</span>
-        </div>
-        <div id="saleDollarItemsWrap" class="sale-group-wrap">
-          <div class="no-group-items" id="noDollarItemsMsg">
-            <i class="fa-solid fa-circle-info"></i> No Dollar items in catalogue yet.
-            <a href="#" onclick="closeModal('newSale');openAddModal('addItem');return false;">Add items</a>
-          </div>
-          <div id="saleDollarItemsGrid" class="sale-items-grid"></div>
-        </div>
-
-        <!-- Modal totals preview -->
-        <div class="sale-modal-totals">
-          <div class="modal-total-box unit-box">
-            <span class="mt-label"><i class="fa-solid fa-hashtag"></i> Total Units</span>
-            <span class="mt-val" id="modalTotalUnits">0</span>
-          </div>
-          <div class="modal-total-box dollar-box">
-            <span class="mt-label"><i class="fa-solid fa-dollar-sign"></i> Total Revenue</span>
-            <span class="mt-val" id="modalTotalRevenue">$0.00</span>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-cancel" onclick="closeModal('newSale')">
-          <i class="fa-solid fa-xmark"></i>Cancel
-        </button>
-        <button type="submit" class="btn-save">
-          <i class="fa-solid fa-floppy-disk"></i><span id="sale-save-label">Save Sale</span>
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ══ NEW CUSTOMER MODAL ══ -->
-<div class="modal-overlay" id="modal-newCustomer" onclick="handleOverlay(event,'newCustomer')">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-header-left">
-        <div class="modal-header-icon blue"><i class="fa-solid fa-user-plus"></i></div>
-        <div>
-          <h3 id="nc-modal-title">Add New Customer</h3>
-          <p id="nc-modal-sub">Fill in the customer lead details</p>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeModal('newCustomer')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <form onsubmit="submitNewCustomer(event)">
-      <div class="modal-body">
-        <input type="hidden" id="nc-edit-id"/>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-user-tie"></i>Agent <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-user-tie input-icon"></i>
-              <input type="text" id="nc-agent" placeholder="Agent name" required/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i>
-              <input type="text" id="nc-branch" placeholder="e.g. Phnom Penh HQ" required/>
-            </div>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-user"></i>Customer Name <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-user input-icon"></i>
-              <input type="text" id="nc-name" placeholder="Full name" required/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-phone"></i>Phone <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-phone input-icon"></i>
-              <input type="text" id="nc-phone" placeholder="e.g. 012 345 678" required/>
-            </div>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-box"></i>Product <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-box input-icon"></i>
-              <select id="nc-product" required>
-                <option value="" disabled selected>Select product</option>
-                <option>Smart@Home</option><option>Smart Fiber+</option><option>M2M</option>
-                <option>Smart Laor 6</option><option>Smart Laor 10$</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-flag"></i>Status <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-flag input-icon"></i>
-              <select id="nc-status" required>
-                <option value="" disabled selected>Select status</option>
-                <option>New Lead</option><option>Hot Prospect</option><option>Closed</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <div class="form-group full">
-          <label><i class="fa-solid fa-comment"></i>Remark</label>
-          <div class="input-wrap"><i class="fa-solid fa-comment input-icon" style="top:14px;"></i>
-            <textarea id="nc-remark" placeholder="Optional remarks..."></textarea>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-cancel" onclick="closeModal('newCustomer')">
-          <i class="fa-solid fa-xmark"></i>Cancel
-        </button>
-        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i>Save</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ══ TOP UP MODAL ══ -->
-<div class="modal-overlay" id="modal-topUp" onclick="handleOverlay(event,'topUp')">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-header-left">
-        <div class="modal-header-icon teal"><i class="fa-solid fa-arrow-up-right-dots"></i></div>
-        <div>
-          <h3 id="tu-modal-title">Add Top Up</h3>
-          <p id="tu-modal-sub">Enter top up customer details</p>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeModal('topUp')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <form onsubmit="submitTopUp(event)">
-      <div class="modal-body">
-        <input type="hidden" id="tu-edit-id"/>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-user-tie"></i>Agent <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-user-tie input-icon"></i>
-              <input type="text" id="tu-agent" placeholder="Agent name" required/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i>
-              <input type="text" id="tu-branch" placeholder="e.g. Phnom Penh HQ" required/>
-            </div>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-user"></i>Customer Name <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-user input-icon"></i>
-              <input type="text" id="tu-name" placeholder="Full name" required/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-phone"></i>Phone <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-phone input-icon"></i>
-              <input type="text" id="tu-phone" placeholder="e.g. 012 345 678" required/>
-            </div>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-box"></i>Product <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-box input-icon"></i>
-              <select id="tu-product" required>
-                <option value="" disabled selected>Select product</option>
-                <option>Smart@Home</option><option>Smart Fiber+</option><option>M2M</option>
-                <option>Smart Laor 6</option><option>Smart Laor 10$</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-circle-dot"></i>Status <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-circle-dot input-icon"></i>
-              <select id="tu-status" required>
-                <option value="" disabled selected>Select status</option>
-                <option>Active</option><option>Termination</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <div class="form-group full">
-          <label><i class="fa-solid fa-comment"></i>Remark</label>
-          <div class="input-wrap"><i class="fa-solid fa-comment input-icon" style="top:14px;"></i>
-            <textarea id="tu-remark" placeholder="Optional remarks..."></textarea>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-cancel" onclick="closeModal('topUp')">
-          <i class="fa-solid fa-xmark"></i>Cancel
-        </button>
-        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i>Save</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ══ TERMINATION MODAL ══ -->
-<div class="modal-overlay" id="modal-termination" onclick="handleOverlay(event,'termination')">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-header-left">
-        <div class="modal-header-icon red"><i class="fa-solid fa-ban"></i></div>
-        <div>
-          <h3 id="tm-modal-title">Add Termination</h3>
-          <p id="tm-modal-sub">Record a terminated customer</p>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeModal('termination')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <form onsubmit="submitTermination(event)">
-      <div class="modal-body">
-        <input type="hidden" id="tm-edit-id"/>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-user-tie"></i>Agent <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-user-tie input-icon"></i>
-              <input type="text" id="tm-agent" placeholder="Agent name" required/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i>
-              <input type="text" id="tm-branch" placeholder="e.g. Phnom Penh HQ" required/>
-            </div>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-solid fa-user"></i>Customer Name <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-user input-icon"></i>
-              <input type="text" id="tm-name" placeholder="Full name" required/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-phone"></i>Phone <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-phone input-icon"></i>
-              <input type="text" id="tm-phone" placeholder="e.g. 012 345 678" required/>
-            </div>
+      <h2 class="login-title">Welcome Back</h2>
+      <p class="login-subtitle">Sign in to your dashboard</p>
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Username <span class="required">*</span></label>
+          <div class="input-with-icon">
+            <i class="fas fa-user input-prefix-icon"></i>
+            <input type="text" id="login-username" class="form-input login-input" placeholder="Enter username" autocomplete="username" />
           </div>
         </div>
         <div class="form-group">
-          <label><i class="fa-solid fa-box"></i>Product <span class="req">*</span></label>
-          <div class="input-wrap"><i class="fa-solid fa-box input-icon"></i>
-            <select id="tm-product" required>
-              <option value="" disabled selected>Select product</option>
-              <option>Smart@Home</option><option>Smart Fiber+</option><option>M2M</option>
-              <option>Smart Laor 6</option><option>Smart Laor 10$</option>
+          <label class="form-label">Password <span class="required">*</span></label>
+          <div class="input-with-icon">
+            <i class="fas fa-lock input-prefix-icon"></i>
+            <input type="password" id="login-password" class="form-input login-input" placeholder="Enter password" autocomplete="current-password" />
+            <button type="button" class="input-icon-btn" onclick="toggleLoginPwd()"><i class="fas fa-eye" id="login-pwd-eye"></i></button>
+          </div>
+        </div>
+        <div id="login-error" class="login-error" style="display:none;"></div>
+        <button type="submit" id="login-submit-btn" class="btn btn-primary login-submit-btn">
+          <i class="fas fa-right-to-bracket"></i> Sign In
+        </button>
+      </form>
+      <div class="login-support-hint">
+        Need access? <a href="#" onclick="loginContactSupport();return false;">Contact Support</a>
+      </div>
+
+    </div>
+  </div>
+  <!-- END LOGIN SCREEN -->
+
+  <!-- ===================== APP SHELL ===================== -->
+  <div id="app-shell" style="display:none;flex:1;height:100vh;overflow:hidden;flex-direction:row;">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon"><i class="fas fa-tower-broadcast"></i></div>
+      <span class="sidebar-logo-text">Smart 5G</span>
+    </div>
+
+    <ul class="sidebar-nav">
+
+      <li class="nav-section-label">MAIN MENU</li>
+
+      <!-- Dashboard -->
+      <li class="nav-item active" id="nav-dashboard" onclick="navigateTo('dashboard', this)">
+        <i class="fas fa-gauge-high nav-icon"></i>
+        <span class="nav-label">Dashboard</span>
+      </li>
+
+      <!-- Promotion -->
+      <li class="nav-item" id="nav-promotion" onclick="navigateTo('promotionPage', this)">
+        <i class="fas fa-tags nav-icon"></i>
+        <span class="nav-label">Promotion</span>
+      </li>
+
+      <!-- Sale (with submenu) -->
+      <li class="nav-item has-submenu" id="nav-sale" onclick="toggleSubmenu('submenu-sale', this)">
+        <i class="fas fa-receipt nav-icon"></i>
+        <span class="nav-label">Sale</span>
+        <i class="fas fa-chevron-down nav-chevron"></i>
+      </li>
+      <ul class="submenu" id="submenu-sale">
+        <li class="submenu-item" id="nav-daily-sale" onclick="navigateTo('sale', null)">
+          <i class="fas fa-calendar-check submenu-icon"></i>
+          <span>Daily Sale</span>
+        </li>
+      </ul>
+
+      <!-- Deposit -->
+      <li class="nav-item" id="nav-deposit" onclick="navigateTo('deposit', this)">
+        <i class="fas fa-vault nav-icon"></i>
+        <span class="nav-label">Deposit</span>
+      </li>
+
+      <!-- Customer (with submenu) -->
+      <li class="nav-item has-submenu" id="nav-customer" onclick="toggleSubmenu('submenu-customer', this)">
+        <i class="fas fa-users nav-icon"></i>
+        <span class="nav-label">Customer</span>
+        <i class="fas fa-chevron-down nav-chevron"></i>
+      </li>
+      <ul class="submenu" id="submenu-customer">
+        <li class="submenu-item" id="nav-new-customer" onclick="navigateTo('customer', null); switchCustomerTab('new-customer')">
+          <i class="fas fa-user-plus submenu-icon"></i>
+          <span>New Customer</span>
+        </li>
+        <li class="submenu-item" id="nav-topup" onclick="navigateTo('customer', null); switchCustomerTab('topup')">
+          <i class="fas fa-money-bill-trend-up submenu-icon"></i>
+          <span>Top Up</span>
+        </li>
+        <li class="submenu-item" id="nav-termination" onclick="navigateTo('customer', null); switchCustomerTab('termination')">
+          <i class="fas fa-user-xmark submenu-icon"></i>
+          <span>Termination</span>
+        </li>
+      </ul>
+
+      <li class="nav-section-label">CONFIGURATION</li>
+
+      <!-- Settings (with submenu) -->
+      <li class="nav-item has-submenu" id="nav-settings" onclick="toggleSubmenu('submenu-settings', this)">
+        <i class="fas fa-sliders nav-icon"></i>
+        <span class="nav-label">Settings</span>
+        <i class="fas fa-chevron-down nav-chevron"></i>
+      </li>
+      <ul class="submenu" id="submenu-settings">
+        <li class="submenu-item" id="nav-permission" onclick="navigateTo('settings', null); switchSettingsTab('permission')">
+          <i class="fas fa-shield-halved submenu-icon"></i>
+          <span>Permission</span>
+        </li>
+        <li class="submenu-item" id="nav-kpi" onclick="navigateTo('settings', null); switchSettingsTab('kpi')">
+          <i class="fas fa-crosshairs submenu-icon"></i>
+          <span>KPI Setting</span>
+        </li>
+        <li class="submenu-item" id="nav-promo-setting" onclick="navigateTo('settings', null); switchSettingsTab('promo')">
+          <i class="fas fa-percent submenu-icon"></i>
+          <span>Promotion</span>
+        </li>
+      </ul>
+
+    </ul>
+  </nav>
+  <!-- END SIDEBAR -->
+
+  <!-- ===================== MAIN WRAPPER ===================== -->
+  <div id="main-wrapper">
+
+    <!-- TOPBAR -->
+    <header id="topbar">
+      <div class="topbar-left">
+        <button class="topbar-menu-btn" onclick="toggleSidebar()">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1 class="topbar-title" id="page-title">Dashboard</h1>
+      </div>
+      <div class="topbar-right">
+        <div style="position:relative;">
+          <button class="topbar-icon-btn" id="notif-btn" title="Notifications" onclick="toggleNotifications()">
+            <i class="fas fa-bell"></i>
+            <span class="topbar-badge" id="notif-badge"></span>
+          </button>
+          <!-- Notification Panel -->
+          <div id="notif-panel" style="display:none;position:absolute;top:44px;right:0;width:300px;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:1000;overflow:hidden;">
+            <div style="padding:12px 16px;border-bottom:1px solid #F0F0F0;display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-weight:700;font-size:.9rem;color:#1A1A2E;"><i class="fas fa-bell" style="color:#1B7D3D;margin-right:6px;"></i>Notifications</span>
+              <button onclick="notifications=[];updateNotificationBadge();renderNotificationPanel();" style="background:none;border:none;font-size:.72rem;color:#999;cursor:pointer;">Clear all</button>
+            </div>
+            <div id="notif-list" style="max-height:320px;overflow-y:auto;"></div>
+          </div>
+        </div>
+        <button class="topbar-icon-btn" onclick="handleLogout()" title="Sign Out">
+          <i class="fas fa-right-from-bracket"></i>
+        </button>
+        <div class="topbar-user-pill">
+          <div class="topbar-avatar" id="topbar-avatar">A</div>
+          <span class="topbar-name" id="topbar-name">Admin User</span>
+        </div>
+        <span class="topbar-role-badge" id="topbar-role">Admin</span>
+        <span id="gs-sync-indicator" title="Google Sheets Sync" style="display:flex;align-items:center;gap:5px;font-size:.75rem;color:#888;padding:0 6px;">
+          <i class="fas fa-table-cells-large" style="color:#0f9d58;font-size:.85rem;"></i>
+          <span id="gs-sync-status">Synced</span>
+        </span>
+      </div>
+    </header>
+    <!-- END TOPBAR -->
+
+    <!-- ===================== MAIN CONTENT ===================== -->
+    <main id="main-content">
+
+      <!-- ========== DASHBOARD PAGE ========== -->
+      <section class="page active" id="page-dashboard">
+
+        <div class="page-toolbar">
+          <div class="toolbar-left">
+            <label class="toolbar-label" for="dash-branch-filter"><i class="fas fa-location-dot"></i> Branch</label>
+            <select class="form-select toolbar-select" id="dash-branch-filter" onchange="loadDashboard()">
+              <option value="">All Branches</option>
             </select>
           </div>
-        </div>
-        <div class="form-group full">
-          <label><i class="fa-solid fa-comment"></i>Remark</label>
-          <div class="input-wrap"><i class="fa-solid fa-comment input-icon" style="top:14px;"></i>
-            <textarea id="tm-remark" placeholder="Optional remarks..."></textarea>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-cancel" onclick="closeModal('termination')">
-          <i class="fa-solid fa-xmark"></i>Cancel
-        </button>
-        <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i>Save</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ══ KPI MODAL ══ -->
-<div class="modal-overlay" id="modal-kpi" onclick="handleOverlay(event,'kpi')">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-header-left">
-        <div class="modal-header-icon teal"><i class="fa-solid fa-chart-line"></i></div>
-        <div>
-          <h3 id="kpi-modal-title">Add KPI</h3>
-          <p id="kpi-modal-sub">Define a new KPI metric and target</p>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeModal('kpi')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <form onsubmit="submitKpi(event)">
-      <div class="modal-body">
-        <input type="hidden" id="kpi-edit-id"/>
-
-        <div class="form-group full">
-          <label><i class="fa-solid fa-tag"></i>KPI Name <span class="opt">(optional)</span></label>
-          <div class="input-wrap"><i class="fa-solid fa-tag input-icon"></i>
-            <input type="text" id="kpi-name" placeholder="e.g. Monthly Sales Target…"/>
-          </div>
-        </div>
-
-        <div class="form-group full">
-          <label><i class="fa-solid fa-layer-group"></i>KPI Type <span class="opt">(optional)</span></label>
-          <div class="kpi-type-chips" id="kpiTypeChips">
-            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Sales')">📈 Sales</button>
-            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Revenue')">💰 Revenue</button>
-            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Subscribers')">👥 Subscribers</button>
-            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Retention')">🔁 Retention</button>
-            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Churn')">📉 Churn</button>
-            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'NPS')">⭐ NPS</button>
-            <button type="button" class="kpi-chip" onclick="selectKpiType(this,'Custom')">✏️ Custom</button>
-          </div>
-        </div>
-
-        <div class="form-divider">Target &amp; Measurement</div>
-
-        <div class="form-group full">
-          <label><i class="fa-solid fa-bullseye"></i>Target Value <span class="opt">(optional)</span></label>
-          <div class="value-unit-row">
-            <div class="input-wrap">
-              <i class="fa-solid fa-hashtag input-icon"></i>
-              <input type="number" id="kpi-value" placeholder="e.g. 1000" min="0" step="any"/>
-            </div>
-            <div class="unit-toggle">
-              <button type="button" id="btn-unit" class="active" onclick="setValueMode('unit')">
-                <i class="fa-solid fa-ruler"></i>Unit
-              </button>
-              <button type="button" id="btn-currency" onclick="setValueMode('currency')">
-                <i class="fa-solid fa-dollar-sign"></i>Currency
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group full" id="unit-label-group">
-          <label><i class="fa-solid fa-ruler"></i>Unit Label <span class="opt">(optional)</span></label>
-          <div class="input-wrap"><i class="fa-solid fa-pen input-icon"></i>
-            <input type="text" id="kpi-unit-label" placeholder="e.g. Subscribers, Lines, %"/>
-          </div>
-        </div>
-
-        <div class="currency-select-wrap" id="currency-group">
-          <div class="form-row">
-            <div class="form-group">
-              <label><i class="fa-solid fa-coins"></i>Currency <span class="opt">(optional)</span></label>
-              <div class="input-wrap"><i class="fa-solid fa-coins input-icon"></i>
-                <select id="kpi-currency">
-                  <option value="" disabled selected>Select currency</option>
-                  <option value="USD">🇺🇸 USD</option>
-                  <option value="KHR">🇰🇭 KHR</option>
-                  <option value="THB">🇹🇭 THB</option>
-                  <option value="SGD">🇸🇬 SGD</option>
-                  <option value="EUR">🇪🇺 EUR</option>
-                  <option value="GBP">🇬🇧 GBP</option>
-                  <option value="Custom">✏️ Custom</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group" id="custom-currency-group" style="display:none;">
-              <label><i class="fa-solid fa-pen"></i>Custom Symbol</label>
-              <div class="input-wrap"><i class="fa-solid fa-pen input-icon"></i>
-                <input type="text" id="kpi-custom-currency" placeholder="e.g. BTC…"/>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-regular fa-calendar"></i>Period <span class="opt">(optional)</span></label>
-            <div class="input-wrap"><i class="fa-regular fa-calendar input-icon"></i>
-              <select id="kpi-period">
-                <option value="">— No period —</option>
-                <option>Daily</option><option>Weekly</option><option>Monthly</option>
-                <option>Quarterly</option><option>Half-Yearly</option><option>Yearly</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-circle-dot"></i>Status <span class="opt">(optional)</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-circle-dot input-icon"></i>
-              <select id="kpi-status">
-                <option value="">— No status —</option>
-                <option>Active</option><option>Inactive</option><option>Draft</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group full">
-          <label><i class="fa-solid fa-align-left"></i>Description <span class="opt">(optional)</span></label>
-          <div class="input-wrap"><i class="fa-solid fa-align-left input-icon" style="top:14px;"></i>
-            <textarea id="kpi-desc" placeholder="Describe this KPI metric…"></textarea>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-cancel" onclick="closeModal('kpi')">
-          <i class="fa-solid fa-xmark"></i>Cancel
-        </button>
-        <button type="submit" class="btn-save">
-          <i class="fa-solid fa-floppy-disk"></i><span id="kpi-save-label">Save KPI</span>
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ══ ADD USER MODAL ══ -->
-<div class="modal-overlay" id="modal-addUser" onclick="handleOverlay(event,'addUser')">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-header-left">
-        <div class="modal-header-icon"><i class="fa-solid fa-user-plus"></i></div>
-        <div>
-          <h3 id="au-modal-title">Add New User</h3>
-          <p id="au-modal-sub">Create a staff account</p>
-        </div>
-      </div>
-      <button class="modal-close" onclick="closeModal('addUser')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <form onsubmit="submitUser(event)">
-      <div class="modal-body">
-        <input type="hidden" id="au-edit-id"/>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fa-regular fa-id-card"></i>Full Name <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-regular fa-id-card input-icon"></i>
-              <input type="text" id="au-fullname" placeholder="e.g. John Smith" required/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-at"></i>Username <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-at input-icon"></i>
-              <input type="text" id="au-username" placeholder="e.g. john.smith" required/>
-            </div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label><i class="fa-solid fa-lock"></i>Password <span class="req" id="au-pwd-req">*</span></label>
-          <div class="input-wrap">
-            <i class="fa-solid fa-lock input-icon"></i>
-            <input type="password" id="au-password" placeholder="Enter password"/>
-            <button type="button" class="password-eye" onclick="togglePwd('au-password','au-eye')">
-              <i class="fa-regular fa-eye" id="au-eye"></i>
+          <div class="toolbar-right">
+            <button class="btn btn-outline" onclick="loadDashboard()">
+              <i class="fas fa-arrows-rotate"></i> Refresh
             </button>
           </div>
-          <span id="au-pwd-hint" style="font-size:11px;color:#aaa;display:none;">
-            Leave blank to keep current password
-          </span>
         </div>
-        <div class="form-divider">Account Details</div>
-        <div class="form-row">
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-blue"><i class="fas fa-cart-shopping"></i></div>
+            <div class="kpi-card-body">
+              <p class="kpi-label">Total Sales</p>
+              <p class="kpi-value" id="kv-sales">0</p>
+            </div>
+            <span class="trend-badge trend-flat" id="tr-sales"><i class="fas fa-minus"></i> 0%</span>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-green"><i class="fas fa-boxes-stacked"></i></div>
+            <div class="kpi-card-body">
+              <p class="kpi-label">Total Units</p>
+              <p class="kpi-value" id="kv-units">0</p>
+            </div>
+            <span class="trend-badge trend-flat" id="tr-units"><i class="fas fa-minus"></i> 0%</span>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-purple"><i class="fas fa-sack-dollar"></i></div>
+            <div class="kpi-card-body">
+              <p class="kpi-label">Total Revenue</p>
+              <p class="kpi-value" id="kv-revenue">$0</p>
+            </div>
+            <span class="trend-badge trend-flat" id="tr-revenue"><i class="fas fa-minus"></i> 0%</span>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-orange"><i class="fas fa-users-between-lines"></i></div>
+            <div class="kpi-card-body">
+              <p class="kpi-label">Active Agents</p>
+              <p class="kpi-value" id="kv-agents">0</p>
+            </div>
+            <span class="trend-badge trend-flat" id="tr-agents"><i class="fas fa-minus"></i> 0%</span>
+          </div>
+        </div>
+
+        <!-- Chart Row 1 -->
+        <div class="chart-row">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title"><i class="fas fa-chart-line" style="color:#1B7D3D;margin-right:6px"></i>Monthly Trend</span>
+            </div>
+            <div class="chart-card-body">
+              <canvas id="cTrend"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title"><i class="fas fa-chart-pie" style="color:#9C27B0;margin-right:6px"></i>Item Mix</span>
+            </div>
+            <div class="chart-card-body">
+              <canvas id="cMix"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart Row 2 -->
+        <div class="chart-row">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title"><i class="fas fa-ranking-star" style="color:#FF9800;margin-right:6px"></i>Agent Performance</span>
+            </div>
+            <div class="chart-card-body">
+              <canvas id="cAgent"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title"><i class="fas fa-arrow-trend-up" style="color:#1565C0;margin-right:6px"></i>Growth vs Last Month</span>
+            </div>
+            <div class="chart-card-body">
+              <canvas id="cGrowth"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Branch Summary Table -->
+        <div class="table-card">
+          <div class="table-card-header">
+            <span class="table-card-title"><i class="fas fa-building" style="color:#1B7D3D;margin-right:6px"></i>Branch Summary</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Branch</th>
+                  <th>This Month</th>
+                  <th>Last Month</th>
+                  <th>Change</th>
+                </tr>
+              </thead>
+              <tbody id="branch-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+      <!-- END DASHBOARD PAGE -->
+
+      <!-- ========== PROMOTION PAGE ========== -->
+      <section class="page" id="page-promotionPage">
+        <div class="page-header">
+          <h2 class="page-header-title"><i class="fas fa-tags" style="color:#1B7D3D;margin-right:8px"></i>Promotion</h2>
+          <button class="btn btn-primary" id="promo-new-btn" onclick="openNewPromotionModal()">
+            <i class="fas fa-circle-plus"></i> New Promotion
+          </button>
+        </div>
+
+        <!-- Available Promotions -->
+        <div style="margin-bottom:24px;">
+          <div class="promo-section-header available">
+            <div>
+              <div class="promo-section-title"><i class="fas fa-circle-check"></i> Available Promotions</div>
+              <div class="promo-section-subtitle">Currently active campaigns</div>
+            </div>
+            <span class="promo-section-count" id="promo-available-count">0</span>
+          </div>
+          <div class="promo-card-grid" id="promo-available-grid"></div>
+          <div id="promo-available-empty" class="promo-empty-state" style="display:none;">
+            <i class="fas fa-tags"></i>
+            <p>No active promotions yet</p>
+            <span>Create your first promotion using the button above</span>
+          </div>
+        </div>
+
+        <!-- Expired Promotions -->
+        <div>
+          <div class="promo-section-header expired" style="margin-top:32px;">
+            <div>
+              <div class="promo-section-title"><i class="fas fa-clock-rotate-left"></i> Expired Promotions</div>
+              <div class="promo-section-subtitle">Past campaigns — admin can restore</div>
+            </div>
+            <span class="promo-section-count" id="promo-expired-count">0</span>
+          </div>
+          <div class="promo-card-grid" id="promo-expired-grid"></div>
+          <div id="promo-expired-empty" class="promo-empty-state" style="display:none;">
+            <i class="fas fa-clock"></i>
+            <p>No expired promotions</p>
+            <span>All promotions are currently active</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== DEPOSIT PAGE ========== -->
+      <section class="page" id="page-deposit">
+        <div class="page-header">
+          <h2 class="page-header-title"><i class="fas fa-vault" style="color:#1B7D3D;margin-right:8px"></i>Deposit</h2>
+          <button class="btn btn-primary" onclick="openModal('modal-addDeposit')">
+            <i class="fas fa-circle-plus"></i> Add Deposit
+          </button>
+        </div>
+        <div class="table-card">
+          <div class="table-responsive">
+            <table class="data-table" id="deposit-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Agent</th><th>Branch</th><th>Amount</th><th>Date</th><th>Note</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="7" class="empty-state"><i class="fas fa-vault fa-2x" style="opacity:.2;display:block;margin:0 auto 8px"></i>No deposit records yet</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== SALE PAGE ========== -->
+      <section class="page" id="page-sale">
+
+        <div class="tab-header">
+          <button class="tab-btn active" id="tab-sale-report" onclick="openSaleTab('report', this)">
+            <i class="fas fa-chart-bar"></i> Report
+          </button>
+          <button class="tab-btn" id="tab-daily-sale" onclick="openSaleTab('daily-sale', this)">
+            <i class="fas fa-calendar-check"></i> Daily Sale
+          </button>
+        </div>
+
+        <div class="items-strip-wrapper">
+          <div class="items-strip" id="items-strip"></div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label class="filter-label"><i class="fas fa-calendar"></i> From</label>
+            <input type="date" class="form-input" id="sale-date-from" onchange="applySaleFilters()" />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">To</label>
+            <input type="date" class="form-input" id="sale-date-to" onchange="applySaleFilters()" />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label"><i class="fas fa-user"></i> Agent</label>
+            <select class="form-select" id="sale-filter-agent" onchange="applySaleFilters()">
+              <option value="">All Agents</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label"><i class="fas fa-location-dot"></i> Branch</label>
+            <select class="form-select" id="sale-filter-branch" onchange="applySaleFilters()">
+              <option value="">All Branches</option>
+            </select>
+          </div>
+          <button class="btn btn-outline" onclick="clearSaleFilters()">
+            <i class="fas fa-xmark"></i> Clear
+          </button>
+        </div>
+
+        <!-- Sale KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-blue"><i class="fas fa-cart-shopping"></i></div>
+            <div class="kpi-card-body"><p class="kpi-label">Total Sales</p><p class="kpi-value" id="sale-kpi-sales">0</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-green"><i class="fas fa-boxes-stacked"></i></div>
+            <div class="kpi-card-body"><p class="kpi-label">Total Units</p><p class="kpi-value" id="sale-kpi-units">0</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-purple"><i class="fas fa-sack-dollar"></i></div>
+            <div class="kpi-card-body"><p class="kpi-label">Total Revenue</p><p class="kpi-value" id="sale-kpi-revenue">$0</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-orange"><i class="fas fa-users-between-lines"></i></div>
+            <div class="kpi-card-body"><p class="kpi-label">Active Agents</p><p class="kpi-value" id="sale-kpi-agents">0</p></div>
+          </div>
+        </div>
+
+        <div class="view-toggle-bar">
+          <button class="view-toggle-btn active" id="view-btn-table" onclick="setReportView('table')">
+            <i class="fas fa-table-list"></i> Table View
+          </button>
+          <button class="view-toggle-btn" id="view-btn-summary" onclick="setReportView('summary')">
+            <i class="fas fa-chart-pie"></i> Summary View
+          </button>
+          <div class="view-toggle-spacer"></div>
+          <button class="btn btn-primary" onclick="openNewSaleModal()">
+            <i class="fas fa-circle-plus"></i> New Sale
+          </button>
+        </div>
+
+        <div class="table-card" id="sale-table-card">
+          <div class="table-responsive">
+            <table class="data-table" id="sale-table"></table>
+          </div>
+        </div>
+
+        <div id="sale-summary-view" style="display:none;"></div>
+        <div id="sale-total-bar"></div>
+
+      </section>
+      <!-- END SALE PAGE -->
+
+      <!-- ========== CUSTOMER PAGE ========== -->
+      <section class="page" id="page-customer">
+
+        <div class="tab-header">
+          <button class="tab-btn active" id="tab-new-customer" onclick="openCustomerTab('new-customer', this)">
+            <i class="fas fa-user-plus"></i> New Customer
+          </button>
+          <button class="tab-btn" id="tab-topup" onclick="openCustomerTab('topup', this)">
+            <i class="fas fa-money-bill-trend-up"></i> Top Up
+          </button>
+          <button class="tab-btn" id="tab-termination" onclick="openCustomerTab('termination', this)">
+            <i class="fas fa-user-xmark"></i> Termination
+          </button>
+        </div>
+
+        <div class="tab-content active" id="tab-content-new-customer">
+          <div class="page-header">
+            <h2 class="page-header-title">New Customers</h2>
+            <button class="btn btn-primary" onclick="openAddModal('new-customer')">
+              <i class="fas fa-circle-plus"></i> Add New Customer
+            </button>
+          </div>
+          <div class="table-card">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>ID/Passport</th><th>Package</th><th>Agent</th><th>Branch</th><th>Date</th><th>Actions</th></tr></thead>
+                <tbody id="new-customer-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-content-topup">
+          <div class="page-header">
+            <h2 class="page-header-title">Top Up</h2>
+            <button class="btn btn-primary" onclick="openAddModal('topup')">
+              <i class="fas fa-circle-plus"></i> Add Top Up
+            </button>
+          </div>
+          <div class="table-card">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>Customer Name</th><th>Phone</th><th>Amount</th><th>Agent</th><th>Branch</th><th>Date</th><th>Actions</th></tr></thead>
+                <tbody id="topup-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-content-termination">
+          <div class="page-header">
+            <h2 class="page-header-title">Termination</h2>
+            <button class="btn btn-primary" onclick="openAddModal('termination')">
+              <i class="fas fa-circle-plus"></i> Add Termination
+            </button>
+          </div>
+          <div class="table-card">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>Customer Name</th><th>Phone</th><th>Reason</th><th>Agent</th><th>Branch</th><th>Date</th><th>Actions</th></tr></thead>
+                <tbody id="termination-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========== SETTINGS PAGE ========== -->
+      <section class="page" id="page-settings">
+
+        <div id="settings-contact-banner" class="settings-contact-banner" style="display:none;">
+          <i class="fas fa-headset"></i>
+          <div>
+            <div style="font-weight:600;font-size:.9375rem;">Need to manage user accounts?</div>
+            <div style="font-size:.8125rem;opacity:.85;margin-top:2px;">Contact the admin team to add, edit, or remove users.</div>
+          </div>
+          <button class="btn btn-outline" onclick="openContactSupportModal()"><i class="fas fa-paper-plane"></i> Contact Support</button>
+        </div>
+
+        <div class="tab-header">
+          <button class="tab-btn active" id="stab-permission" onclick="openSettingsTab('permission', this)">
+            <i class="fas fa-shield-halved"></i> Permission
+          </button>
+          <button class="tab-btn" id="stab-kpi" onclick="openSettingsTab('kpi', this)">
+            <i class="fas fa-crosshairs"></i> KPI Setting
+          </button>
+          <button class="tab-btn" id="stab-promo" onclick="openSettingsTab('promo', this)">
+            <i class="fas fa-percent"></i> Promotion
+          </button>
+        </div>
+
+        <div class="tab-content active" id="stab-content-permission">
+          <div class="page-header">
+            <h2 class="page-header-title">User Permissions</h2>
+            <button class="btn btn-primary" onclick="openAddModal('user')">
+              <i class="fas fa-circle-plus"></i> Add User
+            </button>
+          </div>
+          <div class="table-card">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>Full Name</th><th>Username</th><th>Role</th><th>Branch</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody id="staff-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="stab-content-kpi">
+          <div class="page-header">
+            <h2 class="page-header-title">KPI Settings</h2>
+            <button class="btn btn-primary" onclick="openAddModal('kpi')">
+              <i class="fas fa-circle-plus"></i> Add KPI
+            </button>
+          </div>
+          <div class="table-card">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>KPI Name</th><th>Type</th><th>For</th><th>Target</th><th>Period</th><th>Actions</th></tr></thead>
+                <tbody id="kpi-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="stab-content-promo">
+          <div class="page-header">
+            <h2 class="page-header-title">Promotion Settings</h2>
+            <button class="btn btn-primary" onclick="openNewPromotionModal()">
+              <i class="fas fa-circle-plus"></i> New Promotion
+            </button>
+          </div>
+          <div class="table-card">
+            <div class="table-responsive">
+              <table class="data-table" id="promo-setting-table">
+                <thead><tr><th>#</th><th>Campaign</th><th>Channel</th><th>Period</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===================== MODALS ===================== -->
+
+  <!-- Add/Edit Item -->
+  <div class="modal-overlay" id="modal-addItem">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-addItem-title">Add Item</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-addItem')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-addItem" onsubmit="submitItem(event)">
+        <div class="modal-body">
           <div class="form-group">
-            <label><i class="fa-solid fa-user-shield"></i>Role <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-user-shield input-icon"></i>
-              <select id="au-role" required>
-                <option value="" disabled selected>Select role</option>
-                <option>Admin</option><option>Supervisor</option><option>User</option>
+            <label class="form-label">Item Group</label>
+            <div class="toggle-btn-group">
+              <button type="button" class="toggle-btn active" id="grp-btn-unit" onclick="selectItemGroup('unit')"><i class="fas fa-boxes-stacked"></i> Unit Group</button>
+              <button type="button" class="toggle-btn" id="grp-btn-dollar" onclick="selectItemGroup('dollar')"><i class="fas fa-dollar-sign"></i> Dollar Group</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="item-name">Item Name <span class="required">*</span></label>
+            <input type="text" class="form-input" id="item-name" placeholder="Enter item name" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="item-shortcut">Shortcut</label>
+            <input type="text" class="form-input" id="item-shortcut" placeholder="e.g. PP50" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="item-category">Category <span class="required">*</span></label>
+            <select class="form-select" id="item-category" required>
+              <option value="">Select category</option>
+              <option value="Prepaid">Prepaid</option>
+              <option value="Postpaid">Postpaid</option>
+              <option value="Data">Data</option>
+              <option value="Voice">Voice</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div id="item-unit-fields">
+            <div class="form-group">
+              <label class="form-label" for="item-unit">Unit</label>
+              <select class="form-select" id="item-unit" onchange="handleUnitSelectChange()">
+                <option value="SIM">SIM</option>
+                <option value="Card">Card</option>
+                <option value="Package">Package</option>
+                <option value="Voucher">Voucher</option>
+                <option value="custom">+ Custom Unit</option>
+              </select>
+            </div>
+            <div class="form-group" style="display:none;" id="item-custom-unit-group">
+              <label class="form-label" for="item-custom-unit">Custom Unit</label>
+              <input type="text" class="form-input" id="item-custom-unit" placeholder="Enter custom unit" style="display:none;" />
+            </div>
+          </div>
+          <div id="item-dollar-fields" style="display:none;">
+            <div class="form-row">
+              <div class="form-group form-col">
+                <label class="form-label" for="item-currency">Currency</label>
+                <select class="form-select" id="item-currency" onchange="handleCurrencySelectChange()">
+                  <option value="USD">USD ($)</option>
+                  <option value="KHR">KHR (៛)</option>
+                  <option value="custom">+ Custom</option>
+                </select>
+              </div>
+              <div class="form-group form-col">
+                <label class="form-label" for="item-price">Price</label>
+                <input type="number" class="form-input" id="item-price" placeholder="0.00" min="0" step="0.01" />
+              </div>
+            </div>
+            <div class="form-group" style="display:none;" id="item-custom-currency-group">
+              <label class="form-label" for="item-custom-currency">Custom Currency</label>
+              <input type="text" class="form-input" id="item-custom-currency" placeholder="Enter currency code" style="display:none;" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="item-status">Status</label>
+            <select class="form-select" id="item-status">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="item-desc">Description</label>
+            <textarea class="form-textarea" id="item-desc" placeholder="Optional description" rows="3"></textarea>
+          </div>
+          <input type="hidden" id="item-edit-id" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-addItem')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="modal-addItem-submit">Add Item</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- New/Edit Sale -->
+  <div class="modal-overlay" id="modal-newSale">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-newSale-title">New Sale</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-newSale')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-newSale" onsubmit="submitSale(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="sale-agent-name">Agent Name <span class="required">*</span></label>
+              <input type="text" class="form-input" id="sale-agent-name" placeholder="Enter agent name" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="sale-branch">Branch <span class="required">*</span></label>
+              <select class="form-select" id="sale-branch" required>
+                <option value="">Select branch</option>
+                <option value="Phnom Penh">Phnom Penh</option>
+                <option value="Siem Reap">Siem Reap</option>
+                <option value="Battambang">Battambang</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="sale-date">Date <span class="required">*</span></label>
+              <input type="date" class="form-input" id="sale-date" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="sale-note">Note</label>
+              <input type="text" class="form-input" id="sale-note" placeholder="Optional note" />
+            </div>
+          </div>
+          <div class="sale-items-section">
+            <h4 class="sale-section-title"><i class="fas fa-boxes-stacked"></i> Unit Group Items</h4>
+            <div id="sale-unit-items"></div>
+          </div>
+          <div class="sale-items-section">
+            <h4 class="sale-section-title"><i class="fas fa-dollar-sign"></i> Dollar Group Items</h4>
+            <div id="sale-dollar-items"></div>
+          </div>
+          <input type="hidden" id="sale-edit-id" />
+        </div>
+        <div class="sale-totals-footer">
+          <div class="sale-total-item">
+            <span class="sale-total-label">Total Units</span>
+            <span class="sale-total-value" id="sale-total-units">0</span>
+          </div>
+          <div class="sale-total-item">
+            <span class="sale-total-label">Total Revenue</span>
+            <span class="sale-total-value" id="sale-total-rev">$0.00</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-newSale')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="modal-newSale-submit">Save Sale</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- New Customer -->
+  <div class="modal-overlay" id="modal-newCustomer">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-newCustomer-title">Add New Customer</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-newCustomer')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-newCustomer" onsubmit="submitNewCustomer(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="nc-name">Customer Name <span class="required">*</span></label>
+              <input type="text" class="form-input" id="nc-name" placeholder="Full name" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="nc-phone">Phone <span class="required">*</span></label>
+              <input type="tel" class="form-input" id="nc-phone" placeholder="Phone number" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="nc-id">ID / Passport</label>
+              <input type="text" class="form-input" id="nc-id" placeholder="ID or Passport number" />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="nc-package">Package</label>
+              <input type="text" class="form-input" id="nc-package" placeholder="Package name" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="nc-agent">Agent <span class="required">*</span></label>
+              <input type="text" class="form-input" id="nc-agent" placeholder="Agent name" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="nc-branch">Branch <span class="required">*</span></label>
+              <select class="form-select" id="nc-branch" required>
+                <option value="">Select branch</option>
+                <option value="Phnom Penh">Phnom Penh</option>
+                <option value="Siem Reap">Siem Reap</option>
+                <option value="Battambang">Battambang</option>
               </select>
             </div>
           </div>
           <div class="form-group">
-            <label><i class="fa-solid fa-circle-dot"></i>Status <span class="req">*</span></label>
-            <div class="input-wrap"><i class="fa-solid fa-circle-dot input-icon"></i>
-              <select id="au-status" required>
-                <option value="" disabled selected>Select status</option>
-                <option>Active</option><option>Inactive</option>
+            <label class="form-label" for="nc-date">Date <span class="required">*</span></label>
+            <input type="date" class="form-input" id="nc-date" required />
+          </div>
+          <input type="hidden" id="nc-edit-id" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-newCustomer')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Customer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Top Up -->
+  <div class="modal-overlay" id="modal-topUp">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-topUp-title">Add Top Up</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-topUp')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-topUp" onsubmit="submitTopUp(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="tu-name">Customer Name <span class="required">*</span></label>
+              <input type="text" class="form-input" id="tu-name" placeholder="Customer name" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="tu-phone">Phone <span class="required">*</span></label>
+              <input type="tel" class="form-input" id="tu-phone" placeholder="Phone number" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tu-amount">Amount <span class="required">*</span></label>
+            <input type="number" class="form-input" id="tu-amount" placeholder="0.00" min="0" step="0.01" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="tu-agent">Agent <span class="required">*</span></label>
+              <input type="text" class="form-input" id="tu-agent" placeholder="Agent name" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="tu-branch">Branch <span class="required">*</span></label>
+              <select class="form-select" id="tu-branch" required>
+                <option value="">Select branch</option>
+                <option value="Phnom Penh">Phnom Penh</option>
+                <option value="Siem Reap">Siem Reap</option>
+                <option value="Battambang">Battambang</option>
               </select>
             </div>
           </div>
+          <div class="form-group">
+            <label class="form-label" for="tu-date">Date <span class="required">*</span></label>
+            <input type="date" class="form-input" id="tu-date" required />
+          </div>
+          <input type="hidden" id="tu-edit-id" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-topUp')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Top Up</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Termination -->
+  <div class="modal-overlay" id="modal-termination">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-termination-title">Add Termination</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-termination')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-termination" onsubmit="submitTermination(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="term-name">Customer Name <span class="required">*</span></label>
+              <input type="text" class="form-input" id="term-name" placeholder="Customer name" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="term-phone">Phone <span class="required">*</span></label>
+              <input type="tel" class="form-input" id="term-phone" placeholder="Phone number" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="term-reason">Reason <span class="required">*</span></label>
+            <textarea class="form-textarea" id="term-reason" placeholder="Reason for termination" rows="3" required></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="term-agent">Agent <span class="required">*</span></label>
+              <input type="text" class="form-input" id="term-agent" placeholder="Agent name" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="term-branch">Branch <span class="required">*</span></label>
+              <select class="form-select" id="term-branch" required>
+                <option value="">Select branch</option>
+                <option value="Phnom Penh">Phnom Penh</option>
+                <option value="Siem Reap">Siem Reap</option>
+                <option value="Battambang">Battambang</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="term-date">Date <span class="required">*</span></label>
+            <input type="date" class="form-input" id="term-date" required />
+          </div>
+          <input type="hidden" id="term-edit-id" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-termination')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Termination</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- KPI Modal -->
+  <div class="modal-overlay" id="modal-kpi">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-kpi-title">Add KPI</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-kpi')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-kpi" onsubmit="submitKPI(event)">
+        <div class="modal-body">
+          <!-- KPI For: Shop or Agent -->
+          <div class="form-group">
+            <label class="form-label">KPI For <span class="required">*</span></label>
+            <div class="toggle-btn-group" style="width:100%;">
+              <button type="button" class="toggle-btn active" id="kpi-for-shop" onclick="selectKpiFor('shop')" style="flex:1;">
+                <i class="fas fa-store"></i> Shop
+              </button>
+              <button type="button" class="toggle-btn" id="kpi-for-agent" onclick="selectKpiFor('agent')" style="flex:1;">
+                <i class="fas fa-user"></i> Agent
+              </button>
+            </div>
+          </div>
+
+          <!-- Assignee section: shown when KPI For = Shop -->
+          <div class="form-group" id="kpi-shop-assignee-group">
+            <label class="form-label">Supervisor (Shop) <span class="required">*</span></label>
+            <select class="form-select" id="kpi-shop-assignee">
+              <option value="">Select Supervisor</option>
+            </select>
+          </div>
+
+          <!-- Assignee section: shown when KPI For = Agent -->
+          <div class="form-group" id="kpi-agent-branch-group" style="display:none;">
+            <label class="form-label">Branch <span class="required">*</span></label>
+            <select class="form-select" id="kpi-agent-branch" onchange="onKpiBranchChange()">
+              <option value="">Select branch</option>
+            </select>
+          </div>
+          <div class="form-group" id="kpi-agent-assignee-group" style="display:none;">
+            <label class="form-label">Agent <span class="required">*</span></label>
+            <select class="form-select" id="kpi-agent-assignee">
+              <option value="">Select Agent</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="kpi-name">KPI Name <span class="required">*</span></label>
+            <input type="text" class="form-input" id="kpi-name" placeholder="Enter KPI name" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">KPI Type <span class="required">*</span></label>
+            <div class="chip-group">
+              <button type="button" class="chip active" id="kpi-chip-Sales" data-value="Sales" onclick="selectKpiType(this)">Sales</button>
+              <button type="button" class="chip" id="kpi-chip-Units" data-value="Units" onclick="selectKpiType(this)">Units</button>
+              <button type="button" class="chip" id="kpi-chip-Revenue" data-value="Revenue" onclick="selectKpiType(this)">Revenue</button>
+              <button type="button" class="chip" id="kpi-chip-Customers" data-value="Customers" onclick="selectKpiType(this)">Customers</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="kpi-target">Target Value <span class="required">*</span></label>
+            <input type="number" class="form-input" id="kpi-target" placeholder="0" min="0" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Value Mode</label>
+            <div class="toggle-btn-group">
+              <button type="button" class="toggle-btn active" id="kpi-unit-toggle" onclick="selectKpiMode('unit')"><i class="fas fa-boxes-stacked"></i> Unit</button>
+              <button type="button" class="toggle-btn" id="kpi-currency-toggle" onclick="selectKpiMode('currency')"><i class="fas fa-dollar-sign"></i> Currency</button>
+            </div>
+          </div>
+          <div class="form-group" id="kpi-unit-field">
+            <label class="form-label" for="kpi-unit-val">Unit Label</label>
+            <input type="text" class="form-input" id="kpi-unit-val" placeholder="e.g. SIM, Card, Package" />
+          </div>
+          <div class="form-group" id="kpi-currency-field" style="display:none;">
+            <label class="form-label">Currency</label>
+            <select class="form-select" id="kpi-currency-sel">
+              <option value="USD">USD ($)</option>
+              <option value="KHR">KHR (៛)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="kpi-period">Period <span class="required">*</span></label>
+            <select class="form-select" id="kpi-period" required>
+              <option value="Monthly">Monthly</option>
+              <option value="Weekly">Weekly</option>
+              <option value="Daily">Daily</option>
+            </select>
+          </div>
+          <input type="hidden" id="kpi-edit-id" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-kpi')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="modal-kpi-submit">Add KPI</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add/Edit User -->
+  <div class="modal-overlay" id="modal-addUser">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-addUser-title">Add User</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-addUser')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-addUser" onsubmit="submitUser(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="user-name">Full Name <span class="required">*</span></label>
+              <input type="text" class="form-input" id="user-name" placeholder="Full name" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="user-username">Username <span class="required">*</span></label>
+              <input type="text" class="form-input" id="user-username" placeholder="Username" required autocomplete="off" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="user-password">Password <span class="required">*</span></label>
+            <div class="input-with-icon">
+              <input type="password" class="form-input" id="user-password" placeholder="Password" required autocomplete="new-password" />
+              <button type="button" class="input-icon-btn" id="user-pwd-eye" onclick="togglePasswordVisibility('user-password','user-pwd-eye')">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="user-role">Role <span class="required">*</span></label>
+              <select class="form-select" id="user-role" required onchange="onUserRoleChange()">
+                <option value="">Select role</option>
+                <option value="Admin">Admin</option>
+                <option value="Supervisor">Supervisor</option>
+                <option value="Agent">Agent</option>
+              </select>
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="user-branch">Branch <span class="required">*</span></label>
+              <input type="text" class="form-input" id="user-branch" placeholder="Enter branch name" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="user-status">Status</label>
+            <select class="form-select" id="user-status">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <input type="hidden" id="user-edit-id" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-addUser')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="modal-addUser-submit">Add User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- New Promotion Modal -->
+  <div class="modal-overlay" id="modal-newPromotion">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-newPromotion-title">New Promotion</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-newPromotion')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-newPromotion" onsubmit="submitNewPromotion(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="np-campaign">Campaign Promotion <span class="required">*</span></label>
+            <input type="text" class="form-input" id="np-campaign" placeholder="Enter campaign name" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="np-channel">Channel <span class="required">*</span></label>
+            <input type="text" class="form-input" id="np-channel" placeholder="e.g. SMS, Social Media, In-Store" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="np-start">Start Date <span class="required">*</span></label>
+              <input type="date" class="form-input" id="np-start" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="np-end">End Date <span class="required">*</span></label>
+              <input type="date" class="form-input" id="np-end" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="np-terms">Terms &amp; Conditions</label>
+            <textarea class="form-textarea" id="np-terms" placeholder="Enter terms and conditions..." style="min-height:120px;"></textarea>
+          </div>
+          <input type="hidden" id="np-edit-id" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-newPromotion')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="np-submit-btn">Add Promotion</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View Promotion Modal -->
+  <div class="modal-overlay" id="modal-viewPromo" onclick="handleOverlay(event,'modal-viewPromo')">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-tag" style="color:#1B7D3D;margin-right:8px;"></i>Promotion Details</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-viewPromo')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" id="modal-viewPromo-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-viewPromo')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contact Support Modal -->
+  <div class="modal-overlay" id="modal-contactSupport" onclick="handleOverlay(event,'modal-contactSupport')">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-headset" style="color:#1B7D3D;margin-right:8px;"></i>Contact Support</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-contactSupport')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="cs-name" class="form-input" style="width:100%;" readonly />
         </div>
         <div class="form-group">
-          <label><i class="fa-solid fa-building"></i>Branch <span class="req">*</span></label>
-          <div class="input-wrap"><i class="fa-solid fa-building input-icon"></i>
-            <input type="text" id="au-branch" placeholder="e.g. Phnom Penh HQ" required/>
-          </div>
+          <label class="form-label">Username</label>
+          <input type="text" id="cs-username" class="form-input" style="width:100%;" readonly />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Branch</label>
+          <input type="text" id="cs-branch" class="form-input" style="width:100%;" readonly />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message <span class="required">*</span></label>
+          <textarea id="cs-message" class="form-textarea" placeholder="Describe your request..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn-cancel" onclick="closeModal('addUser')">
-          <i class="fa-solid fa-xmark"></i>Cancel
-        </button>
-        <button type="submit" class="btn-save">
-          <i class="fa-solid fa-floppy-disk"></i><span id="au-save-label">Save User</span>
-        </button>
+        <button class="btn btn-outline" onclick="closeModal('modal-contactSupport')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitContactSupport()"><i class="fas fa-paper-plane"></i> Send</button>
       </div>
-    </form>
+    </div>
   </div>
-</div>
 
-<!-- ══ ROLE SWITCHER (Demo) ══ -->
-<div class="role-selector">
-  <div class="role-selector-title">Demo — Switch Role</div>
-  <div class="role-selector-row">
-    <i class="fa-solid fa-masks-theater" style="color:#aaa;font-size:13px;"></i>
-    <select id="roleSelect" onchange="switchRole(this.value)">
-      <option value="admin">Admin</option>
-      <option value="supervisor">Supervisor</option>
-      <option value="user">User</option>
-    </select>
+  <!-- ===================== ROLE WIDGET ===================== -->
+  <div id="role-widget">
+    <div id="role-widget-dropdown">
+      <div class="role-widget-header">Switch Role</div>
+      <button class="role-widget-option" onclick="switchRole('admin')"><i class="fas fa-user-shield"></i> Admin</button>
+      <button class="role-widget-option" onclick="switchRole('supervisor')"><i class="fas fa-user-tie"></i> Supervisor</button>
+      <button class="role-widget-option" onclick="switchRole('user')"><i class="fas fa-user"></i> User</button>
+    </div>
+    <button id="role-widget-btn" onclick="toggleRoleWidget()">
+      <i class="fas fa-user-shield"></i> Admin
+    </button>
   </div>
-</div>
 
-<script src="app.js"></script>
+  </div>
+  <!-- END APP SHELL -->
+
+  <script src="app.js"></script>
 </body>
 </html>
