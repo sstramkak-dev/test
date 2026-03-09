@@ -121,6 +121,56 @@ let depositList = [
 let notifications = [];
 
 // ------------------------------------------------------------
+// localStorage Persistence
+// ------------------------------------------------------------
+const LS_KEYS = {
+  items: 'smart5g_items',
+  sales: 'smart5g_sales',
+  customers: 'smart5g_customers',
+  topup: 'smart5g_topup',
+  terminations: 'smart5g_terminations',
+  staff: 'smart5g_staff',
+  kpis: 'smart5g_kpis',
+  promotions: 'smart5g_promotions',
+  deposits: 'smart5g_deposits'
+};
+
+function lsSave(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) { console.warn('localStorage save failed:', e); }
+}
+
+function lsLoad(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) { return fallback; }
+}
+
+function saveAllData() {
+  lsSave(LS_KEYS.items, itemCatalogue);
+  lsSave(LS_KEYS.sales, saleRecords);
+  lsSave(LS_KEYS.customers, newCustomers);
+  lsSave(LS_KEYS.topup, topUpList);
+  lsSave(LS_KEYS.terminations, terminationList);
+  lsSave(LS_KEYS.staff, staffList);
+  lsSave(LS_KEYS.kpis, kpiList);
+  lsSave(LS_KEYS.promotions, promotionList);
+  lsSave(LS_KEYS.deposits, depositList);
+}
+
+function loadAllData() {
+  itemCatalogue = lsLoad(LS_KEYS.items, itemCatalogue);
+  saleRecords = lsLoad(LS_KEYS.sales, saleRecords);
+  newCustomers = lsLoad(LS_KEYS.customers, newCustomers);
+  topUpList = lsLoad(LS_KEYS.topup, topUpList);
+  terminationList = lsLoad(LS_KEYS.terminations, terminationList);
+  staffList = lsLoad(LS_KEYS.staff, staffList);
+  kpiList = lsLoad(LS_KEYS.kpis, kpiList);
+  promotionList = lsLoad(LS_KEYS.promotions, promotionList);
+  depositList = lsLoad(LS_KEYS.deposits, depositList);
+}
+
+// ------------------------------------------------------------
 // Helper Functions
 // ------------------------------------------------------------
 function g(id) { return document.getElementById(id); }
@@ -542,6 +592,7 @@ function submitItem(e) {
   closeModal('modal-addItem');
   renderItemChips();
   if (currentPage === 'dashboard') renderDashboard();
+  saveAllData();
 }
 
 function editItem(id) {
@@ -554,6 +605,7 @@ function deleteItem(id) {
   itemCatalogue = itemCatalogue.filter(function(x) { return x.id !== id; });
   renderItemChips();
   if (currentPage === 'dashboard') renderDashboard();
+  saveAllData();
 }
 
 function renderItemChips() {
@@ -708,6 +760,7 @@ function submitSale(e) {
   applyReportFilters();
   if (currentPage === 'dashboard') renderDashboard();
   syncSheet('Sales', saleRecords);
+  saveAllData();
 }
 
 function editSale(id) {
@@ -721,6 +774,7 @@ function deleteSale(id) {
   applyReportFilters();
   if (currentPage === 'dashboard') renderDashboard();
   syncSheet('Sales', saleRecords);
+  saveAllData();
 }
 
 // ------------------------------------------------------------
@@ -820,7 +874,6 @@ function renderSaleTable() {
       branches.map(function(b) { return '<option value="' + esc(b) + '"' + (curBranch === b ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('');
   }
 
-  const actualData = filteredSales.length ? filteredSales : (filteredSales === saleRecords ? saleRecords : filteredSales);
   const data = filteredSales;
   const unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
   const dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active'; });
@@ -860,7 +913,7 @@ function renderSaleTable() {
 
     const avIdx = Math.abs((s.agent.charCodeAt(0) || 0)) % 8;
     return '<tr>' +
-      '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;background:#1B7D3D;margin-right:8px;">' + esc(ini(s.agent)) + '</span>' + esc(s.agent) + '</div></td>' +
+      '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(s.agent)) + '</span>' + esc(s.agent) + '</div></td>' +
       '<td>' + esc(s.branch) + '</td>' +
       '<td>' + esc(s.date) + '</td>' +
       unitCells +
@@ -1251,6 +1304,9 @@ function submitNewCustomer(e) {
     pkg: rv('nc-package'), agent: rv('nc-agent'), branch: rv('nc-branch'), date: rv('nc-date')
   };
   if (!obj.name) return alert('Please enter customer name');
+  if (!obj.phone) return alert('Please enter phone number');
+  if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) return alert('Please enter a valid phone number (6–15 digits, separators allowed)');
+  if (!obj.date) return alert('Please select a date');
   if (editId) {
     const idx = newCustomers.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) newCustomers[idx] = obj;
@@ -1262,6 +1318,7 @@ function submitNewCustomer(e) {
   closeModal('modal-newCustomer');
   renderNewCustomerTable();
   syncSheet('Customers', newCustomers);
+  saveAllData();
 }
 
 function editNewCustomer(id) {
@@ -1274,6 +1331,7 @@ function deleteNewCustomer(id) {
   newCustomers = newCustomers.filter(function(x) { return x.id !== id; });
   renderNewCustomerTable();
   syncSheet('Customers', newCustomers);
+  saveAllData();
 }
 
 function renderNewCustomerTable() {
@@ -1311,6 +1369,10 @@ function submitTopUp(e) {
     agent: rv('tu-agent'), branch: rv('tu-branch'), date: rv('tu-date')
   };
   if (!obj.name) return alert('Please enter customer name');
+  if (!obj.phone) return alert('Please enter phone number');
+  if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) return alert('Please enter a valid phone number (6–15 digits, separators allowed)');
+  if (!obj.amount || obj.amount <= 0) return alert('Please enter a valid top-up amount');
+  if (!obj.date) return alert('Please select a date');
   if (editId) {
     const idx = topUpList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) topUpList[idx] = obj;
@@ -1322,6 +1384,7 @@ function submitTopUp(e) {
   closeModal('modal-topUp');
   renderTopUpTable();
   syncSheet('TopUp', topUpList);
+  saveAllData();
 }
 
 function editTopUp(id) {
@@ -1334,6 +1397,7 @@ function deleteTopUp(id) {
   topUpList = topUpList.filter(function(x) { return x.id !== id; });
   renderTopUpTable();
   syncSheet('TopUp', topUpList);
+  saveAllData();
 }
 
 function renderTopUpTable() {
@@ -1370,6 +1434,9 @@ function submitTermination(e) {
     agent: rv('term-agent'), branch: rv('term-branch'), date: rv('term-date')
   };
   if (!obj.name) return alert('Please enter customer name');
+  if (!obj.phone) return alert('Please enter phone number');
+  if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) return alert('Please enter a valid phone number (6–15 digits, separators allowed)');
+  if (!obj.date) return alert('Please select a date');
   if (editId) {
     const idx = terminationList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) terminationList[idx] = obj;
@@ -1381,6 +1448,7 @@ function submitTermination(e) {
   closeModal('modal-termination');
   renderTerminationTable();
   syncSheet('Terminations', terminationList);
+  saveAllData();
 }
 
 function editTermination(id) {
@@ -1393,6 +1461,7 @@ function deleteTermination(id) {
   terminationList = terminationList.filter(function(x) { return x.id !== id; });
   renderTerminationTable();
   syncSheet('Terminations', terminationList);
+  saveAllData();
 }
 
 function renderTerminationTable() {
@@ -1476,6 +1545,7 @@ function submitNewPromotion(e) {
   renderPromotionCards();
   renderPromoSettingTable();
   syncSheet('Promotions', promotionList);
+  saveAllData();
 }
 
 function editNewPromotion(id) {
@@ -1489,6 +1559,7 @@ function deleteNewPromotion(id) {
   renderPromotionCards();
   renderPromoSettingTable();
   syncSheet('Promotions', promotionList);
+  saveAllData();
 }
 
 function renderPromotionCards() {
@@ -1568,6 +1639,7 @@ function restorePromotion(id) {
   renderPromotionCards();
   showToast('Promotion restored for 30 days.', 'success');
   syncSheet('Promotions', promotionList);
+  saveAllData();
 }
 
 function openPromoViewModal(id) {
@@ -1658,7 +1730,8 @@ function submitDeposit(e) {
     note: rv('dep-note')
   };
   if (!obj.agent) return alert('Please enter agent name');
-  if (!obj.amount) return alert('Please enter deposit amount');
+  if (!obj.amount || obj.amount <= 0) return alert('Please enter a valid deposit amount');
+  if (!obj.date) return alert('Please select a date');
   if (editId) {
     const idx = depositList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) depositList[idx] = obj;
@@ -1671,6 +1744,7 @@ function submitDeposit(e) {
   renderDepositTable();
   updateDepositKpis();
   syncSheet('Deposits', depositList);
+  saveAllData();
 }
 
 function editDeposit(id) {
@@ -1684,6 +1758,7 @@ function deleteDeposit(id) {
   renderDepositTable();
   updateDepositKpis();
   syncSheet('Deposits', depositList);
+  saveAllData();
 }
 
 function updateDepositKpis() {
@@ -1757,6 +1832,9 @@ function submitUser(e) {
   };
   if (!obj.name) return alert('Please enter user name');
   if (!obj.username) return alert('Please enter username');
+  if (!editId && !obj.password) return alert('Please enter a password for the new user');
+  const dupUser = staffList.find(function(x) { return x.username.toLowerCase() === obj.username.toLowerCase() && x.id !== editId; });
+  if (dupUser) return alert('Username already exists. Please choose a different username.');
   if (editId) {
     const idx = staffList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) staffList[idx] = obj;
@@ -1766,6 +1844,7 @@ function submitUser(e) {
   closeModal('modal-addUser');
   renderStaffTable();
   syncSheet('Staff', staffList);
+  saveAllData();
 }
 
 function editUser(id) {
@@ -1778,6 +1857,7 @@ function deleteUser(id) {
   staffList = staffList.filter(function(x) { return x.id !== id; });
   renderStaffTable();
   syncSheet('Staff', staffList);
+  saveAllData();
 }
 
 function renderStaffTable() {
@@ -1972,6 +2052,7 @@ function submitKpi(e) {
   closeModal('modal-kpi');
   renderKpiTable();
   syncSheet('KPI', kpiList);
+  saveAllData();
 }
 
 function editKpi(id) {
@@ -1984,6 +2065,7 @@ function deleteKpi(id) {
   kpiList = kpiList.filter(function(x) { return x.id !== id; });
   renderKpiTable();
   syncSheet('KPI', kpiList);
+  saveAllData();
 }
 
 function renderKpiTable() {
@@ -2156,6 +2238,7 @@ function toggleSidebar() {
 // Init
 // ------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function() {
+  loadAllData();
   filteredSales = saleRecords.slice();
   populateBranchSelects();
   renderItemChips();
