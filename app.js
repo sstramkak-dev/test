@@ -1190,7 +1190,7 @@ function renderDashboard() {
   }
 
   // Branch summary table
-  const branchTableBody = g('branch-table') ? g('branch-table').querySelector('tbody') : null;
+  const branchTableBody = g('branch-table');
   if (branchTableBody) {
     const branches = [];
     saleRecords.forEach(function(s) { if (branches.indexOf(s.branch) < 0) branches.push(s.branch); });
@@ -1335,7 +1335,7 @@ function deleteNewCustomer(id) {
 }
 
 function renderNewCustomerTable() {
-  const tbody = g('new-customer-table') ? g('new-customer-table').querySelector('tbody') : null;
+  const tbody = g('new-customer-table');
   if (!tbody) return;
   if (!newCustomers.length) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No customers yet</td></tr>';
@@ -1401,7 +1401,7 @@ function deleteTopUp(id) {
 }
 
 function renderTopUpTable() {
-  const tbody = g('topup-table') ? g('topup-table').querySelector('tbody') : null;
+  const tbody = g('topup-table');
   if (!tbody) return;
   if (!topUpList.length) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-coins" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No top up records yet</td></tr>';
@@ -1465,7 +1465,7 @@ function deleteTermination(id) {
 }
 
 function renderTerminationTable() {
-  const tbody = g('termination-table') ? g('termination-table').querySelector('tbody') : null;
+  const tbody = g('termination-table');
   if (!tbody) return;
   if (!terminationList.length) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-times-circle" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No termination records yet</td></tr>';
@@ -1861,7 +1861,7 @@ function deleteUser(id) {
 }
 
 function renderStaffTable() {
-  const tbody = g('staff-table') ? g('staff-table').querySelector('tbody') : null;
+  const tbody = g('staff-table');
   if (!tbody) return;
   if (!staffList.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users-cog" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No users yet</td></tr>';
@@ -2069,7 +2069,7 @@ function deleteKpi(id) {
 }
 
 function renderKpiTable() {
-  const tbody = g('kpi-table') ? g('kpi-table').querySelector('tbody') : null;
+  const tbody = g('kpi-table');
   if (!tbody) return;
   if (!kpiList.length) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-chart-line" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No KPIs defined yet</td></tr>';
