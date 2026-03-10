@@ -1227,9 +1227,9 @@
           <!-- Assignee section: shown when KPI For = Shop -->
           <div class="form-group" id="kpi-shop-assignee-group">
             <label class="form-label">Supervisor (Shop) <span class="required">*</span></label>
-            <select class="form-select" id="kpi-shop-assignee">
-              <option value="">Select Supervisor</option>
-            </select>
+            <input type="text" class="form-input" id="kpi-shop-assignee-name" placeholder="Supervisor name" list="kpi-sup-list" autocomplete="off" oninput="onKpiShopNameInput(this.value)" />
+            <datalist id="kpi-sup-list"></datalist>
+            <input type="hidden" id="kpi-shop-assignee" />
           </div>
 
           <!-- Assignee section: shown when KPI For = Agent -->
@@ -1253,10 +1253,10 @@
           <div class="form-group">
             <label class="form-label">KPI Type <span class="required">*</span></label>
             <div class="chip-group">
-              <button type="button" class="chip active" id="kpi-chip-Sales" data-value="Sales" onclick="selectKpiType(this)">Sales</button>
-              <button type="button" class="chip" id="kpi-chip-Units" data-value="Units" onclick="selectKpiType(this)">Units</button>
-              <button type="button" class="chip" id="kpi-chip-Revenue" data-value="Revenue" onclick="selectKpiType(this)">Revenue</button>
-              <button type="button" class="chip" id="kpi-chip-Customers" data-value="Customers" onclick="selectKpiType(this)">Customers</button>
+              <button type="button" class="chip kpi-type-chip active" id="kpi-chip-Sales" data-value="Sales" onclick="selectKpiType(this)">Sales</button>
+              <button type="button" class="chip kpi-type-chip" id="kpi-chip-Units" data-value="Units" onclick="selectKpiType(this)">Units</button>
+              <button type="button" class="chip kpi-type-chip" id="kpi-chip-Revenue" data-value="Revenue" onclick="selectKpiType(this)">Revenue</button>
+              <button type="button" class="chip kpi-type-chip" id="kpi-chip-Customers" data-value="Customers" onclick="selectKpiType(this)">Customers</button>
             </div>
           </div>
           <div class="form-group">
