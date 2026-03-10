@@ -736,7 +736,7 @@
               <option value="">All Agents</option>
             </select>
           </div>
-          <div class="filter-group">
+          <div class="filter-group" id="sale-branch-filter-wrap">
             <label class="filter-label"><i class="fas fa-location-dot"></i> Branch</label>
             <select class="form-select" id="sale-filter-branch" onchange="applySaleFilters()">
               <option value="">All Branches</option>
@@ -775,7 +775,7 @@
             <i class="fas fa-chart-pie"></i> Summary View
           </button>
           <div class="view-toggle-spacer"></div>
-          <button class="btn btn-primary" onclick="openNewSaleModal()">
+          <button class="btn btn-primary" id="sale-new-btn" onclick="openNewSaleModal()">
             <i class="fas fa-circle-plus"></i> New Sale
           </button>
         </div>

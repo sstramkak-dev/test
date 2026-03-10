@@ -333,7 +333,7 @@ function navigateTo(page, btn) {
   if (page === 'dashboard') renderDashboard();
   if (page === 'promotionPage') renderPromotionCards();
   if (page === 'deposit') { renderDepositTable(); updateDepositKpis(); }
-  if (page === 'sale') { renderItemChips(); renderSaleTable(); updateSaleKpis(); }
+  if (page === 'sale') { renderItemChips(); applyReportFilters(); }
   if (page === 'customer') {
     renderNewCustomerTable();
     renderTopUpTable();
@@ -455,7 +455,11 @@ function switchRole(role) {
   var newBtn = g('promo-new-btn');
   if (newBtn) newBtn.style.display = (currentRole === 'admin' || currentRole === 'cluster') ? '' : 'none';
 
+  var saleNewBtn = g('sale-new-btn');
+  if (saleNewBtn) saleNewBtn.style.display = (currentRole === 'cluster') ? 'none' : '';
+
   if (currentPage === 'settings') renderAccessContent(currentSettingsTab);
+  if (currentPage === 'sale') applyReportFilters();
 }
 
 function toggleRoleWidget() {
@@ -774,6 +778,8 @@ function submitSale(e) {
   const obj = { id: editId || uid(), agent: agent, branch: branch, date: date, note: note, items: items, dollarItems: dollarItems };
 
   if (editId) {
+    const existingSale = saleRecords.find(function(x) { return x.id === editId; });
+    if (existingSale && !canModifySaleRecord(existingSale)) { showSalePermissionError('edit'); return; }
     const idx = saleRecords.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) saleRecords[idx] = obj;
     addNotification((currentUser ? currentUser.name : 'User') + ' updated a sale record.');
@@ -792,10 +798,15 @@ function submitSale(e) {
 
 function editSale(id) {
   const sale = saleRecords.find(function(x) { return x.id === id; });
-  if (sale) openNewSaleModal(sale);
+  if (!sale) return;
+  if (!canModifySaleRecord(sale)) { showSalePermissionError('edit'); return; }
+  openNewSaleModal(sale);
 }
 
 function deleteSale(id) {
+  const sale = saleRecords.find(function(x) { return x.id === id; });
+  if (!sale) return;
+  if (!canModifySaleRecord(sale)) { showSalePermissionError('delete'); return; }
   showConfirm('Are you sure you want to delete this sale record? This action cannot be undone.', function() {
     saleRecords = saleRecords.filter(function(x) { return x.id !== id; });
     applyReportFilters();
@@ -809,13 +820,47 @@ function deleteSale(id) {
 // ------------------------------------------------------------
 // Sale Filters & Table
 // ------------------------------------------------------------
+
+// Returns the base sale records filtered by the current user's role.
+// Supervisors only see records within their branch; all other roles see all records.
+function getSaleBaseRecords() {
+  if (currentRole === 'supervisor' && currentUser) {
+    return saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
+  }
+  return saleRecords.slice();
+}
+
+// Returns true if the current user is permitted to edit or delete the given sale record.
+function canModifySaleRecord(sale) {
+  if (!sale) return false;
+  if (currentRole === 'admin') return true;
+  if (currentRole === 'cluster') return false;
+  if (!currentUser) return false;
+  if (currentRole === 'supervisor') return sale.branch === currentUser.branch;
+  if (currentRole === 'agent') return sale.agent === currentUser.name;
+  return false;
+}
+
+// Shows a role-appropriate permission error for sale report modification attempts.
+function showSalePermissionError(action) {
+  if (currentRole === 'cluster') {
+    showAlert('You do not have permission to ' + action + ' sale reports.', 'error');
+  } else if (currentRole === 'agent') {
+    showAlert('You can only ' + action + ' your own sale reports.', 'error');
+  } else {
+    showAlert('You can only ' + action + ' sale reports within your branch.', 'error');
+  }
+}
+
 function applyReportFilters() {
+  const baseRecords = getSaleBaseRecords();
+
   const dateFrom = rv('sale-date-from');
   const dateTo = rv('sale-date-to');
   const agent = rv('sale-filter-agent');
   const branch = rv('sale-filter-branch');
 
-  filteredSales = saleRecords.filter(function(s) {
+  filteredSales = baseRecords.filter(function(s) {
     if (dateFrom && s.date < dateFrom) return false;
     if (dateTo && s.date > dateTo) return false;
     if (agent && s.agent !== agent) return false;
@@ -831,7 +876,7 @@ function clearReportFilters() {
   ['sale-date-from', 'sale-date-to', 'sale-filter-agent', 'sale-filter-branch'].forEach(function(id) {
     const el = g(id); if (el) el.value = '';
   });
-  filteredSales = saleRecords.slice();
+  filteredSales = getSaleBaseRecords();
   renderSaleTable();
   updateSaleKpis();
 }
@@ -888,17 +933,32 @@ function renderSaleTable() {
   const table = g('sale-table');
   if (!table) return;
 
+  // Role-based base records for filter dropdowns
+  const baseRecords = getSaleBaseRecords();
+
+  // Show/hide branch filter: hidden for agent and supervisor (supervisor is locked to their branch)
+  const branchFilterWrap = g('sale-branch-filter-wrap');
+  if (branchFilterWrap) {
+    branchFilterWrap.style.display = (currentRole === 'agent' || currentRole === 'supervisor') ? 'none' : '';
+  }
+
+  // Show/hide New Sale button: cluster cannot create/edit reports
+  const saleNewBtn = g('sale-new-btn');
+  if (saleNewBtn) {
+    saleNewBtn.style.display = (currentRole === 'cluster') ? 'none' : '';
+  }
+
   // Populate filter dropdowns
   const agentFilter = g('sale-filter-agent');
   const branchFilter = g('sale-filter-branch');
   if (agentFilter) {
-    const agents = [...new Set(saleRecords.map(function(s) { return s.agent; }))];
+    const agents = [...new Set(baseRecords.map(function(s) { return s.agent; }))];
     const curAgent = agentFilter.value;
     agentFilter.innerHTML = '<option value="">All Agents</option>' +
       agents.map(function(a) { return '<option value="' + esc(a) + '"' + (curAgent === a ? ' selected' : '') + '>' + esc(a) + '</option>'; }).join('');
   }
   if (branchFilter) {
-    const branches = [...new Set(saleRecords.map(function(s) { return s.branch; }))];
+    const branches = [...new Set(baseRecords.map(function(s) { return s.branch; }))];
     const curBranch = branchFilter.value;
     branchFilter.innerHTML = '<option value="">All Branches</option>' +
       branches.map(function(b) { return '<option value="' + esc(b) + '"' + (curBranch === b ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('');
@@ -943,6 +1003,9 @@ function renderSaleTable() {
       return '<td class="td-dollar">' + (amt > 0 ? fmtMoney(amt, esc(item.currency) + ' ') : '') + '</td>';
     }).join('');
 
+    // Determine if the current user can edit/delete this record
+    const canEdit = canModifySaleRecord(s);
+
     const avIdx = Math.abs((s.agent.charCodeAt(0) || 0)) % 8;
     return '<tr>' +
       '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(s.agent)) + '</span>' + esc(s.agent) + '</div></td>' +
@@ -953,8 +1016,8 @@ function renderSaleTable() {
       '<td class="td-revenue">' + fmtMoney(saleRev) + '</td>' +
       '<td style="color:#888;font-size:0.8rem;">' + esc(s.note || s.remark || '') + '</td>' +
       '<td style="white-space:nowrap;">' +
-        '<button class="btn-edit" onclick="editSale(\'' + esc(s.id) + '\')"><i class="fas fa-edit"></i></button> ' +
-        '<button class="btn-delete" onclick="deleteSale(\'' + esc(s.id) + '\')"><i class="fas fa-trash"></i></button>' +
+        (canEdit ? '<button class="btn-edit" onclick="editSale(\'' + esc(s.id) + '\')"><i class="fas fa-edit"></i></button> ' : '') +
+        (canEdit ? '<button class="btn-delete" onclick="deleteSale(\'' + esc(s.id) + '\')"><i class="fas fa-trash"></i></button>' : '') +
       '</td>' +
       '</tr>';
   }).join('');
