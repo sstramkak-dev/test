@@ -2010,7 +2010,7 @@ function openDepositModal(item) {
     const cashEl = g('dep-cash'); if (cashEl) cashEl.value = item.cash || '';
     const creditEl = g('dep-credit'); if (creditEl) creditEl.value = item.credit || '';
     const dtEl = g('dep-date'); if (dtEl) dtEl.value = item.date || '';
-    const ntEl = g('dep-remark'); if (ntEl) ntEl.value = item.remark || '';
+    const ntEl = g('dep-remark'); if (ntEl) ntEl.value = item.remark || item.note || '';
   } else {
     if (title) title.textContent = 'Add Deposit';
     if (btn) btn.textContent = 'Add Deposit';
