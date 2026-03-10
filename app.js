@@ -78,10 +78,11 @@ let itemCatalogue = [
   { id: 'i2', name: 'Smart@Home', shortcut: 'SH', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Smart@Home package' },
   { id: 'i3', name: 'Smart Fiber+', shortcut: 'SF', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Smart Fiber+' },
   { id: 'i4', name: 'SmartNas', shortcut: 'SN', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'SmartNas' },
-  { id: 'i5', name: 'Monthly Update', shortcut: 'MU', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Monthly Update' },
-  { id: 'i6', name: 'ChangeSIM', shortcut: 'CS', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Change SIM' },
-  { id: 'i7', name: 'Recharge', shortcut: 'RC', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Recharge' },
-  { id: 'i8', name: 'Total Revenue', shortcut: 'TR', group: 'dollar', currency: 'USD', price: 1, category: 'Sales', status: 'active', desc: 'Total Revenue ($)' },
+  { id: 'i5', name: 'Monthly Upselling', shortcut: 'MU', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Monthly Upselling' },
+  { id: 'i6', name: 'ChangeSIM', shortcut: 'CS', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Change SIM ($)' },
+  { id: 'i7', name: 'Recharge', shortcut: 'RC', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Recharge ($)' },
+  { id: 'i8', name: 'Revenue', shortcut: 'RV', group: 'dollar', currency: '$', price: 1, noAutoSum: true, category: 'Sales', status: 'active', desc: 'Revenue ($)' },
+  { id: 'i9', name: 'SC Dealer', shortcut: 'SD', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'SC Dealer ($)' },
 ];
 
 let saleRecords = [];
@@ -761,7 +762,7 @@ function updateSaleModalTotals() {
     const val = parseFloat(inp.value) || 0;
     if (item.group === 'unit') {
       totalUnits += val;
-    } else {
+    } else if (!item.noAutoSum) {
       totalRev += val * (item.price || 1);
     }
   });
@@ -891,7 +892,8 @@ function updateSaleKpis() {
     Object.keys(s.items || {}).forEach(function(iid) { totalUnits += s.items[iid]; });
     Object.keys(s.dollarItems || {}).forEach(function(iid) {
       const item = itemCatalogue.find(function(x) { return x.id === iid; });
-      totalRev += s.dollarItems[iid] * (item ? item.price : 1);
+      if (!item || item.noAutoSum) return;
+      totalRev += s.dollarItems[iid] * (item.price || 1);
     });
   });
 
@@ -958,8 +960,10 @@ function renderSaleTable() {
     const dollarCells = dollarItems.map(function(item) {
       const amt = s.dollarItems && s.dollarItems[item.id] ? s.dollarItems[item.id] : 0;
       const rev = amt * (item.price || 1);
-      saleRev += rev;
-      totalRev += rev;
+      if (!item.noAutoSum) {
+        saleRev += rev;
+        totalRev += rev;
+      }
       return '<td class="td-dollar">' + (amt > 0 ? fmtMoney(amt, esc(item.currency) + ' ') : '') + '</td>';
     }).join('');
 
@@ -1017,7 +1021,7 @@ function renderSummaryView(data, unitItems, dollarItems) {
     Object.keys(s.dollarItems || {}).forEach(function(iid) {
       ag.dollars[iid] = (ag.dollars[iid] || 0) + s.dollarItems[iid];
       const item = itemCatalogue.find(function(x) { return x.id === iid; });
-      ag.totalRev += s.dollarItems[iid] * (item ? item.price : 1);
+      if (item && !item.noAutoSum) ag.totalRev += s.dollarItems[iid] * (item.price || 1);
     });
   });
 
@@ -1122,7 +1126,7 @@ function renderDashboard() {
     Object.values(s.items || {}).forEach(function(v) { currUnits += v; });
     Object.keys(s.dollarItems || {}).forEach(function(iid) {
       const item = itemCatalogue.find(function(x) { return x.id === iid; });
-      currRev += s.dollarItems[iid] * (item ? item.price : 1);
+      if (item && !item.noAutoSum) currRev += s.dollarItems[iid] * (item.price || 1);
     });
   });
 
@@ -1131,7 +1135,7 @@ function renderDashboard() {
     Object.values(s.items || {}).forEach(function(v) { prevUnits += v; });
     Object.keys(s.dollarItems || {}).forEach(function(iid) {
       const item = itemCatalogue.find(function(x) { return x.id === iid; });
-      prevRev += s.dollarItems[iid] * (item ? item.price : 1);
+      if (item && !item.noAutoSum) prevRev += s.dollarItems[iid] * (item.price || 1);
     });
   });
 
@@ -1162,7 +1166,7 @@ function renderDashboard() {
     viewSales.filter(function(s) { return ymOf(s.date) === m; }).forEach(function(s) {
       Object.keys(s.dollarItems || {}).forEach(function(iid) {
         const item = itemCatalogue.find(function(x) { return x.id === iid; });
-        r += s.dollarItems[iid] * (item ? item.price : 1);
+        if (item && !item.noAutoSum) r += s.dollarItems[iid] * (item.price || 1);
       });
     });
     return r;
@@ -1316,7 +1320,7 @@ function calcKpiActual(kpi) {
     filtered.forEach(function(s) {
       Object.keys(s.dollarItems || {}).forEach(function(iid) {
         const item = itemCatalogue.find(function(x) { return x.id === iid; });
-        actual += s.dollarItems[iid] * (item ? item.price : 1);
+        if (item && !item.noAutoSum) actual += s.dollarItems[iid] * (item.price || 1);
       });
     });
   }
