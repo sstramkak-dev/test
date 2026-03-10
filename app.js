@@ -30,7 +30,7 @@ const CHART_PAL = ['#1B7D3D','#2196F3','#FF9800','#9C27B0','#F44336','#00BCD4','
 const KNOWN_CURS = ['USD','KHR','THB','VND'];
 const KNOWN_UNITS = ['Unit','SIM','GB','MB','Minutes','SMS','Voucher'];
 
-const BRANCHES = ['Phnom Penh', 'Siem Reap', 'Battambang', 'Sihanoukville', 'Kampong Cham'];
+const BRANCHES = ['Phnom Penh', 'Siem Reap', 'Battambang', 'Sihanoukville', 'Kampong Cham', 'Express_Tramkak'];
 
 const SUPPORT_CONTACT = { email: 'support@smart5g.com', phone: '+855 23 123 456' };
 
@@ -101,6 +101,9 @@ let staffList = [
   { id: 'u1', name: 'Admin', username: 'admin', password: 'admin@2026', role: 'Admin', branch: 'Phnom Penh', status: 'active' },
   { id: 'u2', name: 'Bob Smith', username: 'bob', password: 'Pass@123', role: 'Supervisor', branch: 'Siem Reap', status: 'active' },
   { id: 'u3', name: 'Charlie Brown', username: 'charlie', password: 'Pass@123', role: 'Agent', branch: 'Battambang', status: 'active' },
+  { id: 'u4', name: 'Rim Saray', username: 'rim.saray', password: 'Pass@123', role: 'Supervisor', branch: 'Express_Tramkak', status: 'active' },
+  { id: 'u5', name: 'Dara Mony', username: 'dara.mony', password: 'Pass@123', role: 'Agent', branch: 'Express_Tramkak', status: 'active' },
+  { id: 'u6', name: 'Sok Phally', username: 'sok.phally', password: 'Pass@123', role: 'Agent', branch: 'Express_Tramkak', status: 'active' },
 ];
 
 let kpiList = [
@@ -1893,6 +1896,14 @@ function onUserRoleChange() {
   // reserved for role-specific UI changes
 }
 
+function onKpiShopNameInput(val) {
+  var hiddenEl = g('kpi-shop-assignee');
+  if (!hiddenEl) return;
+  var sups = staffList.filter(function(u) { return u.role === 'Supervisor'; });
+  var found = sups.find(function(u) { return u.name === val; });
+  hiddenEl.value = found ? found.id : '';
+}
+
 function selectKpiFor(type) {
   kpiForSelected = type;
   const shopBtn = g('kpi-for-shop');
@@ -1917,25 +1928,66 @@ function selectKpiFor(type) {
   }
 }
 
-function populateKpiShopAssignee() {
-  const sel = g('kpi-shop-assignee');
-  if (!sel) return;
+function populateKpiShopAssignee(preselectedId) {
+  const textEl = g('kpi-shop-assignee-name');
+  const hiddenEl = g('kpi-shop-assignee');
+  const datalist = g('kpi-sup-list');
+  if (!textEl) return;
   const sups = staffList.filter(function(u) { return u.role === 'Supervisor'; });
-  sel.innerHTML = '<option value="">Select Supervisor</option>' +
-    sups.map(function(u) { return '<option value="' + esc(u.id) + '">' + esc(u.name) + '</option>'; }).join('');
+
+  if (currentRole === 'supervisor' && currentUser) {
+    // Supervisor can only assign KPI to themselves — show readonly textbox
+    textEl.value = currentUser.name;
+    textEl.readOnly = true;
+    textEl.style.background = '#f5f5f5';
+    if (hiddenEl) hiddenEl.value = currentUser.id;
+    if (datalist) datalist.innerHTML = '';
+  } else {
+    // Admin: populate datalist with all supervisors, allow typing to choose
+    textEl.readOnly = false;
+    textEl.style.background = '';
+    if (datalist) {
+      datalist.innerHTML = sups.map(function(u) {
+        return '<option value="' + esc(u.name) + '"></option>';
+      }).join('');
+    }
+    if (preselectedId) {
+      var sup = sups.find(function(u) { return u.id === preselectedId; });
+      textEl.value = sup ? sup.name : '';
+      if (hiddenEl) hiddenEl.value = preselectedId;
+    } else {
+      textEl.value = '';
+      if (hiddenEl) hiddenEl.value = '';
+    }
+  }
 }
 
 function populateKpiAgentBranch() {
   const branchSel = g('kpi-agent-branch');
   if (!branchSel) return;
-  branchSel.innerHTML = '<option value="">Select branch</option>' +
-    BRANCHES.map(function(b) { return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('');
+
+  if (currentRole === 'supervisor' && currentUser) {
+    // Lock branch dropdown to supervisor's own branch
+    branchSel.innerHTML = '<option value="' + esc(currentUser.branch) + '">' + esc(currentUser.branch) + '</option>';
+    branchSel.disabled = true;
+    branchSel.value = currentUser.branch;
+  } else {
+    branchSel.disabled = false;
+    branchSel.innerHTML = '<option value="">Select branch</option>' +
+      BRANCHES.map(function(b) { return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('');
+  }
+
   const agentSel = g('kpi-agent-assignee');
   if (agentSel) agentSel.innerHTML = '<option value="">Select Agent</option>';
+
+  // Auto-load agents when supervisor's branch is pre-set
+  if (currentRole === 'supervisor' && currentUser) {
+    onKpiBranchChange();
+  }
 }
 
 function onKpiBranchChange() {
-  const branch = rv('kpi-agent-branch');
+  const branch = (currentRole === 'supervisor' && currentUser) ? currentUser.branch : rv('kpi-agent-branch');
   const agentSel = g('kpi-agent-assignee');
   if (!agentSel) return;
   const agents = staffList.filter(function(u) { return u.role === 'Agent' && u.branch === branch; });
@@ -1979,9 +2031,7 @@ function openKpiModal(item) {
       const csEl = g('kpi-currency-sel'); if (csEl) csEl.value = item.currency || 'USD';
     }
     if (item.kpiFor === 'shop') {
-      populateKpiShopAssignee();
-      const shopSel = g('kpi-shop-assignee');
-      if (shopSel && item.assigneeId) shopSel.value = item.assigneeId;
+      populateKpiShopAssignee(item.assigneeId);
     } else if (item.kpiFor === 'agent') {
       populateKpiAgentBranch();
       const branchSel = g('kpi-agent-branch');
@@ -2029,6 +2079,19 @@ function setValueMode(mode) {
 function submitKpi(e) {
   e.preventDefault();
   const editId = rv('kpi-edit-id');
+
+  // Resolve supervisor id from text input (for admin role)
+  if (kpiForSelected === 'shop') {
+    var shopName = rv('kpi-shop-assignee-name');
+    var hiddenEl = g('kpi-shop-assignee');
+    var isSupervisorWithAutoFill = currentRole === 'supervisor' && currentUser;
+    if (!isSupervisorWithAutoFill && shopName && hiddenEl && !hiddenEl.value) {
+      var sups = staffList.filter(function(u) { return u.role === 'Supervisor'; });
+      var found = sups.find(function(u) { return u.name === shopName; });
+      if (found) hiddenEl.value = found.id;
+    }
+  }
+
   const obj = {
     id: editId || uid(),
     name: rv('kpi-name'),
@@ -2043,6 +2106,8 @@ function submitKpi(e) {
     period: rv('kpi-period')
   };
   if (!obj.name) return alert('Please enter KPI name');
+  if (kpiForSelected === 'shop' && !obj.assigneeId) return alert('Please select a supervisor');
+  if (kpiForSelected === 'agent' && !obj.assigneeId) return alert('Please select an agent');
   if (editId) {
     const idx = kpiList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) kpiList[idx] = obj;
