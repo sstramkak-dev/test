@@ -182,6 +182,52 @@ function showToast(message, type) {
   setTimeout(function() { toast.style.opacity = '0'; setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300); }, 3000);
 }
 
+// Professional alert dialog (replaces native alert)
+function showAlert(message, type, title) {
+  type = type || 'error';
+  var iconMap = { error: 'fa-circle-xmark', success: 'fa-circle-check', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' };
+  var titleMap = { error: 'Error', success: 'Success', warning: 'Warning', info: 'Information' };
+  var classMap = { error: 'dialog-icon-error', success: 'dialog-icon-success', warning: 'dialog-icon-warning', info: 'dialog-icon-info' };
+  var iconEl = g('alert-icon');
+  var iconWrap = g('alert-icon-wrap');
+  var titleEl = g('alert-title');
+  var msgEl = g('alert-message');
+  if (iconEl) { iconEl.className = 'fas ' + (iconMap[type] || iconMap.error); }
+  if (iconWrap) { iconWrap.className = 'dialog-icon-wrap ' + (classMap[type] || classMap.error); }
+  if (titleEl) { titleEl.textContent = title || titleMap[type] || 'Alert'; }
+  if (msgEl) { msgEl.textContent = message; }
+  openModal('modal-alert');
+}
+
+// Professional confirm dialog (replaces native confirm)
+var _confirmCallback = null;
+function showConfirm(message, onConfirm, title, confirmText, isDanger) {
+  _confirmCallback = onConfirm || null;
+  var titleEl = g('confirm-title');
+  var msgEl = g('confirm-message');
+  var btn = g('confirm-ok-btn');
+  var iconEl = g('confirm-icon');
+  var iconWrap = g('confirm-icon-wrap');
+  if (titleEl) titleEl.textContent = title || 'Confirm Action';
+  if (msgEl) msgEl.textContent = message;
+  if (btn) {
+    btn.textContent = confirmText || 'Confirm';
+    btn.className = isDanger === false ? 'btn btn-primary' : 'btn btn-danger';
+  }
+  if (iconEl) { iconEl.className = isDanger === false ? 'fas fa-circle-check' : 'fas fa-trash-can'; }
+  if (iconWrap) { iconWrap.className = isDanger === false ? 'dialog-icon-wrap dialog-icon-info' : 'dialog-icon-wrap dialog-icon-delete'; }
+  openModal('modal-confirm');
+}
+
+function _onConfirmAction() {
+  closeModal('modal-confirm');
+  if (typeof _confirmCallback === 'function') {
+    var cb = _confirmCallback;
+    _confirmCallback = null;
+    cb();
+  }
+}
+
 // Populate branch dropdowns
 function getBranches() {
   return [...new Set(staffList.map(function(u) { return u.branch; }).filter(Boolean))].sort();
@@ -556,7 +602,7 @@ function submitItem(e) {
   const desc = rv('item-desc');
   const grp = itemGroupSelected;
 
-  if (!name) return alert('Please enter item name');
+  if (!name) { showAlert('Please enter item name'); return; }
 
   let unit = '', currency = '', price = 0;
   if (grp === 'unit') {
@@ -581,6 +627,7 @@ function submitItem(e) {
   renderItemChips();
   if (currentPage === 'dashboard') renderDashboard();
   saveAllData();
+  showToast(editId ? 'Item updated.' : 'Item added successfully.', 'success');
 }
 
 function editItem(id) {
@@ -589,11 +636,13 @@ function editItem(id) {
 }
 
 function deleteItem(id) {
-  if (!confirm('Delete this item?')) return;
-  itemCatalogue = itemCatalogue.filter(function(x) { return x.id !== id; });
-  renderItemChips();
-  if (currentPage === 'dashboard') renderDashboard();
-  saveAllData();
+  showConfirm('Are you sure you want to delete this item? This action cannot be undone.', function() {
+    itemCatalogue = itemCatalogue.filter(function(x) { return x.id !== id; });
+    renderItemChips();
+    if (currentPage === 'dashboard') renderDashboard();
+    saveAllData();
+    showToast('Item deleted.', 'success');
+  }, 'Delete Item', 'Delete');
 }
 
 function renderItemChips() {
@@ -719,8 +768,8 @@ function submitSale(e) {
   const date = rv('sale-date');
   const note = rv('sale-note');
 
-  if (!agent) return alert('Please enter agent name');
-  if (!date) return alert('Please select date');
+  if (!agent) { showAlert('Please enter agent name'); return; }
+  if (!date) { showAlert('Please select date'); return; }
 
   const items = {}, dollarItems = {};
   itemCatalogue.forEach(function(item) {
@@ -749,6 +798,7 @@ function submitSale(e) {
   if (currentPage === 'dashboard') renderDashboard();
   syncSheet('Sales', saleRecords);
   saveAllData();
+  showToast(editId ? 'Sale record updated.' : 'Sale record added successfully.', 'success');
 }
 
 function editSale(id) {
@@ -757,12 +807,14 @@ function editSale(id) {
 }
 
 function deleteSale(id) {
-  if (!confirm('Delete this sale record?')) return;
-  saleRecords = saleRecords.filter(function(x) { return x.id !== id; });
-  applyReportFilters();
-  if (currentPage === 'dashboard') renderDashboard();
-  syncSheet('Sales', saleRecords);
-  saveAllData();
+  showConfirm('Are you sure you want to delete this sale record? This action cannot be undone.', function() {
+    saleRecords = saleRecords.filter(function(x) { return x.id !== id; });
+    applyReportFilters();
+    if (currentPage === 'dashboard') renderDashboard();
+    syncSheet('Sales', saleRecords);
+    saveAllData();
+    showToast('Sale record deleted.', 'success');
+  }, 'Delete Sale Record', 'Delete');
 }
 
 // ------------------------------------------------------------
@@ -1452,10 +1504,10 @@ function submitNewCustomer(e) {
     name: rv('nc-name'), phone: rv('nc-phone'), idNum: rv('nc-id'),
     pkg: rv('nc-package'), agent: rv('nc-agent'), branch: rv('nc-branch'), date: rv('nc-date')
   };
-  if (!obj.name) return alert('Please enter customer name');
-  if (!obj.phone) return alert('Please enter phone number');
-  if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) return alert('Please enter a valid phone number (6–15 digits, separators allowed)');
-  if (!obj.date) return alert('Please select a date');
+  if (!obj.name) { showAlert('Please enter customer name'); return; }
+  if (!obj.phone) { showAlert('Please enter phone number'); return; }
+  if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) { showAlert('Please enter a valid phone number (6–15 digits, separators allowed)'); return; }
+  if (!obj.date) { showAlert('Please select a date'); return; }
   if (editId) {
     const idx = newCustomers.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) newCustomers[idx] = obj;
@@ -1468,6 +1520,7 @@ function submitNewCustomer(e) {
   renderNewCustomerTable();
   syncSheet('Customers', newCustomers);
   saveAllData();
+  showToast(editId ? 'Customer record updated.' : 'Customer added successfully.', 'success');
 }
 
 function editNewCustomer(id) {
@@ -1476,11 +1529,13 @@ function editNewCustomer(id) {
 }
 
 function deleteNewCustomer(id) {
-  if (!confirm('Delete this customer?')) return;
-  newCustomers = newCustomers.filter(function(x) { return x.id !== id; });
-  renderNewCustomerTable();
-  syncSheet('Customers', newCustomers);
-  saveAllData();
+  showConfirm('Are you sure you want to delete this customer record? This action cannot be undone.', function() {
+    newCustomers = newCustomers.filter(function(x) { return x.id !== id; });
+    renderNewCustomerTable();
+    syncSheet('Customers', newCustomers);
+    saveAllData();
+    showToast('Customer record deleted.', 'success');
+  }, 'Delete Customer', 'Delete');
 }
 
 function renderNewCustomerTable() {
@@ -1517,11 +1572,11 @@ function submitTopUp(e) {
     name: rv('tu-name'), phone: rv('tu-phone'), amount: parseFloat(rv('tu-amount')) || 0,
     agent: rv('tu-agent'), branch: rv('tu-branch'), date: rv('tu-date')
   };
-  if (!obj.name) return alert('Please enter customer name');
-  if (!obj.phone) return alert('Please enter phone number');
-  if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) return alert('Please enter a valid phone number (6–15 digits, separators allowed)');
-  if (!obj.amount || obj.amount <= 0) return alert('Please enter a valid top-up amount');
-  if (!obj.date) return alert('Please select a date');
+  if (!obj.name) { showAlert('Please enter customer name'); return; }
+  if (!obj.phone) { showAlert('Please enter phone number'); return; }
+  if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) { showAlert('Please enter a valid phone number (6–15 digits, separators allowed)'); return; }
+  if (!obj.amount || obj.amount <= 0) { showAlert('Please enter a valid top-up amount'); return; }
+  if (!obj.date) { showAlert('Please select a date'); return; }
   if (editId) {
     const idx = topUpList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) topUpList[idx] = obj;
@@ -1534,6 +1589,7 @@ function submitTopUp(e) {
   renderTopUpTable();
   syncSheet('TopUp', topUpList);
   saveAllData();
+  showToast(editId ? 'Top-up record updated.' : 'Top-up submitted successfully.', 'success');
 }
 
 function editTopUp(id) {
@@ -1542,11 +1598,13 @@ function editTopUp(id) {
 }
 
 function deleteTopUp(id) {
-  if (!confirm('Delete this top up record?')) return;
-  topUpList = topUpList.filter(function(x) { return x.id !== id; });
-  renderTopUpTable();
-  syncSheet('TopUp', topUpList);
-  saveAllData();
+  showConfirm('Are you sure you want to delete this top-up record? This action cannot be undone.', function() {
+    topUpList = topUpList.filter(function(x) { return x.id !== id; });
+    renderTopUpTable();
+    syncSheet('TopUp', topUpList);
+    saveAllData();
+    showToast('Top-up record deleted.', 'success');
+  }, 'Delete Top-Up Record', 'Delete');
 }
 
 function renderTopUpTable() {
@@ -1582,10 +1640,10 @@ function submitTermination(e) {
     name: rv('term-name'), phone: rv('term-phone'), reason: rv('term-reason'),
     agent: rv('term-agent'), branch: rv('term-branch'), date: rv('term-date')
   };
-  if (!obj.name) return alert('Please enter customer name');
-  if (!obj.phone) return alert('Please enter phone number');
-  if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) return alert('Please enter a valid phone number (6–15 digits, separators allowed)');
-  if (!obj.date) return alert('Please select a date');
+  if (!obj.name) { showAlert('Please enter customer name'); return; }
+  if (!obj.phone) { showAlert('Please enter phone number'); return; }
+  if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) { showAlert('Please enter a valid phone number (6–15 digits, separators allowed)'); return; }
+  if (!obj.date) { showAlert('Please select a date'); return; }
   if (editId) {
     const idx = terminationList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) terminationList[idx] = obj;
@@ -1598,6 +1656,7 @@ function submitTermination(e) {
   renderTerminationTable();
   syncSheet('Terminations', terminationList);
   saveAllData();
+  showToast(editId ? 'Termination record updated.' : 'Termination submitted successfully.', 'success');
 }
 
 function editTermination(id) {
@@ -1606,11 +1665,13 @@ function editTermination(id) {
 }
 
 function deleteTermination(id) {
-  if (!confirm('Delete this termination record?')) return;
-  terminationList = terminationList.filter(function(x) { return x.id !== id; });
-  renderTerminationTable();
-  syncSheet('Terminations', terminationList);
-  saveAllData();
+  showConfirm('Are you sure you want to delete this termination record? This action cannot be undone.', function() {
+    terminationList = terminationList.filter(function(x) { return x.id !== id; });
+    renderTerminationTable();
+    syncSheet('Terminations', terminationList);
+    saveAllData();
+    showToast('Termination record deleted.', 'success');
+  }, 'Delete Termination Record', 'Delete');
 }
 
 function renderTerminationTable() {
@@ -1682,8 +1743,8 @@ function submitNewPromotion(e) {
     endDate: rv('np-end'),
     terms: g('np-terms') ? g('np-terms').value : ''
   };
-  if (!obj.campaign) return alert('Please enter campaign name');
-  if (!obj.startDate || !obj.endDate) return alert('Please enter the promotion period');
+  if (!obj.campaign) { showAlert('Please enter campaign name'); return; }
+  if (!obj.startDate || !obj.endDate) { showAlert('Please enter the promotion period'); return; }
   if (editId) {
     const idx = promotionList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) promotionList[idx] = obj;
@@ -1695,6 +1756,7 @@ function submitNewPromotion(e) {
   renderPromoSettingTable();
   syncSheet('Promotions', promotionList);
   saveAllData();
+  showToast(editId ? 'Promotion updated.' : 'Promotion created successfully.', 'success');
 }
 
 function editNewPromotion(id) {
@@ -1703,12 +1765,14 @@ function editNewPromotion(id) {
 }
 
 function deleteNewPromotion(id) {
-  if (!confirm('Delete this promotion?')) return;
-  promotionList = promotionList.filter(function(x) { return x.id !== id; });
-  renderPromotionCards();
-  renderPromoSettingTable();
-  syncSheet('Promotions', promotionList);
-  saveAllData();
+  showConfirm('Are you sure you want to delete this promotion? This action cannot be undone.', function() {
+    promotionList = promotionList.filter(function(x) { return x.id !== id; });
+    renderPromotionCards();
+    renderPromoSettingTable();
+    syncSheet('Promotions', promotionList);
+    saveAllData();
+    showToast('Promotion deleted.', 'success');
+  }, 'Delete Promotion', 'Delete');
 }
 
 function renderPromotionCards() {
@@ -1878,9 +1942,9 @@ function submitDeposit(e) {
     date: rv('dep-date'),
     note: rv('dep-note')
   };
-  if (!obj.agent) return alert('Please enter agent name');
-  if (!obj.amount || obj.amount <= 0) return alert('Please enter a valid deposit amount');
-  if (!obj.date) return alert('Please select a date');
+  if (!obj.agent) { showAlert('Please enter agent name'); return; }
+  if (!obj.amount || obj.amount <= 0) { showAlert('Please enter a valid deposit amount'); return; }
+  if (!obj.date) { showAlert('Please select a date'); return; }
   if (editId) {
     const idx = depositList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) depositList[idx] = obj;
@@ -1894,6 +1958,7 @@ function submitDeposit(e) {
   updateDepositKpis();
   syncSheet('Deposits', depositList);
   saveAllData();
+  showToast(editId ? 'Deposit record updated.' : 'Deposit added successfully.', 'success');
 }
 
 function editDeposit(id) {
@@ -1902,12 +1967,14 @@ function editDeposit(id) {
 }
 
 function deleteDeposit(id) {
-  if (!confirm('Delete this deposit record?')) return;
-  depositList = depositList.filter(function(x) { return x.id !== id; });
-  renderDepositTable();
-  updateDepositKpis();
-  syncSheet('Deposits', depositList);
-  saveAllData();
+  showConfirm('Are you sure you want to delete this deposit record? This action cannot be undone.', function() {
+    depositList = depositList.filter(function(x) { return x.id !== id; });
+    renderDepositTable();
+    updateDepositKpis();
+    syncSheet('Deposits', depositList);
+    saveAllData();
+    showToast('Deposit record deleted.', 'success');
+  }, 'Delete Deposit Record', 'Delete');
 }
 
 function updateDepositKpis() {
@@ -1979,11 +2046,11 @@ function submitUser(e) {
     name: rv('user-name'), username: rv('user-username'), password: rv('user-password'),
     role: rv('user-role'), branch: rv('user-branch'), status: rv('user-status')
   };
-  if (!obj.name) return alert('Please enter user name');
-  if (!obj.username) return alert('Please enter username');
-  if (!editId && !obj.password) return alert('Please enter a password for the new user');
+  if (!obj.name) { showAlert('Please enter user name'); return; }
+  if (!obj.username) { showAlert('Please enter username'); return; }
+  if (!editId && !obj.password) { showAlert('Please enter a password for the new user'); return; }
   const dupUser = staffList.find(function(x) { return x.username.toLowerCase() === obj.username.toLowerCase() && x.id !== editId; });
-  if (dupUser) return alert('Username already exists. Please choose a different username.');
+  if (dupUser) { showAlert('Username already exists. Please choose a different username.'); return; }
   if (editId) {
     const idx = staffList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) staffList[idx] = obj;
@@ -1994,6 +2061,7 @@ function submitUser(e) {
   renderStaffTable();
   syncSheet('Staff', staffList);
   saveAllData();
+  showToast(editId ? 'User updated successfully.' : 'User added successfully.', 'success');
 }
 
 function editUser(id) {
@@ -2002,11 +2070,13 @@ function editUser(id) {
 }
 
 function deleteUser(id) {
-  if (!confirm('Delete this user?')) return;
-  staffList = staffList.filter(function(x) { return x.id !== id; });
-  renderStaffTable();
-  syncSheet('Staff', staffList);
-  saveAllData();
+  showConfirm('Are you sure you want to delete this user? This action cannot be undone.', function() {
+    staffList = staffList.filter(function(x) { return x.id !== id; });
+    renderStaffTable();
+    syncSheet('Staff', staffList);
+    saveAllData();
+    showToast('User deleted.', 'success');
+  }, 'Delete User', 'Delete');
 }
 
 function renderStaffTable() {
@@ -2046,7 +2116,8 @@ function onKpiShopNameInput(val) {
   var hiddenEl = g('kpi-shop-assignee');
   if (!hiddenEl) return;
   var sups = staffList.filter(function(u) { return u.role === 'Supervisor'; });
-  var found = sups.find(function(u) { return u.name === val; });
+  var searchVal = (val || '').trim().toLowerCase();
+  var found = sups.find(function(u) { return u.name.toLowerCase() === searchVal; });
   hiddenEl.value = found ? found.id : '';
 }
 
@@ -2233,7 +2304,7 @@ function submitKpi(e) {
     var isSupervisorWithAutoFill = currentRole === 'supervisor' && currentUser;
     if (!isSupervisorWithAutoFill && shopName && hiddenEl && !hiddenEl.value) {
       var sups = staffList.filter(function(u) { return u.role === 'Supervisor'; });
-      var found = sups.find(function(u) { return u.name === shopName; });
+      var found = sups.find(function(u) { return u.name.toLowerCase() === shopName.trim().toLowerCase(); });
       if (found) hiddenEl.value = found.id;
     }
   }
@@ -2251,9 +2322,9 @@ function submitKpi(e) {
     currency: kpiValueMode === 'currency' ? rv('kpi-currency-sel') : '',
     period: rv('kpi-period')
   };
-  if (!obj.name) return alert('Please enter KPI name');
-  if (kpiForSelected === 'shop' && !obj.assigneeId) return alert('Please select a supervisor');
-  if (kpiForSelected === 'agent' && !obj.assigneeId) return alert('Please select an agent');
+  if (!obj.name) { showAlert('Please enter KPI name'); return; }
+  if (kpiForSelected === 'shop' && !obj.assigneeId) { showAlert('Please select a supervisor'); return; }
+  if (kpiForSelected === 'agent' && !obj.assigneeId) { showAlert('Please select an agent'); return; }
   if (editId) {
     const idx = kpiList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) kpiList[idx] = obj;
@@ -2264,6 +2335,7 @@ function submitKpi(e) {
   renderKpiTable();
   syncSheet('KPI', kpiList);
   saveAllData();
+  showToast(editId ? 'KPI updated successfully.' : 'KPI added successfully.', 'success');
   // Refresh dashboard KPI section if on dashboard
   if (currentPage === 'dashboard') renderDashboardKpiSection();
 }
@@ -2274,12 +2346,14 @@ function editKpi(id) {
 }
 
 function deleteKpi(id) {
-  if (!confirm('Delete this KPI?')) return;
-  kpiList = kpiList.filter(function(x) { return x.id !== id; });
-  renderKpiTable();
-  syncSheet('KPI', kpiList);
-  saveAllData();
-  if (currentPage === 'dashboard') renderDashboardKpiSection();
+  showConfirm('Are you sure you want to delete this KPI? This action cannot be undone.', function() {
+    kpiList = kpiList.filter(function(x) { return x.id !== id; });
+    renderKpiTable();
+    syncSheet('KPI', kpiList);
+    saveAllData();
+    showToast('KPI deleted.', 'success');
+    if (currentPage === 'dashboard') renderDashboardKpiSection();
+  }, 'Delete KPI', 'Delete');
 }
 
 function renderKpiTable() {
@@ -2355,13 +2429,14 @@ function toggleLoginPwd() {
 }
 
 function handleLogout() {
-  if (!confirm('Sign out of Smart 5G Dashboard?')) return;
-  currentUser = null;
-  var as = g('app-shell'); if (as) as.style.display = 'none';
-  var ls = g('login-screen'); if (ls) ls.style.display = 'flex';
-  var lf = g('login-form'); if (lf) lf.reset();
-  var errEl = g('login-error'); if (errEl) errEl.style.display = 'none';
-  var btn = g('login-submit-btn'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-right-to-bracket"></i> Sign In'; }
+  showConfirm('Are you sure you want to sign out of Smart 5G Dashboard?', function() {
+    currentUser = null;
+    var as = g('app-shell'); if (as) as.style.display = 'none';
+    var ls = g('login-screen'); if (ls) ls.style.display = 'flex';
+    var lf = g('login-form'); if (lf) lf.reset();
+    var errEl = g('login-error'); if (errEl) errEl.style.display = 'none';
+    var btn = g('login-submit-btn'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-right-to-bracket"></i> Sign In'; }
+  }, 'Sign Out', 'Sign Out', false);
 }
 
 function addNotification(msg) {
@@ -2406,7 +2481,7 @@ function renderNotificationPanel() {
 }
 
 function loginContactSupport() {
-  alert('Contact Support\nEmail: ' + SUPPORT_CONTACT.email + '\nPhone: ' + SUPPORT_CONTACT.phone);
+  showAlert('Email: ' + SUPPORT_CONTACT.email + '\nPhone: ' + SUPPORT_CONTACT.phone, 'info', 'Contact Support');
 }
 
 // ------------------------------------------------------------
