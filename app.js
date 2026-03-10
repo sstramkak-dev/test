@@ -21,6 +21,7 @@ let kpiForSelected = 'shop'; // 'shop' or 'agent'
 // Chart instances
 let _cTrend = null, _cMix = null, _cAgent = null, _cGrowth = null;
 let _cSaleMix = null, _cSaleAgent = null;
+let _cDepositPerf = null;
 let _cKpiAchieve = null;
 
 // Constants
@@ -73,9 +74,14 @@ function deleteFromSheet(sheetName, id) {
 // Sample Data
 // ------------------------------------------------------------
 let itemCatalogue = [
-  { id: 'i1', name: 'SIM Card', shortcut: 'SIM', group: 'unit', unit: 'Unit', category: 'Prepaid', status: 'active', desc: 'Prepaid SIM card' },
-  { id: 'i2', name: 'Data 5GB', shortcut: 'D5', group: 'unit', unit: 'GB', category: 'Data', status: 'active', desc: 'Data package 5GB' },
-  { id: 'i3', name: 'Top Up USD', shortcut: 'TU', group: 'dollar', currency: 'USD', price: 10, category: 'Prepaid', status: 'active', desc: 'Top up USD' },
+  { id: 'i1', name: 'Gross Ads', shortcut: 'GA', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Gross Ads' },
+  { id: 'i2', name: 'Smart@Home', shortcut: 'SH', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Smart@Home package' },
+  { id: 'i3', name: 'Smart Fiber+', shortcut: 'SF', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Smart Fiber+' },
+  { id: 'i4', name: 'SmartNas', shortcut: 'SN', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'SmartNas' },
+  { id: 'i5', name: 'Monthly Update', shortcut: 'MU', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Monthly Update' },
+  { id: 'i6', name: 'ChangeSIM', shortcut: 'CS', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Change SIM' },
+  { id: 'i7', name: 'Recharge', shortcut: 'RC', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Recharge' },
+  { id: 'i8', name: 'Total Revenue', shortcut: 'TR', group: 'dollar', currency: 'USD', price: 1, category: 'Sales', status: 'active', desc: 'Total Revenue ($)' },
 ];
 
 let saleRecords = [];
@@ -716,7 +722,7 @@ function openNewSaleModal(sale) {
     const brSel = g('sale-branch');
     if (brSel) brSel.value = sale.branch || '';
     g('sale-date').value = sale.date || '';
-    g('sale-note').value = sale.note || '';
+    g('sale-remark').value = sale.remark || sale.note || '';
 
     if (sale.items) {
       Object.keys(sale.items).forEach(function(iid) {
@@ -734,6 +740,12 @@ function openNewSaleModal(sale) {
     if (title) title.textContent = 'New Sale';
     if (btn) btn.textContent = 'Save Sale';
     g('sale-date').value = new Date().toISOString().split('T')[0];
+    if (currentUser) {
+      const agentEl = g('sale-agent-name');
+      if (agentEl) { agentEl.value = currentUser.name || ''; if (currentRole === 'agent') agentEl.readOnly = true; }
+      const brEl = g('sale-branch');
+      if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent') brEl.disabled = true; }
+    }
   }
 
   updateSaleModalTotals();
@@ -766,7 +778,7 @@ function submitSale(e) {
   const agent = rv('sale-agent-name');
   const branch = rv('sale-branch');
   const date = rv('sale-date');
-  const note = rv('sale-note');
+  const note = rv('sale-remark');
 
   if (!agent) { showAlert('Please enter agent name'); return; }
   if (!date) { showAlert('Please select date'); return; }
@@ -927,7 +939,7 @@ function renderSaleTable() {
   let headerRow1 = '<tr><th rowspan="2">Agent</th><th rowspan="2">Branch</th><th rowspan="2">Date</th>';
   if (unitItems.length) headerRow1 += '<th colspan="' + unitItems.length + '" class="th-group-unit">Unit Group</th>';
   if (dollarItems.length) headerRow1 += '<th colspan="' + dollarItems.length + '" class="th-group-dollar">Dollar Group</th>';
-  headerRow1 += '<th rowspan="2" class="td-revenue">Revenue</th><th rowspan="2">Note</th><th rowspan="2">Actions</th></tr>';
+  headerRow1 += '<th rowspan="2" class="td-revenue">Revenue</th><th rowspan="2">Remark</th><th rowspan="2">Actions</th></tr>';
 
   let headerRow2 = '<tr>';
   unitItems.forEach(function(item) { headerRow2 += '<th class="th-unit">' + esc(item.shortcut || item.name) + '</th>'; });
@@ -959,7 +971,7 @@ function renderSaleTable() {
       unitCells +
       dollarCells +
       '<td class="td-revenue">' + fmtMoney(saleRev) + '</td>' +
-      '<td style="color:#888;font-size:0.8rem;">' + esc(s.note || '') + '</td>' +
+      '<td style="color:#888;font-size:0.8rem;">' + esc(s.note || s.remark || '') + '</td>' +
       '<td style="white-space:nowrap;">' +
         '<button class="btn-edit" onclick="editSale(\'' + esc(s.id) + '\')"><i class="fas fa-edit"></i></button> ' +
         '<button class="btn-delete" onclick="deleteSale(\'' + esc(s.id) + '\')"><i class="fas fa-trash"></i></button>' +
@@ -1442,13 +1454,18 @@ function openCustomerModal(type, item) {
       g('nc-name').value = item.name || '';
       g('nc-phone').value = item.phone || '';
       g('nc-id').value = item.idNum || '';
-      g('nc-package').value = item.pkg || '';
+      const tariffSel = g('nc-tariff'); if (tariffSel) tariffSel.value = item.tariff || item.pkg || '';
       g('nc-agent').value = item.agent || '';
       const bSel = g('nc-branch'); if (bSel) bSel.value = item.branch || '';
       g('nc-date').value = item.date || '';
+      const statusSel = g('nc-status'); if (statusSel) statusSel.value = item.status || 'follow';
     } else {
       if (title) title.textContent = 'Add New Customer';
       g('nc-date').value = new Date().toISOString().split('T')[0];
+      if (currentUser) {
+        const agEl = g('nc-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent') agEl.readOnly = true; }
+        const brEl = g('nc-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent') brEl.disabled = true; }
+      }
     }
     openModal('modal-newCustomer');
 
@@ -1458,6 +1475,14 @@ function openCustomerModal(type, item) {
     g('tu-edit-id').value = '';
     const title = g('modal-topUp-title');
     populateBranchSelects();
+    // Populate existing customer dropdown
+    const tuCustSel = g('tu-existing-customer');
+    if (tuCustSel) {
+      tuCustSel.innerHTML = '<option value="">-- New / Manual Entry --</option>' +
+        newCustomers.map(function(c) {
+          return '<option value="' + esc(c.id) + '">' + esc(c.name) + ' (' + esc(c.phone) + ')</option>';
+        }).join('');
+    }
     if (item) {
       if (title) title.textContent = 'Edit Top Up';
       g('tu-edit-id').value = item.id;
@@ -1467,9 +1492,14 @@ function openCustomerModal(type, item) {
       g('tu-agent').value = item.agent || '';
       const bSel = g('tu-branch'); if (bSel) bSel.value = item.branch || '';
       g('tu-date').value = item.date || '';
+      const tuStatusSel = g('tu-status'); if (tuStatusSel) tuStatusSel.value = item.tuStatus || 'active';
     } else {
       if (title) title.textContent = 'Add Top Up';
       g('tu-date').value = new Date().toISOString().split('T')[0];
+      if (currentUser) {
+        const agEl = g('tu-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent') agEl.readOnly = true; }
+        const brEl = g('tu-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent') brEl.disabled = true; }
+      }
     }
     openModal('modal-topUp');
 
@@ -1499,15 +1529,20 @@ function openCustomerModal(type, item) {
 function submitNewCustomer(e) {
   e.preventDefault();
   const editId = rv('nc-edit-id');
+  const tariffEl = g('nc-tariff');
+  const statusEl = g('nc-status');
   const obj = {
     id: editId || uid(),
     name: rv('nc-name'), phone: rv('nc-phone'), idNum: rv('nc-id'),
-    pkg: rv('nc-package'), agent: rv('nc-agent'), branch: rv('nc-branch'), date: rv('nc-date')
+    tariff: tariffEl ? tariffEl.value : '', pkg: tariffEl ? tariffEl.value : '',
+    agent: rv('nc-agent'), branch: rv('nc-branch'), date: rv('nc-date'),
+    status: statusEl ? statusEl.value : 'follow'
   };
   if (!obj.name) { showAlert('Please enter customer name'); return; }
   if (!obj.phone) { showAlert('Please enter phone number'); return; }
   if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) { showAlert('Please enter a valid phone number (6–15 digits, separators allowed)'); return; }
   if (!obj.date) { showAlert('Please select a date'); return; }
+  const prevStatus = editId ? (newCustomers.find(function(x){return x.id===editId;})||{}).status : null;
   if (editId) {
     const idx = newCustomers.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) newCustomers[idx] = obj;
@@ -1516,8 +1551,22 @@ function submitNewCustomer(e) {
     newCustomers.push(obj);
     addNotification((currentUser ? currentUser.name : 'User') + ' added a new customer.');
   }
+  // Auto-add to TopUp when status is Close
+  if (obj.status === 'close' && prevStatus !== 'close') {
+    var existingTopUpRecord = topUpList.find(function(t) { return t.customerId === obj.id; });
+    if (!existingTopUpRecord) {
+      topUpList.push({
+        id: uid(), customerId: obj.id, name: obj.name, phone: obj.phone,
+        tariff: obj.tariff, agent: obj.agent, branch: obj.branch, date: obj.date,
+        tuStatus: 'active', amount: 0, note: 'Auto-added (status: Close)'
+      });
+      syncSheet('TopUp', topUpList);
+      showToast('Customer marked as Closed and added to Top Up list.', 'info');
+    }
+  }
   closeModal('modal-newCustomer');
   renderNewCustomerTable();
+  renderTopUpTable();
   syncSheet('Customers', newCustomers);
   saveAllData();
   showToast(editId ? 'Customer record updated.' : 'Customer added successfully.', 'success');
@@ -1542,17 +1591,23 @@ function renderNewCustomerTable() {
   const tbody = g('new-customer-table');
   if (!tbody) return;
   if (!newCustomers.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No customers yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No customers yet</td></tr>';
     return;
   }
+  const statusPillMap = { follow: 'pill-gray', lead: 'pill-blue', 'hot-prospect': 'pill-orange', close: 'pill-green' };
+  const statusLabelMap = { follow: 'Follow', lead: 'Lead', 'hot-prospect': 'Hot Prospect', close: 'Close' };
   tbody.innerHTML = newCustomers.map(function(c, i) {
     const avIdx = i % 8;
+    const st = c.status || 'follow';
+    const stPill = statusPillMap[st] || 'pill-gray';
+    const stLabel = statusLabelMap[st] || esc(st);
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
       '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(c.name)) + '</span>' + esc(c.name) + '</div></td>' +
       '<td>' + esc(c.phone) + '</td>' +
       '<td>' + esc(c.idNum || '') + '</td>' +
-      '<td>' + esc(c.pkg || '') + '</td>' +
+      '<td>' + esc(c.tariff || c.pkg || '') + '</td>' +
+      '<td><span class="pill ' + stPill + '">' + stLabel + '</span></td>' +
       '<td>' + esc(c.agent || '') + '</td>' +
       '<td>' + esc(c.branch || '') + '</td>' +
       '<td>' + esc(c.date || '') + '</td>' +
@@ -1567,16 +1622,22 @@ function renderNewCustomerTable() {
 function submitTopUp(e) {
   e.preventDefault();
   const editId = rv('tu-edit-id');
+  const tuStatusSel = g('tu-status');
+  const tuStatus = tuStatusSel ? tuStatusSel.value : 'active';
+  const custSel = g('tu-existing-customer');
+  const customerId = custSel ? custSel.value : '';
   const obj = {
     id: editId || uid(),
+    customerId: customerId,
     name: rv('tu-name'), phone: rv('tu-phone'), amount: parseFloat(rv('tu-amount')) || 0,
-    agent: rv('tu-agent'), branch: rv('tu-branch'), date: rv('tu-date')
+    agent: rv('tu-agent'), branch: rv('tu-branch'), date: rv('tu-date'),
+    tuStatus: tuStatus
   };
   if (!obj.name) { showAlert('Please enter customer name'); return; }
   if (!obj.phone) { showAlert('Please enter phone number'); return; }
   if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) { showAlert('Please enter a valid phone number (6–15 digits, separators allowed)'); return; }
-  if (!obj.amount || obj.amount <= 0) { showAlert('Please enter a valid top-up amount'); return; }
   if (!obj.date) { showAlert('Please select a date'); return; }
+  const prevStatus = editId ? (topUpList.find(function(x){return x.id===editId;})||{}).tuStatus : null;
   if (editId) {
     const idx = topUpList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) topUpList[idx] = obj;
@@ -1585,11 +1646,35 @@ function submitTopUp(e) {
     topUpList.push(obj);
     addNotification((currentUser ? currentUser.name : 'User') + ' submitted a top-up.');
   }
+  // Auto-add to termination when status = Terminate
+  if (tuStatus === 'terminate' && prevStatus !== 'terminate') {
+    const existingTerminationRecord = terminationList.find(function(t) { return (obj.customerId && t.customerId === obj.customerId) || (t.name === obj.name && t.phone === obj.phone); });
+    if (!existingTerminationRecord) {
+      terminationList.push({
+        id: uid(), customerId: obj.customerId || '', name: obj.name, phone: obj.phone, reason: 'Service terminated',
+        agent: obj.agent, branch: obj.branch, date: obj.date
+      });
+      syncSheet('Terminations', terminationList);
+      renderTerminationTable();
+      showToast('Customer moved to Termination list.', 'info');
+    }
+  }
   closeModal('modal-topUp');
   renderTopUpTable();
   syncSheet('TopUp', topUpList);
   saveAllData();
   showToast(editId ? 'Top-up record updated.' : 'Top-up submitted successfully.', 'success');
+}
+
+function onTuExistingCustomerChange() {
+  const sel = g('tu-existing-customer');
+  if (!sel || !sel.value) return;
+  const customer = newCustomers.find(function(c) { return c.id === sel.value; });
+  if (!customer) return;
+  const nameEl = g('tu-name'); if (nameEl) nameEl.value = customer.name || '';
+  const phoneEl = g('tu-phone'); if (phoneEl) phoneEl.value = customer.phone || '';
+  const agEl = g('tu-agent'); if (agEl && !agEl.value) agEl.value = customer.agent || '';
+  const brEl = g('tu-branch'); if (brEl && !brEl.value) brEl.value = customer.branch || '';
 }
 
 function editTopUp(id) {
@@ -1611,16 +1696,20 @@ function renderTopUpTable() {
   const tbody = g('topup-table');
   if (!tbody) return;
   if (!topUpList.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-coins" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No top up records yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-coins" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No top up records yet</td></tr>';
     return;
   }
   tbody.innerHTML = topUpList.map(function(c, i) {
     const avIdx = i % 8;
+    const tuSt = c.tuStatus || 'active';
+    const stPill = tuSt === 'active' ? 'pill-green' : 'pill-red';
+    const stLabel = tuSt === 'active' ? 'Active' : 'Terminate';
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
       '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(c.name)) + '</span>' + esc(c.name) + '</div></td>' +
       '<td>' + esc(c.phone) + '</td>' +
       '<td>' + fmtMoney(c.amount) + '</td>' +
+      '<td><span class="pill ' + stPill + '">' + stLabel + '</span></td>' +
       '<td>' + esc(c.agent || '') + '</td>' +
       '<td>' + esc(c.branch || '') + '</td>' +
       '<td>' + esc(c.date || '') + '</td>' +
@@ -1918,14 +2007,18 @@ function openDepositModal(item) {
     if (editEl) editEl.value = item.id;
     const agEl = g('dep-agent'); if (agEl) agEl.value = item.agent || '';
     const brEl = g('dep-branch'); if (brEl) brEl.value = item.branch || '';
-    const amEl = g('dep-amount'); if (amEl) amEl.value = item.amount || '';
-    const curEl = g('dep-currency'); if (curEl) curEl.value = item.currency || 'USD';
+    const cashEl = g('dep-cash'); if (cashEl) cashEl.value = item.cash || '';
+    const creditEl = g('dep-credit'); if (creditEl) creditEl.value = item.credit || '';
     const dtEl = g('dep-date'); if (dtEl) dtEl.value = item.date || '';
-    const ntEl = g('dep-note'); if (ntEl) ntEl.value = item.note || '';
+    const ntEl = g('dep-remark'); if (ntEl) ntEl.value = item.remark || item.note || '';
   } else {
     if (title) title.textContent = 'Add Deposit';
     if (btn) btn.textContent = 'Add Deposit';
     const dtEl = g('dep-date'); if (dtEl) dtEl.value = new Date().toISOString().split('T')[0];
+    if (currentUser) {
+      const agEl = g('dep-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent') agEl.readOnly = true; }
+      const brEl = g('dep-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent') brEl.disabled = true; }
+    }
   }
   openModal('modal-addDeposit');
 }
@@ -1933,17 +2026,21 @@ function openDepositModal(item) {
 function submitDeposit(e) {
   e.preventDefault();
   const editId = rv('dep-edit-id');
+  const cash = parseFloat(rv('dep-cash')) || 0;
+  const credit = parseFloat(rv('dep-credit')) || 0;
   const obj = {
     id: editId || uid(),
     agent: rv('dep-agent'),
     branch: rv('dep-branch'),
-    amount: parseFloat(rv('dep-amount')) || 0,
-    currency: rv('dep-currency') || 'USD',
+    cash: cash,
+    credit: credit,
+    amount: cash + credit,
     date: rv('dep-date'),
-    note: rv('dep-note')
+    remark: rv('dep-remark'),
+    status: editId ? (depositList.find(function(x){return x.id===editId;})||{}).status || 'pending' : 'pending'
   };
   if (!obj.agent) { showAlert('Please enter agent name'); return; }
-  if (!obj.amount || obj.amount <= 0) { showAlert('Please enter a valid deposit amount'); return; }
+  if (obj.amount <= 0) { showAlert('Please enter a cash and/or credit amount greater than zero'); return; }
   if (!obj.date) { showAlert('Please select a date'); return; }
   if (editId) {
     const idx = depositList.findIndex(function(x) { return x.id === editId; });
@@ -1958,7 +2055,7 @@ function submitDeposit(e) {
   updateDepositKpis();
   syncSheet('Deposits', depositList);
   saveAllData();
-  showToast(editId ? 'Deposit record updated.' : 'Deposit added successfully.', 'success');
+  showToast(editId ? 'Deposit record updated.' : 'Deposit submitted successfully.', 'success');
 }
 
 function editDeposit(id) {
@@ -1977,32 +2074,127 @@ function deleteDeposit(id) {
   }, 'Delete Deposit Record', 'Delete');
 }
 
+function approveDeposit(id) {
+  var canApprove = (currentRole === 'supervisor' || currentRole === 'admin' || currentRole === 'cluster');
+  if (!canApprove) { showAlert('Only supervisor, admin, or cluster can approve deposits.', 'warning'); return; }
+  showConfirm('Approve this deposit record?', function() {
+    var idx = depositList.findIndex(function(x) { return x.id === id; });
+    if (idx >= 0) {
+      depositList[idx].status = 'approved';
+      depositList[idx].approvedBy = currentUser ? currentUser.name : 'Supervisor';
+      depositList[idx].approvedAt = new Date().toISOString().split('T')[0];
+      renderDepositTable();
+      updateDepositKpis();
+      syncSheet('Deposits', depositList);
+      saveAllData();
+      showToast('Deposit approved.', 'success');
+    }
+  }, 'Approve Deposit', 'Approve', false);
+}
+
 function updateDepositKpis() {
-  let total = 0;
+  let totalCash = 0, totalCredit = 0;
   const agents = new Set();
-  depositList.forEach(function(d) { total += d.amount; agents.add(d.agent); });
+  depositList.forEach(function(d) { totalCash += (d.cash || 0); totalCredit += (d.credit || 0); agents.add(d.agent); });
+  const total = totalCash + totalCredit;
   const el1 = g('dep-kpi-total'); if (el1) el1.textContent = fmtMoney(total);
   const el2 = g('dep-kpi-count'); if (el2) el2.textContent = depositList.length;
   const el3 = g('dep-kpi-agents'); if (el3) el3.textContent = agents.size;
+  const el4 = g('dep-kpi-cash'); if (el4) el4.textContent = fmtMoney(totalCash);
+  const el5 = g('dep-kpi-credit'); if (el5) el5.textContent = fmtMoney(totalCredit);
+  renderDepositChart();
+}
+
+function renderDepositChart() {
+  _cDepositPerf = destroyChart(_cDepositPerf);
+  const canvas = g('cDepositPerf');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const periodEl = g('dep-chart-period');
+  const period = periodEl ? periodEl.value : 'monthly';
+
+  const now = new Date();
+  let labels = [], cashData = [], creditData = [];
+
+  if (period === 'weekly') {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      labels.push(key.slice(5));
+      let c = 0, cr = 0;
+      depositList.forEach(function(dep) { if (dep.date === key) { c += (dep.cash||0); cr += (dep.credit||0); } });
+      cashData.push(c); creditData.push(cr);
+    }
+  } else if (period === 'monthly') {
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.toISOString().substring(0, 7);
+      labels.push(ymLabel(key));
+      let c = 0, cr = 0;
+      depositList.forEach(function(dep) { if (dep.date && dep.date.startsWith(key)) { c += (dep.cash||0); cr += (dep.credit||0); } });
+      cashData.push(c); creditData.push(cr);
+    }
+  } else {
+    for (let i = 2; i >= 0; i--) {
+      const yr = now.getFullYear() - i;
+      labels.push(String(yr));
+      let c = 0, cr = 0;
+      depositList.forEach(function(dep) { if (dep.date && dep.date.startsWith(String(yr))) { c += (dep.cash||0); cr += (dep.credit||0); } });
+      cashData.push(c); creditData.push(cr);
+    }
+  }
+
+  _cDepositPerf = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Cash ($)', data: cashData, backgroundColor: 'rgba(27,125,61,0.8)', borderColor: '#1B7D3D', borderWidth: 1 },
+        { label: 'Credit ($)', data: creditData, backgroundColor: 'rgba(21,101,192,0.8)', borderColor: '#1565C0', borderWidth: 1 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: { x: { stacked: true }, y: { beginAtZero: true, stacked: true } }
+    }
+  });
 }
 
 function renderDepositTable() {
-  const tbody = g('deposit-table') ? g('deposit-table').querySelector('tbody') : null;
+  const table = g('deposit-table');
+  if (!table) return;
+  const thead = table.querySelector('thead');
+  const tbody = table.querySelector('tbody');
   if (!tbody) return;
+
+  // Update header to include cash, credit, status columns
+  if (thead) {
+    thead.innerHTML = '<tr><th>#</th><th>Agent</th><th>Branch</th><th>Cash ($)</th><th>Credit ($)</th><th>Total</th><th>Date</th><th>Remark</th><th>Status</th><th>Actions</th></tr>';
+  }
+
   if (!depositList.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-piggy-bank" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No deposit records yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-piggy-bank" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No deposit records yet</td></tr>';
     return;
   }
+  const canApprove = (currentRole === 'supervisor' || currentRole === 'admin' || currentRole === 'cluster');
   tbody.innerHTML = depositList.map(function(d, i) {
     const avIdx = i % 8;
+    const status = d.status || 'pending';
+    const statusPill = status === 'approved' ? 'pill-green' : 'pill-orange';
+    const statusLabel = status === 'approved' ? 'Approved' : 'Pending';
+    const approveBtn = (canApprove && status !== 'approved') ? '<button class="btn-edit" onclick="approveDeposit(\'' + esc(d.id) + '\')" title="Approve"><i class="fas fa-check-circle"></i></button> ' : '';
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
       '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(d.agent)) + '</span>' + esc(d.agent) + '</div></td>' +
       '<td>' + esc(d.branch || '') + '</td>' +
-      '<td style="font-weight:700;color:#1B7D3D;">' + fmtMoney(d.amount, esc(d.currency) + ' ') + '</td>' +
+      '<td style="color:#1B7D3D;font-weight:600;">' + (d.cash ? '$' + Number(d.cash).toFixed(2) : '—') + '</td>' +
+      '<td style="color:#1565C0;font-weight:600;">' + (d.credit ? '$' + Number(d.credit).toFixed(2) : '—') + '</td>' +
+      '<td style="font-weight:700;color:#1B7D3D;">$' + Number(d.amount || 0).toFixed(2) + '</td>' +
       '<td>' + esc(d.date || '') + '</td>' +
-      '<td style="color:#888;font-size:0.8rem;">' + esc(d.note || '') + '</td>' +
+      '<td style="color:#888;font-size:0.8rem;">' + esc(d.remark || d.note || '') + '</td>' +
+      '<td><span class="pill ' + statusPill + '">' + statusLabel + '</span></td>' +
       '<td style="white-space:nowrap;">' +
+        approveBtn +
         '<button class="btn-edit" onclick="editDeposit(\'' + esc(d.id) + '\')"><i class="fas fa-edit"></i></button> ' +
         '<button class="btn-delete" onclick="deleteDeposit(\'' + esc(d.id) + '\')"><i class="fas fa-trash"></i></button>' +
       '</td>' +

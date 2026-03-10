@@ -653,15 +653,49 @@
             <i class="fas fa-circle-plus"></i> Add Deposit
           </button>
         </div>
+
+        <!-- Deposit KPI Cards -->
+        <div class="kpi-grid" style="margin-bottom:16px;">
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-green"><i class="fas fa-sack-dollar"></i></div>
+            <div class="kpi-card-body"><p class="kpi-label">Total Received</p><p class="kpi-value" id="dep-kpi-total">$0</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-blue"><i class="fas fa-money-bill-wave"></i></div>
+            <div class="kpi-card-body"><p class="kpi-label">Total Cash</p><p class="kpi-value" id="dep-kpi-cash">$0</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-purple"><i class="fas fa-credit-card"></i></div>
+            <div class="kpi-card-body"><p class="kpi-label">Total Credit</p><p class="kpi-value" id="dep-kpi-credit">$0</p></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-orange"><i class="fas fa-users"></i></div>
+            <div class="kpi-card-body"><p class="kpi-label">Agents</p><p class="kpi-value" id="dep-kpi-agents">0</p></div>
+          </div>
+        </div>
+
+        <!-- Deposit Chart -->
+        <div class="chart-card" style="margin-bottom:16px;">
+          <div class="chart-card-header">
+            <span class="chart-card-title"><i class="fas fa-chart-bar" style="color:#1B7D3D;margin-right:6px;"></i>Payment Performance</span>
+            <select class="form-select" id="dep-chart-period" onchange="renderDepositChart()" style="padding:5px 28px 5px 10px;font-size:.8125rem;">
+              <option value="weekly">Weekly (Last 7 Days)</option>
+              <option value="monthly" selected>Monthly (Last 6 Months)</option>
+              <option value="yearly">Yearly (Last 3 Years)</option>
+            </select>
+          </div>
+          <div class="chart-card-body"><canvas id="cDepositPerf"></canvas></div>
+        </div>
+
         <div class="table-card">
           <div class="table-responsive">
             <table class="data-table" id="deposit-table">
               <thead>
                 <tr>
-                  <th>#</th><th>Agent</th><th>Branch</th><th>Amount</th><th>Date</th><th>Note</th><th>Actions</th>
+                  <th>#</th><th>Agent</th><th>Branch</th><th>Cash ($)</th><th>Credit ($)</th><th>Total</th><th>Date</th><th>Remark</th><th>Status</th><th>Actions</th>
                 </tr>
               </thead>
-              <tbody><tr><td colspan="7" class="empty-state"><i class="fas fa-vault fa-2x" style="opacity:.2;display:block;margin:0 auto 8px"></i>No deposit records yet</td></tr></tbody>
+              <tbody><tr><td colspan="10" class="empty-state"><i class="fas fa-vault fa-2x" style="opacity:.2;display:block;margin:0 auto 8px"></i>No deposit records yet</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -779,7 +813,7 @@
           <div class="table-card">
             <div class="table-responsive">
               <table class="data-table">
-                <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>ID/Passport</th><th>Package</th><th>Agent</th><th>Branch</th><th>Date</th><th>Actions</th></tr></thead>
+                <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>ID/Passport</th><th>Tariff</th><th>Status</th><th>Agent</th><th>Branch</th><th>Date</th><th>Actions</th></tr></thead>
                 <tbody id="new-customer-table"></tbody>
               </table>
             </div>
@@ -796,7 +830,7 @@
           <div class="table-card">
             <div class="table-responsive">
               <table class="data-table">
-                <thead><tr><th>#</th><th>Customer Name</th><th>Phone</th><th>Amount</th><th>Agent</th><th>Branch</th><th>Date</th><th>Actions</th></tr></thead>
+                <thead><tr><th>#</th><th>Customer Name</th><th>Phone</th><th>Amount</th><th>Status</th><th>Agent</th><th>Branch</th><th>Date</th><th>Actions</th></tr></thead>
                 <tbody id="topup-table"></tbody>
               </table>
             </div>
@@ -1026,8 +1060,8 @@
               <input type="date" class="form-input" id="sale-date" required />
             </div>
             <div class="form-group form-col">
-              <label class="form-label" for="sale-note">Note</label>
-              <input type="text" class="form-input" id="sale-note" placeholder="Optional note" />
+              <label class="form-label" for="sale-remark">Remark</label>
+              <input type="text" class="form-input" id="sale-remark" placeholder="Optional remark" />
             </div>
           </div>
           <div class="sale-items-section">
@@ -1083,9 +1117,25 @@
               <input type="text" class="form-input" id="nc-id" placeholder="ID or Passport number" />
             </div>
             <div class="form-group form-col">
-              <label class="form-label" for="nc-package">Package</label>
-              <input type="text" class="form-input" id="nc-package" placeholder="Package name" />
+              <label class="form-label" for="nc-tariff">Tariff</label>
+              <select class="form-select" id="nc-tariff">
+                <option value="">Select tariff</option>
+                <option value="Smart@Home">Smart@Home</option>
+                <option value="Smart Fiber+">Smart Fiber+</option>
+                <option value="M2M">M2M</option>
+                <option value="Smart Laor 6">Smart Laor 6</option>
+                <option value="Smart Laor 10$">Smart Laor 10$</option>
+              </select>
             </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="nc-status">Status <span class="required">*</span></label>
+            <select class="form-select" id="nc-status" required>
+              <option value="follow">Follow</option>
+              <option value="lead">Lead</option>
+              <option value="hot-prospect">Hot Prospect</option>
+              <option value="close">Close</option>
+            </select>
           </div>
           <div class="form-row">
             <div class="form-group form-col">
@@ -1125,6 +1175,12 @@
       </div>
       <form id="form-topUp" onsubmit="submitTopUp(event)">
         <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="tu-existing-customer">Select Existing Customer</label>
+            <select class="form-select" id="tu-existing-customer" onchange="onTuExistingCustomerChange()">
+              <option value="">-- New / Manual Entry --</option>
+            </select>
+          </div>
           <div class="form-row">
             <div class="form-group form-col">
               <label class="form-label" for="tu-name">Customer Name <span class="required">*</span></label>
@@ -1135,9 +1191,18 @@
               <input type="tel" class="form-input" id="tu-phone" placeholder="Phone number" required />
             </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="tu-amount">Amount <span class="required">*</span></label>
-            <input type="number" class="form-input" id="tu-amount" placeholder="0.00" min="0" step="0.01" required />
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="tu-amount">Amount ($)</label>
+              <input type="number" class="form-input" id="tu-amount" placeholder="0.00" min="0" step="0.01" />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="tu-status">Status <span class="required">*</span></label>
+              <select class="form-select" id="tu-status" required>
+                <option value="active">Active</option>
+                <option value="terminate">Terminate</option>
+              </select>
+            </div>
           </div>
           <div class="form-row">
             <div class="form-group form-col">
@@ -1148,9 +1213,6 @@
               <label class="form-label" for="tu-branch">Branch <span class="required">*</span></label>
               <select class="form-select" id="tu-branch" required>
                 <option value="">Select branch</option>
-                <option value="Phnom Penh">Phnom Penh</option>
-                <option value="Siem Reap">Siem Reap</option>
-                <option value="Battambang">Battambang</option>
               </select>
             </div>
           </div>
@@ -1414,6 +1476,55 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-outline" onclick="closeModal('modal-newPromotion')">Cancel</button>
           <button type="submit" class="btn btn-primary" id="np-submit-btn">Add Promotion</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add/Edit Deposit -->
+  <div class="modal-overlay" id="modal-addDeposit">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-addDeposit-title">Add Deposit</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-addDeposit')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-addDeposit" onsubmit="submitDeposit(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="dep-agent">Agent Name <span class="required">*</span></label>
+              <input type="text" class="form-input" id="dep-agent" placeholder="Agent name" required />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="dep-branch">Branch <span class="required">*</span></label>
+              <select class="form-select" id="dep-branch" required>
+                <option value="">Select branch</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label class="form-label" for="dep-cash">Cash ($)</label>
+              <input type="number" class="form-input" id="dep-cash" placeholder="0.00" min="0" step="0.01" />
+            </div>
+            <div class="form-group form-col">
+              <label class="form-label" for="dep-credit">Credit ($)</label>
+              <input type="number" class="form-input" id="dep-credit" placeholder="0.00" min="0" step="0.01" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="dep-date">Date <span class="required">*</span></label>
+            <input type="date" class="form-input" id="dep-date" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="dep-remark">Remark</label>
+            <input type="text" class="form-input" id="dep-remark" placeholder="Optional remark" />
+          </div>
+          <input type="hidden" id="dep-edit-id" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-addDeposit')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="dep-submit-btn">Add Deposit</button>
         </div>
       </form>
     </div>
