@@ -722,7 +722,7 @@ function openNewSaleModal(sale) {
     const brSel = g('sale-branch');
     if (brSel) brSel.value = sale.branch || '';
     g('sale-date').value = sale.date || '';
-    g('sale-remark').value = sale.note || '';
+    g('sale-remark').value = sale.remark || sale.note || '';
 
     if (sale.items) {
       Object.keys(sale.items).forEach(function(iid) {
