@@ -202,16 +202,9 @@
     .sic-label { font-size:.75rem; font-weight:600; color:#444; margin-bottom:6px; }
     .sic-card-unit .sic-label { color:#2E7D32; }
     .sic-card-dollar .sic-label { color:#E65100; }
-    .sic-sub { font-size:.7rem; color:#999; margin-bottom:6px; }
     .sic-input { width:100%; padding:7px 10px; border:1.5px solid #D0D0D0; border-radius:7px; font-size:.875rem; font-weight:600; text-align:center; outline:none; font-family:inherit; }
     .sic-card-unit .sic-input:focus { border-color:#1B7D3D; }
     .sic-card-dollar .sic-input:focus { border-color:#FB8C00; }
-
-    /* Sale totals footer */
-    .sale-totals-footer { display:flex; gap:20px; padding:14px 24px; background:#F8FAF8; border-top:1px solid #EEEEEE; flex-wrap:wrap; }
-    .sale-total-item { display:flex; flex-direction:column; gap:2px; }
-    .sale-total-label { font-size:.7rem; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:.05em; }
-    .sale-total-value { font-size:1.2rem; font-weight:700; color:#1B7D3D; }
 
     /* Modal */
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:none; align-items:center; justify-content:center; padding:20px; }
@@ -1073,16 +1066,6 @@
             <div id="sale-dollar-items"></div>
           </div>
           <input type="hidden" id="sale-edit-id" />
-        </div>
-        <div class="sale-totals-footer">
-          <div class="sale-total-item">
-            <span class="sale-total-label">Total Units</span>
-            <span class="sale-total-value" id="sale-total-units">0</span>
-          </div>
-          <div class="sale-total-item">
-            <span class="sale-total-label">Total Revenue</span>
-            <span class="sale-total-value" id="sale-total-rev">$0.00</span>
-          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline" onclick="closeModal('modal-newSale')">Cancel</button>
