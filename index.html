@@ -677,7 +677,7 @@
               <option value="yearly">Yearly (Last 3 Years)</option>
             </select>
           </div>
-          <div class="chart-card-body"><canvas id="cDepositPerf"></canvas></div>
+          <div class="chart-card-body" style="min-height:0;height:200px;overflow:hidden;"><canvas id="cDepositPerf" style="height:200px!important;"></canvas></div>
         </div>
 
         <div class="view-toggle-bar">
@@ -1170,12 +1170,6 @@
       </div>
       <form id="form-topUp" onsubmit="submitTopUp(event)">
         <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="tu-existing-customer">Select Existing Customer</label>
-            <select class="form-select" id="tu-existing-customer" onchange="onTuExistingCustomerChange()">
-              <option value="">-- New / Manual Entry --</option>
-            </select>
-          </div>
           <div class="form-row">
             <div class="form-group form-col">
               <label class="form-label" for="tu-name">Customer Name <span class="required">*</span></label>
