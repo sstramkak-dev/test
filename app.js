@@ -21,9 +21,10 @@ let kpiForSelected = 'shop'; // 'shop' or 'agent'
 // Chart instances
 let _cTrend = null, _cMix = null, _cAgent = null, _cGrowth = null;
 let _cSaleMix = null, _cSaleAgent = null;
+let _cKpiAchieve = null;
 
 // Constants
-const TAB_PERM = { admin: ['permission','kpi','promo'], supervisor: ['kpi'], user: [] };
+const TAB_PERM = { admin: ['permission','kpi','promo'], cluster: ['permission','kpi','promo'], supervisor: ['kpi'], agent: [], user: [] };
 const TAB_LBL = { permission: 'Permission', kpi: 'KPI Setting', promo: 'Promotion' };
 const AV_COLORS = ['#E53935','#8E24AA','#1565C0','#00838F','#2E7D32','#F57F17','#4E342E','#37474F'];
 const CHART_PAL = ['#1B7D3D','#2196F3','#FF9800','#9C27B0','#F44336','#00BCD4','#FFEB3B','#795548'];
@@ -77,49 +78,23 @@ let itemCatalogue = [
   { id: 'i3', name: 'Top Up USD', shortcut: 'TU', group: 'dollar', currency: 'USD', price: 10, category: 'Prepaid', status: 'active', desc: 'Top up USD' },
 ];
 
-let saleRecords = [
-  { id: 's1', agent: 'Alice', branch: 'Phnom Penh', date: '2025-01-15', note: '', items: { i1: 5, i2: 3 }, dollarItems: { i3: 20 } },
-  { id: 's2', agent: 'Bob', branch: 'Siem Reap', date: '2025-01-20', note: '', items: { i1: 2, i2: 1 }, dollarItems: { i3: 10 } },
-  { id: 's3', agent: 'Alice', branch: 'Phnom Penh', date: '2025-02-05', note: '', items: { i1: 8, i2: 5 }, dollarItems: { i3: 40 } },
-  { id: 's4', agent: 'Charlie', branch: 'Battambang', date: '2025-02-10', note: '', items: { i1: 3 }, dollarItems: { i3: 15 } },
-  { id: 's5', agent: 'Bob', branch: 'Siem Reap', date: '2025-02-18', note: '', items: { i2: 4 }, dollarItems: { i3: 25 } },
-];
+let saleRecords = [];
 
-let newCustomers = [
-  { id: 'nc1', name: 'Dara Sok', phone: '012345678', idNum: 'ID001', pkg: 'Prepaid Basic', agent: 'Alice', branch: 'Phnom Penh', date: '2025-02-01' },
-];
+let newCustomers = [];
 
-let topUpList = [
-  { id: 'tu1', name: 'Meas Vireak', phone: '098765432', amount: 5, agent: 'Bob', branch: 'Siem Reap', date: '2025-02-10' },
-];
+let topUpList = [];
 
-let terminationList = [
-  { id: 'tr1', name: 'Nget Chenda', phone: '077654321', reason: 'Changed provider', agent: 'Charlie', branch: 'Battambang', date: '2025-02-15' },
-];
+let terminationList = [];
 
 let staffList = [
-  { id: 'u1', name: 'Admin', username: 'admin', password: 'admin@2026', role: 'Admin', branch: 'Phnom Penh', status: 'active' },
-  { id: 'u2', name: 'Bob Smith', username: 'bob', password: 'Pass@123', role: 'Supervisor', branch: 'Siem Reap', status: 'active' },
-  { id: 'u3', name: 'Charlie Brown', username: 'charlie', password: 'Pass@123', role: 'Agent', branch: 'Battambang', status: 'active' },
-  { id: 'u4', name: 'Rim Saray', username: 'rim.saray', password: 'Pass@123', role: 'Supervisor', branch: 'Express_Tramkak', status: 'active' },
-  { id: 'u5', name: 'Dara Mony', username: 'dara.mony', password: 'Pass@123', role: 'Agent', branch: 'Express_Tramkak', status: 'active' },
-  { id: 'u6', name: 'Sok Phally', username: 'sok.phally', password: 'Pass@123', role: 'Agent', branch: 'Express_Tramkak', status: 'active' },
+  { id: 'u1', name: 'Admin', username: 'admin', password: 'admin@2026', role: 'Admin', branch: '', status: 'active' },
 ];
 
-let kpiList = [
-  { id: 'k1', name: 'Monthly Sales Target', type: 'Sales', target: 50, valueMode: 'unit', unit: 'Sales', period: 'Monthly' },
-  { id: 'k2', name: 'Revenue Goal', type: 'Revenue', target: 5000, valueMode: 'currency', currency: 'USD', period: 'Monthly' },
-];
+let kpiList = [];
 
-let promotionList = [
-  { id: 'p1', campaign: 'New Year Promo', channel: 'SMS', startDate: '2025-01-01', endDate: '2025-01-31', terms: 'Applicable to all prepaid customers. One time use only.' },
-  { id: 'p2', campaign: 'Data Boost February', channel: 'Social Media', startDate: '2025-02-01', endDate: '2025-02-28', terms: 'Valid for new activations only.' },
-];
+let promotionList = [];
 
-let depositList = [
-  { id: 'd1', agent: 'Alice', branch: 'Phnom Penh', amount: 500, currency: 'USD', date: '2025-02-01', note: 'February deposit' },
-  { id: 'd2', agent: 'Bob', branch: 'Siem Reap', amount: 300, currency: 'USD', date: '2025-02-05', note: '' },
-];
+let depositList = [];
 
 let notifications = [];
 
@@ -171,6 +146,11 @@ function loadAllData() {
   kpiList = lsLoad(LS_KEYS.kpis, kpiList);
   promotionList = lsLoad(LS_KEYS.promotions, promotionList);
   depositList = lsLoad(LS_KEYS.deposits, depositList);
+  // Ensure admin user always exists
+  var hasAdmin = staffList.some(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
+  if (!hasAdmin) {
+    staffList.unshift({ id: 'u1', name: 'Admin', username: 'admin', password: 'admin@2026', role: 'Admin', branch: '', status: 'active' });
+  }
 }
 
 // ------------------------------------------------------------
@@ -203,14 +183,19 @@ function showToast(message, type) {
 }
 
 // Populate branch dropdowns
+function getBranches() {
+  return [...new Set(staffList.map(function(u) { return u.branch; }).filter(Boolean))].sort();
+}
+
 function populateBranchSelects() {
+  const branches = getBranches();
   const branchSelectIds = ['sale-branch', 'nc-branch', 'tu-branch', 'term-branch', 'dep-branch'];
   branchSelectIds.forEach(function(id) {
     const sel = g(id);
     if (!sel) return;
     const current = sel.value;
     sel.innerHTML = '<option value="">Select branch</option>' +
-      BRANCHES.map(function(b) { return '<option value="' + esc(b) + '"' + (current === b ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('');
+      branches.map(function(b) { return '<option value="' + esc(b) + '"' + (current === b ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('');
   });
 }
 
@@ -375,8 +360,7 @@ function switchSettingsTab(tab) {
 function renderAccessContent(tab) {
   const allowed = TAB_PERM[currentRole] || [];
   var banner = g('settings-contact-banner');
-  if (banner) banner.style.display = (currentRole !== 'admin') ? '' : 'none';
-  if (!allowed.includes(tab)) {
+  if (banner) banner.style.display = (currentRole !== 'admin' && currentRole !== 'cluster') ? '' : 'none';
     const tc = g('stab-content-' + tab);
     if (tc) {
       tc.innerHTML = '<div class="access-denied"><i class="fas fa-lock fa-3x" style="color:#BDBDBD;margin-bottom:12px;"></i><h3 style="color:#555;">Access Denied</h3><p style="color:#999;">You do not have permission to access this section.</p></div>';
@@ -393,9 +377,9 @@ function renderAccessContent(tab) {
 // ------------------------------------------------------------
 function switchRole(role) {
   currentRole = role;
-  const roleNames = { admin: 'Admin User', supervisor: 'Supervisor User', user: 'Regular User' };
-  const roleBadges = { admin: 'Admin', supervisor: 'Supervisor', user: 'User' };
-  const roleColors = { admin: '#1B7D3D', supervisor: '#1565C0', user: '#6D4C41' };
+  const roleNames = { admin: 'Admin User', cluster: 'Cluster User', supervisor: 'Supervisor User', agent: 'Agent User', user: 'Agent User' };
+  const roleBadges = { admin: 'Admin', cluster: 'Cluster', supervisor: 'Supervisor', agent: 'Agent', user: 'Agent' };
+  const roleColors = { admin: '#1B7D3D', cluster: '#6A1B9A', supervisor: '#1565C0', agent: '#E65100', user: '#E65100' };
 
   const nameEl = g('topbar-name');
   const roleEl = g('topbar-role');
@@ -412,10 +396,10 @@ function switchRole(role) {
   if (wd) wd.style.display = 'none';
 
   var banner = g('settings-contact-banner');
-  if (banner) banner.style.display = (currentRole !== 'admin') ? '' : 'none';
+  if (banner) banner.style.display = (currentRole !== 'admin' && currentRole !== 'cluster') ? '' : 'none';
 
   var newBtn = g('promo-new-btn');
-  if (newBtn) newBtn.style.display = (currentRole === 'admin') ? '' : 'none';
+  if (newBtn) newBtn.style.display = (currentRole === 'admin' || currentRole === 'cluster') ? '' : 'none';
 
   if (currentPage === 'settings') renderAccessContent(currentSettingsTab);
 }
@@ -1046,8 +1030,24 @@ function renderDashboard() {
   const ym = ymNow();
   const ymP = ymPrev();
 
-  const currSales = saleRecords.filter(function(s) { return ymOf(s.date) === ym; });
-  const prevSales = saleRecords.filter(function(s) { return ymOf(s.date) === ymP; });
+  // Role-based data filtering
+  let viewSales = saleRecords;
+  if (currentRole === 'agent' && currentUser) {
+    viewSales = saleRecords.filter(function(s) { return s.agent === currentUser.name; });
+  } else if (currentRole === 'supervisor' && currentUser) {
+    viewSales = saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
+  }
+  // Apply branch filter (available for admin/cluster)
+  const branchFilterVal = g('dash-branch-filter') ? g('dash-branch-filter').value : '';
+  if (branchFilterVal) {
+    viewSales = viewSales.filter(function(s) { return s.branch === branchFilterVal; });
+  }
+  // Hide branch filter for agent role
+  var branchFilterWrap = g('dash-branch-filter-wrap');
+  if (branchFilterWrap) branchFilterWrap.style.display = (currentRole === 'agent') ? 'none' : '';
+
+  const currSales = viewSales.filter(function(s) { return ymOf(s.date) === ym; });
+  const prevSales = viewSales.filter(function(s) { return ymOf(s.date) === ymP; });
 
   let currUnits = 0, prevUnits = 0, currRev = 0, prevRev = 0;
   const currAgents = new Set(), prevAgents = new Set();
@@ -1087,14 +1087,14 @@ function renderDashboard() {
   const monthLabels = months.map(ymLabel);
   const unitsPerMonth = months.map(function(m) {
     let u = 0;
-    saleRecords.filter(function(s) { return ymOf(s.date) === m; }).forEach(function(s) {
+    viewSales.filter(function(s) { return ymOf(s.date) === m; }).forEach(function(s) {
       Object.values(s.items || {}).forEach(function(v) { u += v; });
     });
     return u;
   });
   const revPerMonth = months.map(function(m) {
     let r = 0;
-    saleRecords.filter(function(s) { return ymOf(s.date) === m; }).forEach(function(s) {
+    viewSales.filter(function(s) { return ymOf(s.date) === m; }).forEach(function(s) {
       Object.keys(s.dollarItems || {}).forEach(function(iid) {
         const item = itemCatalogue.find(function(x) { return x.id === iid; });
         r += s.dollarItems[iid] * (item ? item.price : 1);
@@ -1130,7 +1130,7 @@ function renderDashboard() {
   const unitItemsDash = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
   const mixData = unitItemsDash.map(function(item) {
     let total = 0;
-    saleRecords.forEach(function(s) { total += (s.items && s.items[item.id]) ? s.items[item.id] : 0; });
+    viewSales.forEach(function(s) { total += (s.items && s.items[item.id]) ? s.items[item.id] : 0; });
     return total;
   });
   const mCtx = g('cMix');
@@ -1192,11 +1192,11 @@ function renderDashboard() {
     });
   }
 
-  // Branch summary table
+  // Branch summary table (visible for admin/cluster/supervisor)
   const branchTableBody = g('branch-table');
   if (branchTableBody) {
     const branches = [];
-    saleRecords.forEach(function(s) { if (branches.indexOf(s.branch) < 0) branches.push(s.branch); });
+    viewSales.forEach(function(s) { if (branches.indexOf(s.branch) < 0) branches.push(s.branch); });
     if (!branches.length) {
       branchTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#999;">No data</td></tr>';
     } else {
@@ -1220,16 +1220,161 @@ function renderDashboard() {
   // Branch filter dropdown
   const branchFilter = g('dash-branch-filter');
   if (branchFilter) {
-    const branches = [];
-    saleRecords.forEach(function(s) { if (branches.indexOf(s.branch) < 0) branches.push(s.branch); });
+    const branches = getBranches();
     const cur = branchFilter.value;
     branchFilter.innerHTML = '<option value="">All Branches</option>' +
       branches.map(function(b) { return '<option value="' + esc(b) + '"' + (cur === b ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('');
   }
+
+  // KPI Achievement section
+  renderDashboardKpiSection();
 }
 
 // ------------------------------------------------------------
-// Customer Functions
+// KPI vs Actual Achievement Dashboard
+// ------------------------------------------------------------
+function calcKpiActual(kpi) {
+  const ym = ymNow();
+  const currSales = saleRecords.filter(function(s) { return ymOf(s.date) === ym; });
+  let filtered = currSales;
+  if (kpi.kpiFor === 'agent') {
+    const agent = staffList.find(function(u) { return u.id === kpi.assigneeId; });
+    if (agent) filtered = currSales.filter(function(s) { return s.agent === agent.name; });
+  } else if (kpi.kpiFor === 'shop') {
+    const sup = staffList.find(function(u) { return u.id === kpi.assigneeId; });
+    if (sup) filtered = currSales.filter(function(s) { return s.branch === sup.branch; });
+  }
+  let actual = 0;
+  if (kpi.valueMode === 'unit') {
+    filtered.forEach(function(s) { Object.values(s.items || {}).forEach(function(v) { actual += v; }); });
+  } else {
+    filtered.forEach(function(s) {
+      Object.keys(s.dollarItems || {}).forEach(function(iid) {
+        const item = itemCatalogue.find(function(x) { return x.id === iid; });
+        actual += s.dollarItems[iid] * (item ? item.price : 1);
+      });
+    });
+  }
+  return actual;
+}
+
+var _dashKpiView = 'all'; // 'all', 'shop', 'agent'
+
+function setDashKpiView(view) {
+  _dashKpiView = view;
+  $$('.dash-kpi-view-btn').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-view') === view);
+  });
+  renderDashboardKpiSection();
+}
+
+function renderDashboardKpiSection() {
+  var section = g('dash-kpi-section');
+  if (!section) return;
+
+  // Determine relevant KPIs based on role
+  var relevantKpis = [];
+  if (currentRole === 'agent' && currentUser) {
+    relevantKpis = kpiList.filter(function(k) { return k.kpiFor === 'agent' && k.assigneeId === currentUser.id; });
+  } else if (currentRole === 'supervisor' && currentUser) {
+    relevantKpis = kpiList.filter(function(k) {
+      return (k.kpiFor === 'shop' && k.assigneeId === currentUser.id) ||
+             (k.kpiFor === 'agent' && k.assigneeBranch === currentUser.branch);
+    });
+  } else if (currentRole === 'cluster' || currentRole === 'admin') {
+    relevantKpis = kpiList.slice();
+  }
+
+  // Apply view filter (agent/supervisor can toggle by agent or by shop)
+  if (_dashKpiView === 'shop') {
+    relevantKpis = relevantKpis.filter(function(k) { return k.kpiFor === 'shop'; });
+  } else if (_dashKpiView === 'agent') {
+    relevantKpis = relevantKpis.filter(function(k) { return k.kpiFor === 'agent'; });
+  }
+
+  // Show/hide the view toggle buttons based on role
+  var toggleWrap = g('dash-kpi-view-toggle');
+  if (toggleWrap) {
+    toggleWrap.style.display = (currentRole === 'agent' || currentRole === 'supervisor' || currentRole === 'cluster' || currentRole === 'admin') ? '' : 'none';
+  }
+
+  if (!relevantKpis.length) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+
+  // Build chart data
+  var labels = [], targets = [], actuals = [], pcts = [];
+  relevantKpis.forEach(function(k) {
+    var assignee = staffList.find(function(u) { return u.id === k.assigneeId; });
+    var label = k.name + (assignee ? ' (' + assignee.name + ')' : '');
+    var actual = calcKpiActual(k);
+    var pct = k.target > 0 ? Math.round(actual / k.target * 100) : 0;
+    labels.push(label);
+    targets.push(k.target);
+    actuals.push(Math.round(actual * 100) / 100);
+    pcts.push(pct);
+  });
+
+  // Render chart
+  _cKpiAchieve = destroyChart(_cKpiAchieve);
+  clearCanvas('cKpiAchieve');
+  var ctx = g('cKpiAchieve');
+  if (ctx && typeof Chart !== 'undefined') {
+    _cKpiAchieve = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Target', data: targets, backgroundColor: 'rgba(21,101,192,0.7)', borderColor: '#1565C0', borderWidth: 1 },
+          { label: 'Actual', data: actuals, backgroundColor: 'rgba(27,125,61,0.85)', borderColor: '#1B7D3D', borderWidth: 1 }
+        ]
+      },
+      options: {
+        responsive: true,
+        indexAxis: 'y',
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              afterLabel: function(ctx) {
+                if (ctx.datasetIndex === 1) {
+                  var pct = pcts[ctx.dataIndex];
+                  return 'Achievement: ' + pct + '%';
+                }
+                return '';
+              }
+            }
+          }
+        },
+        scales: { x: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Render summary table
+  var tableWrap = g('dash-kpi-table-wrap');
+  if (tableWrap) {
+    var rows = relevantKpis.map(function(k, i) {
+      var pct = pcts[i];
+      var pctClass = pct >= 100 ? 'pill-green' : pct >= 70 ? 'pill-orange' : 'pill-red';
+      var assignee = staffList.find(function(u) { return u.id === k.assigneeId; });
+      var assigneeName = assignee ? esc(assignee.name) : (k.assigneeBranch ? esc(k.assigneeBranch) : '—');
+      var forLabel = k.kpiFor === 'shop' ? '<span class="pill pill-blue">Shop</span>' : '<span class="pill pill-orange">Agent</span>';
+      var valueDisplay = k.valueMode === 'currency'
+        ? fmtMoney(k.target, esc(k.currency) + ' ') + ' / ' + fmtMoney(actuals[i], esc(k.currency) + ' ')
+        : k.target + ' / ' + actuals[i] + ' ' + esc(k.unit || '');
+      return '<tr>' +
+        '<td>' + esc(k.name) + '</td>' +
+        '<td>' + forLabel + ' <small style="color:#888;">' + assigneeName + '</small></td>' +
+        '<td>' + valueDisplay + '</td>' +
+        '<td><span class="pill ' + pctClass + '">' + pct + '%</span></td>' +
+        '</tr>';
+    }).join('');
+    tableWrap.innerHTML = '<table class="data-table" style="margin-top:8px;"><thead><tr><th>KPI</th><th>Assignee</th><th>Target / Actual</th><th>Achievement</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+}
 // ------------------------------------------------------------
 function openCustomerModal(type, item) {
   if (type === 'new-customer') {
@@ -1598,11 +1743,11 @@ function renderPromotionCards() {
     }
   }
   var newBtn = g('promo-new-btn');
-  if (newBtn) newBtn.style.display = (currentRole === 'admin') ? '' : 'none';
+  if (newBtn) newBtn.style.display = (currentRole === 'admin' || currentRole === 'cluster') ? '' : 'none';
 }
 
 function buildPromoCard(p, isExpired) {
-  var isAdmin = (currentRole === 'admin');
+  var isAdmin = (currentRole === 'admin' || currentRole === 'cluster');
   var statusBadge = isExpired
     ? '<span class="promo-status-badge promo-status-expired">Expired</span>'
     : '<span class="promo-status-badge promo-status-active">Active</span>';
@@ -1871,7 +2016,7 @@ function renderStaffTable() {
     return;
   }
   tbody.innerHTML = staffList.map(function(u, i) {
-    const rolePill = u.role === 'Admin' ? 'pill-green' : u.role === 'Supervisor' ? 'pill-blue' : u.role === 'Agent' ? 'pill-orange' : 'pill-gray';
+    const rolePill = u.role === 'Admin' ? 'pill-green' : u.role === 'Cluster' ? 'pill-purple' : u.role === 'Supervisor' ? 'pill-blue' : u.role === 'Agent' ? 'pill-orange' : 'pill-gray';
     const statusPill = u.status === 'active' ? 'pill-green' : 'pill-red';
     const avIdx = i % 8;
     return '<tr>' +
@@ -1974,7 +2119,7 @@ function populateKpiAgentBranch() {
   } else {
     branchSel.disabled = false;
     branchSel.innerHTML = '<option value="">Select branch</option>' +
-      BRANCHES.map(function(b) { return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('');
+      getBranches().map(function(b) { return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('');
   }
 
   const agentSel = g('kpi-agent-assignee');
@@ -2118,6 +2263,8 @@ function submitKpi(e) {
   renderKpiTable();
   syncSheet('KPI', kpiList);
   saveAllData();
+  // Refresh dashboard KPI section if on dashboard
+  if (currentPage === 'dashboard') renderDashboardKpiSection();
 }
 
 function editKpi(id) {
@@ -2131,6 +2278,8 @@ function deleteKpi(id) {
   renderKpiTable();
   syncSheet('KPI', kpiList);
   saveAllData();
+  if (currentPage === 'dashboard') renderDashboardKpiSection();
+}
 }
 
 function renderKpiTable() {
@@ -2182,7 +2331,7 @@ function handleLogin(e) {
       return u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.status === 'active';
     });
     if (user) {
-      var roleMap = { 'Admin': 'admin', 'Supervisor': 'supervisor', 'Agent': 'user' };
+      var roleMap = { 'Admin': 'admin', 'Cluster': 'cluster', 'Supervisor': 'supervisor', 'Agent': 'agent' };
       currentUser = user;
       if (errEl) errEl.style.display = 'none';
       var ls = g('login-screen'); if (ls) ls.style.display = 'none';

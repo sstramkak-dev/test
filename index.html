@@ -471,7 +471,7 @@
       <section class="page active" id="page-dashboard">
 
         <div class="page-toolbar">
-          <div class="toolbar-left">
+          <div class="toolbar-left" id="dash-branch-filter-wrap">
             <label class="toolbar-label" for="dash-branch-filter"><i class="fas fa-location-dot"></i> Branch</label>
             <select class="form-select toolbar-select" id="dash-branch-filter" onchange="loadDashboard()">
               <option value="">All Branches</option>
@@ -577,6 +577,24 @@
               </thead>
               <tbody id="branch-table"></tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- KPI vs Actual Achievement Section (shown when KPIs are set) -->
+        <div id="dash-kpi-section" style="display:none; margin-top:20px;">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-card-title"><i class="fas fa-bullseye" style="color:#E53935;margin-right:6px"></i>Monthly KPI vs Actual Achievement</span>
+              <div id="dash-kpi-view-toggle" style="display:flex;gap:6px;">
+                <button class="btn btn-sm btn-outline dash-kpi-view-btn active" data-view="all" onclick="setDashKpiView('all')">All</button>
+                <button class="btn btn-sm btn-outline dash-kpi-view-btn" data-view="shop" onclick="setDashKpiView('shop')">By Shop</button>
+                <button class="btn btn-sm btn-outline dash-kpi-view-btn" data-view="agent" onclick="setDashKpiView('agent')">By Agent</button>
+              </div>
+            </div>
+            <div class="chart-card-body">
+              <canvas id="cKpiAchieve"></canvas>
+            </div>
+            <div id="dash-kpi-table-wrap"></div>
           </div>
         </div>
 
@@ -1333,6 +1351,7 @@
               <select class="form-select" id="user-role" required onchange="onUserRoleChange()">
                 <option value="">Select role</option>
                 <option value="Admin">Admin</option>
+                <option value="Cluster">Cluster</option>
                 <option value="Supervisor">Supervisor</option>
                 <option value="Agent">Agent</option>
               </select>
@@ -1451,8 +1470,9 @@
     <div id="role-widget-dropdown">
       <div class="role-widget-header">Switch Role</div>
       <button class="role-widget-option" onclick="switchRole('admin')"><i class="fas fa-user-shield"></i> Admin</button>
+      <button class="role-widget-option" onclick="switchRole('cluster')"><i class="fas fa-layer-group"></i> Cluster</button>
       <button class="role-widget-option" onclick="switchRole('supervisor')"><i class="fas fa-user-tie"></i> Supervisor</button>
-      <button class="role-widget-option" onclick="switchRole('user')"><i class="fas fa-user"></i> User</button>
+      <button class="role-widget-option" onclick="switchRole('agent')"><i class="fas fa-user"></i> Agent</button>
     </div>
     <button id="role-widget-btn" onclick="toggleRoleWidget()">
       <i class="fas fa-user-shield"></i> Admin
