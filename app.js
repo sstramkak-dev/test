@@ -2183,6 +2183,63 @@ function renderDepositTable() {
   }).join('');
 }
 
+function setDepositView(view) {
+  var depBtns = document.querySelectorAll('#page-deposit .view-toggle-btn');
+  depBtns.forEach(function(b) { b.classList.remove('active'); });
+  var btn = g(view === 'table' ? 'dep-view-btn-table' : 'dep-view-btn-summary');
+  if (btn) btn.classList.add('active');
+
+  var tableCard = g('deposit-table-card');
+  var summaryView = g('deposit-summary-view');
+
+  if (view === 'table') {
+    if (tableCard) tableCard.style.display = '';
+    if (summaryView) summaryView.style.display = 'none';
+  } else {
+    if (tableCard) tableCard.style.display = 'none';
+    if (summaryView) summaryView.style.display = '';
+    renderDepositSummaryView();
+  }
+}
+
+function renderDepositSummaryView() {
+  var container = g('deposit-summary-view');
+  if (!container) return;
+
+  if (!depositList.length) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:#999;"><i class="fas fa-inbox fa-3x" style="display:block;margin-bottom:12px;"></i>No deposit records found</div>';
+    return;
+  }
+
+  var agentMap = {};
+  depositList.forEach(function(d) {
+    if (!agentMap[d.agent]) agentMap[d.agent] = { cash: 0, credit: 0, total: 0, count: 0, branch: d.branch || '' };
+    var ag = agentMap[d.agent];
+    ag.cash += (d.cash || 0);
+    ag.credit += (d.credit || 0);
+    ag.total += (d.amount || 0);
+    ag.count++;
+  });
+
+  var cards = Object.keys(agentMap).map(function(agent, i) {
+    var ag = agentMap[agent];
+    var avIdx = i % 8;
+    return '<div class="summary-card">' +
+      '<div class="summary-card-header">' +
+        '<span class="avatar-circle av-' + avIdx + '" style="width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;">' + esc(ini(agent)) + '</span>' +
+        '<div><div class="sc-name">' + esc(agent) + '</div><div style="font-size:0.72rem;opacity:0.8;">' + esc(ag.branch) + ' &middot; ' + ag.count + ' deposit' + (ag.count !== 1 ? 's' : '') + '</div></div>' +
+      '</div>' +
+      '<div class="summary-card-body">' +
+        '<div class="summary-row"><span>Cash</span><span style="color:#1B7D3D;font-weight:600;">$' + Number(ag.cash).toFixed(2) + '</span></div>' +
+        '<div class="summary-row"><span>Credit</span><span style="color:#1565C0;font-weight:600;">$' + Number(ag.credit).toFixed(2) + '</span></div>' +
+        '<div class="summary-row"><span>Total</span><span style="font-weight:700;color:#1A1A2E;">$' + Number(ag.total).toFixed(2) + '</span></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  container.innerHTML = '<div class="summary-grid">' + cards + '</div>';
+}
+
 // ------------------------------------------------------------
 // Staff Functions
 // ------------------------------------------------------------

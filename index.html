@@ -680,7 +680,16 @@
           <div class="chart-card-body"><canvas id="cDepositPerf"></canvas></div>
         </div>
 
-        <div class="table-card">
+        <div class="view-toggle-bar">
+          <button class="view-toggle-btn active" id="dep-view-btn-table" onclick="setDepositView('table')">
+            <i class="fas fa-table-list"></i> Table View
+          </button>
+          <button class="view-toggle-btn" id="dep-view-btn-summary" onclick="setDepositView('summary')">
+            <i class="fas fa-chart-pie"></i> Summary View
+          </button>
+        </div>
+
+        <div class="table-card" id="deposit-table-card">
           <div class="table-responsive">
             <table class="data-table" id="deposit-table">
               <thead>
@@ -692,6 +701,8 @@
             </table>
           </div>
         </div>
+
+        <div id="deposit-summary-view" style="display:none;"></div>
       </section>
 
       <!-- ========== SALE PAGE ========== -->
