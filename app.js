@@ -361,6 +361,7 @@ function renderAccessContent(tab) {
   const allowed = TAB_PERM[currentRole] || [];
   var banner = g('settings-contact-banner');
   if (banner) banner.style.display = (currentRole !== 'admin' && currentRole !== 'cluster') ? '' : 'none';
+  if (!allowed.includes(tab)) {
     const tc = g('stab-content-' + tab);
     if (tc) {
       tc.innerHTML = '<div class="access-denied"><i class="fas fa-lock fa-3x" style="color:#BDBDBD;margin-bottom:12px;"></i><h3 style="color:#555;">Access Denied</h3><p style="color:#999;">You do not have permission to access this section.</p></div>';
@@ -2279,7 +2280,6 @@ function deleteKpi(id) {
   syncSheet('KPI', kpiList);
   saveAllData();
   if (currentPage === 'dashboard') renderDashboardKpiSection();
-}
 }
 
 function renderKpiTable() {
