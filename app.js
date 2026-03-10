@@ -1553,8 +1553,8 @@ function submitNewCustomer(e) {
   }
   // Auto-add to TopUp when status is Close
   if (obj.status === 'close' && prevStatus !== 'close') {
-    var alreadyTopup = topUpList.find(function(t) { return t.customerId === obj.id; });
-    if (!alreadyTopup) {
+    var existingTopUpRecord = topUpList.find(function(t) { return t.customerId === obj.id; });
+    if (!existingTopUpRecord) {
       topUpList.push({
         id: uid(), customerId: obj.id, name: obj.name, phone: obj.phone,
         tariff: obj.tariff, agent: obj.agent, branch: obj.branch, date: obj.date,
@@ -1648,10 +1648,10 @@ function submitTopUp(e) {
   }
   // Auto-add to termination when status = Terminate
   if (tuStatus === 'terminate' && prevStatus !== 'terminate') {
-    const alreadyTerm = terminationList.find(function(t) { return t.name === obj.name && t.phone === obj.phone; });
-    if (!alreadyTerm) {
+    const existingTerminationRecord = terminationList.find(function(t) { return (obj.customerId && t.customerId === obj.customerId) || (t.name === obj.name && t.phone === obj.phone); });
+    if (!existingTerminationRecord) {
       terminationList.push({
-        id: uid(), name: obj.name, phone: obj.phone, reason: 'Service terminated',
+        id: uid(), customerId: obj.customerId || '', name: obj.name, phone: obj.phone, reason: 'Service terminated',
         agent: obj.agent, branch: obj.branch, date: obj.date
       });
       syncSheet('Terminations', terminationList);
@@ -2155,7 +2155,7 @@ function renderDepositChart() {
     options: {
       responsive: true,
       plugins: { legend: { position: 'top' } },
-      scales: { x: { stacked: false }, y: { beginAtZero: true } }
+      scales: { x: { stacked: true }, y: { beginAtZero: true, stacked: true } }
     }
   });
 }
