@@ -662,9 +662,8 @@ function renderItemChips() {
   }
   strip.innerHTML = active.map(function(item) {
     const chipClass = item.group === 'unit' ? 'item-chip-unit' : 'item-chip-dollar';
-    const iconClass = item.group === 'unit' ? 'fa-box' : 'fa-dollar-sign';
     return '<span class="item-chip ' + chipClass + '" onclick="editItem(\'' + esc(item.id) + '\')" title="' + esc(item.name) + '">' +
-      '<i class="fas ' + iconClass + '"></i> ' + esc(item.shortcut || item.name) + '</span>';
+      esc(item.shortcut || item.name) + '</span>';
   }).join('');
 }
 
@@ -1473,6 +1472,7 @@ function openCustomerModal(type, item) {
       g('tu-agent').value = item.agent || '';
       const bSel = g('tu-branch'); if (bSel) bSel.value = item.branch || '';
       g('tu-date').value = item.date || '';
+      const endDateEl = g('tu-end-date'); if (endDateEl) endDateEl.value = item.endDate || '';
       const tuStatusSel = g('tu-status'); if (tuStatusSel) tuStatusSel.value = item.tuStatus || 'active';
     } else {
       if (title) title.textContent = 'Add Top Up';
@@ -1612,6 +1612,7 @@ function submitTopUp(e) {
     customerId: customerId,
     name: rv('tu-name'), phone: rv('tu-phone'), amount: parseFloat(rv('tu-amount')) || 0,
     agent: rv('tu-agent'), branch: rv('tu-branch'), date: rv('tu-date'),
+    endDate: rv('tu-end-date') || '',
     tuStatus: tuStatus
   };
   if (!obj.name) { showAlert('Please enter customer name'); return; }
@@ -1676,8 +1677,38 @@ function deleteTopUp(id) {
 function renderTopUpTable() {
   const tbody = g('topup-table');
   if (!tbody) return;
+
+  // Render nearly-expired notice
+  const MS_PER_DAY = 86400000;
+  const today = new Date(new Date().toISOString().split('T')[0]);
+  const in7Days = new Date(today); in7Days.setDate(in7Days.getDate() + 7);
+  const nearlyExpired = topUpList.filter(function(c) {
+    if (!c.endDate || c.tuStatus === 'terminate') return false;
+    const exp = new Date(c.endDate);
+    return exp >= today && exp <= in7Days;
+  });
+  const noticeEl = g('topup-expiry-notice');
+  if (noticeEl) {
+    if (nearlyExpired.length) {
+      noticeEl.innerHTML = '<div class="expiry-notice-banner">' +
+        '<div class="expiry-notice-icon"><i class="fas fa-bell"></i></div>' +
+        '<div class="expiry-notice-content">' +
+          '<div class="expiry-notice-title">Follow-up Required — ' + nearlyExpired.length + ' customer' + (nearlyExpired.length > 1 ? 's' : '') + ' expiring within 7 days</div>' +
+          '<div class="expiry-notice-list">' +
+            nearlyExpired.map(function(c) {
+              const daysLeft = Math.round((new Date(c.endDate) - today) / MS_PER_DAY);
+              return '<span class="expiry-notice-item">' + esc(c.name) + ' (' + esc(c.phone) + ') — <strong>' + (daysLeft === 0 ? 'Today' : daysLeft + ' day' + (daysLeft > 1 ? 's' : '')) + '</strong></span>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    } else {
+      noticeEl.innerHTML = '';
+    }
+  }
+
   if (!topUpList.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-coins" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No top up records yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-coins" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No top up records yet</td></tr>';
     return;
   }
   tbody.innerHTML = topUpList.map(function(c, i) {
@@ -1685,7 +1716,22 @@ function renderTopUpTable() {
     const tuSt = c.tuStatus || 'active';
     const stPill = tuSt === 'active' ? 'pill-green' : 'pill-red';
     const stLabel = tuSt === 'active' ? 'Active' : 'Terminate';
-    return '<tr>' +
+    var expiryCell = '<td>—</td>';
+    var rowClass = '';
+    if (c.endDate) {
+      const exp = new Date(c.endDate);
+      const daysLeft = Math.round((exp - today) / MS_PER_DAY);
+      if (tuSt !== 'terminate' && daysLeft >= 0 && daysLeft <= 7) {
+        rowClass = ' class="tr-nearly-expired"';
+        expiryCell = '<td><span class="expiry-badge expiry-badge-warn">' + esc(c.endDate) + ' <span class="expiry-days-left">(' + (daysLeft === 0 ? 'Today' : daysLeft + 'd') + ')</span></span></td>';
+      } else if (tuSt !== 'terminate' && daysLeft < 0) {
+        rowClass = ' class="tr-expired"';
+        expiryCell = '<td><span class="expiry-badge expiry-badge-expired">' + esc(c.endDate) + ' <span class="expiry-days-left">(Expired)</span></span></td>';
+      } else {
+        expiryCell = '<td>' + esc(c.endDate) + '</td>';
+      }
+    }
+    return '<tr' + rowClass + '>' +
       '<td>' + (i + 1) + '</td>' +
       '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(c.name)) + '</span>' + esc(c.name) + '</div></td>' +
       '<td>' + esc(c.phone) + '</td>' +
@@ -1694,6 +1740,7 @@ function renderTopUpTable() {
       '<td>' + esc(c.agent || '') + '</td>' +
       '<td>' + esc(c.branch || '') + '</td>' +
       '<td>' + esc(c.date || '') + '</td>' +
+      expiryCell +
       '<td style="white-space:nowrap;">' +
         '<button class="btn-edit" onclick="editTopUp(\'' + esc(c.id) + '\')"><i class="fas fa-edit"></i></button> ' +
         '<button class="btn-delete" onclick="deleteTopUp(\'' + esc(c.id) + '\')"><i class="fas fa-trash"></i></button>' +
