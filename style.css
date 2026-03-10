@@ -1399,37 +1399,6 @@ input, select, textarea, button {
   border-radius: 0 0 14px 14px;
 }
 
-/* Sale modal totals footer */
-.sale-totals-footer {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 12px 24px;
-  background: #F8F9FA;
-  border-top: 1px solid #EEEEEE;
-  flex-wrap: wrap;
-}
-
-.sale-total-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sale-total-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.sale-total-value {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #1A1A2E;
-}
-
 /* ============================================================
    25. FORM ELEMENTS
    ============================================================ */
@@ -1653,11 +1622,6 @@ input, select, textarea, button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.sic-sub {
-  font-size: 0.7rem;
-  color: #888;
 }
 
 .sic-card-unit .sic-label   { color: #2E7D32; }

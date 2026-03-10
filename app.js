@@ -690,8 +690,7 @@ function openNewSaleModal(sale) {
       unitContainer.innerHTML = '<div class="sale-items-grid">' + unitItems.map(function(item) {
         return '<div class="sic-card sic-card-unit">' +
           '<div class="sic-label">' + esc(item.name) + '</div>' +
-          '<div style="font-size:0.72rem;color:#888;">' + esc(item.unit) + '</div>' +
-          '<input type="number" class="sic-input" id="sic-' + esc(item.id) + '" min="0" value="" placeholder="0" oninput="updateSaleModalTotals()">' +
+          '<input type="number" class="sic-input" id="sic-' + esc(item.id) + '" min="0" value="" placeholder="0">' +
           '</div>';
       }).join('') + '</div>';
     } else {
@@ -704,8 +703,7 @@ function openNewSaleModal(sale) {
       dollarContainer.innerHTML = '<div class="sale-items-grid">' + dollarItems.map(function(item) {
         return '<div class="sic-card sic-card-dollar">' +
           '<div class="sic-label">' + esc(item.name) + '</div>' +
-          '<div style="font-size:0.72rem;color:#888;">' + esc(item.currency) + ' ' + esc(String(item.price)) + '</div>' +
-          '<input type="number" class="sic-input" id="sic-' + esc(item.id) + '" min="0" step="0.01" value="" placeholder="0" oninput="updateSaleModalTotals()">' +
+          '<input type="number" class="sic-input" id="sic-' + esc(item.id) + '" min="0" step="0.01" value="" placeholder="0">' +
           '</div>';
       }).join('') + '</div>';
     } else {
@@ -749,28 +747,7 @@ function openNewSaleModal(sale) {
     }
   }
 
-  updateSaleModalTotals();
   openModal('modal-newSale');
-}
-
-function updateSaleModalTotals() {
-  let totalUnits = 0, totalRev = 0;
-
-  itemCatalogue.forEach(function(item) {
-    const inp = g('sic-' + item.id);
-    if (!inp) return;
-    const val = parseFloat(inp.value) || 0;
-    if (item.group === 'unit') {
-      totalUnits += val;
-    } else if (!item.noAutoSum) {
-      totalRev += val * (item.price || 1);
-    }
-  });
-
-  const tu = g('sale-total-units');
-  const tr = g('sale-total-rev');
-  if (tu) tu.textContent = totalUnits;
-  if (tr) tr.textContent = fmtMoney(totalRev);
 }
 
 function submitSale(e) {
