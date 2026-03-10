@@ -819,6 +819,9 @@ input, select, textarea, button {
 
 .btn-outline:hover { border-color: #999; color: #1A1A2E; }
 
+.btn-sm { padding: 5px 12px; font-size: 0.75rem; }
+.btn-sm.active { background: #1B7D3D; color: #fff; border-color: #1B7D3D; }
+
 /* ============================================================
    11. DATA TABLE
    ============================================================ */
