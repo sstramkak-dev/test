@@ -2266,3 +2266,88 @@ input, select, textarea, button {
   margin: 0;
   line-height: 1.6;
 }
+
+/* ── Top-Up Expiry Notice Banner ─────────────────────────── */
+.expiry-notice-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3cd 100%);
+  border: 1px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+.expiry-notice-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  background: #f59e0b;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1rem;
+}
+.expiry-notice-content {
+  flex: 1;
+}
+.expiry-notice-title {
+  font-weight: 700;
+  color: #92400e;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+.expiry-notice-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.expiry-notice-item {
+  background: #fff;
+  border: 1px solid #f59e0b;
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 0.8rem;
+  color: #78350f;
+}
+
+/* ── Top-Up Expiry Row Highlighting ──────────────────────── */
+.tr-nearly-expired {
+  background: #fffbeb !important;
+}
+.tr-nearly-expired:hover {
+  background: #fef3c7 !important;
+}
+.tr-expired {
+  background: #fff1f0 !important;
+}
+.tr-expired:hover {
+  background: #ffe4e4 !important;
+}
+
+/* ── Expiry Date Badges ───────────────────────────────────── */
+.expiry-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.expiry-badge-warn {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+.expiry-badge-expired {
+  background: #ffe4e4;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+}
+.expiry-days-left {
+  font-weight: 700;
+}
