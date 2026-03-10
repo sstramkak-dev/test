@@ -1518,14 +1518,6 @@ function openCustomerModal(type, item) {
     g('tu-edit-id').value = '';
     const title = g('modal-topUp-title');
     populateBranchSelects();
-    // Populate existing customer dropdown
-    const tuCustSel = g('tu-existing-customer');
-    if (tuCustSel) {
-      tuCustSel.innerHTML = '<option value="">-- New / Manual Entry --</option>' +
-        newCustomers.map(function(c) {
-          return '<option value="' + esc(c.id) + '">' + esc(c.name) + ' (' + esc(c.phone) + ')</option>';
-        }).join('');
-    }
     if (item) {
       if (title) title.textContent = 'Edit Top Up';
       g('tu-edit-id').value = item.id;
@@ -1595,7 +1587,7 @@ function submitNewCustomer(e) {
     newCustomers.push(obj);
     addNotification((currentUser ? currentUser.name : 'User') + ' added a new customer.');
   }
-  // Auto-add to TopUp when status is Close
+  // Auto-add to TopUp when status is Close and remove from New Customer list
   if (obj.status === 'close' && prevStatus !== 'close') {
     var existingTopUpRecord = topUpList.find(function(t) { return t.customerId === obj.id; });
     if (!existingTopUpRecord) {
@@ -1605,8 +1597,21 @@ function submitNewCustomer(e) {
         tuStatus: 'active', amount: 0, note: 'Auto-added (status: Close)'
       });
       syncSheet('TopUp', topUpList);
-      showToast('Customer marked as Closed and added to Top Up list.', 'info');
     }
+    // Remove from new customer list and navigate to Top Up tab
+    newCustomers = newCustomers.filter(function(x) { return x.id !== obj.id; });
+    closeModal('modal-newCustomer');
+    renderNewCustomerTable();
+    renderTopUpTable();
+    syncSheet('Customers', newCustomers);
+    saveAllData();
+    navigateTo('customer', null);
+    switchCustomerTab('topup');
+    // Update tab button active state
+    $$('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    var topupBtn = g('tab-topup'); if (topupBtn) topupBtn.classList.add('active');
+    showToast('Customer marked as Closed and moved to Top Up.', 'info');
+    return;
   }
   closeModal('modal-newCustomer');
   renderNewCustomerTable();
@@ -1668,11 +1673,10 @@ function submitTopUp(e) {
   const editId = rv('tu-edit-id');
   const tuStatusSel = g('tu-status');
   const tuStatus = tuStatusSel ? tuStatusSel.value : 'active';
-  const custSel = g('tu-existing-customer');
-  const customerId = custSel ? custSel.value : '';
+  const existingRecord = editId ? topUpList.find(function(x) { return x.id === editId; }) : null;
   const obj = {
     id: editId || uid(),
-    customerId: customerId,
+    customerId: existingRecord ? (existingRecord.customerId || '') : '',
     name: rv('tu-name'), phone: rv('tu-phone'), amount: parseFloat(rv('tu-amount')) || 0,
     agent: rv('tu-agent'), branch: rv('tu-branch'), date: rv('tu-date'),
     endDate: rv('tu-end-date') || '',
@@ -1682,7 +1686,7 @@ function submitTopUp(e) {
   if (!obj.phone) { showAlert('Please enter phone number'); return; }
   if (!/^\d{6,15}$/.test(obj.phone.replace(/[\s\-+()]/g, ''))) { showAlert('Please enter a valid phone number (6–15 digits, separators allowed)'); return; }
   if (!obj.date) { showAlert('Please select a date'); return; }
-  const prevStatus = editId ? (topUpList.find(function(x){return x.id===editId;})||{}).tuStatus : null;
+  const prevStatus = existingRecord ? existingRecord.tuStatus : null;
   if (editId) {
     const idx = topUpList.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) topUpList[idx] = obj;
@@ -1691,7 +1695,7 @@ function submitTopUp(e) {
     topUpList.push(obj);
     addNotification((currentUser ? currentUser.name : 'User') + ' submitted a top-up.');
   }
-  // Auto-add to termination when status = Terminate
+  // Auto-add to termination when status = Terminate and remove from Top Up list
   if (tuStatus === 'terminate' && prevStatus !== 'terminate') {
     const existingTerminationRecord = terminationList.find(function(t) { return (obj.customerId && t.customerId === obj.customerId) || (t.name === obj.name && t.phone === obj.phone); });
     if (!existingTerminationRecord) {
@@ -1701,8 +1705,20 @@ function submitTopUp(e) {
       });
       syncSheet('Terminations', terminationList);
       renderTerminationTable();
-      showToast('Customer moved to Termination list.', 'info');
     }
+    // Remove from Top Up list and navigate to Termination tab
+    topUpList = topUpList.filter(function(x) { return x.id !== obj.id; });
+    closeModal('modal-topUp');
+    renderTopUpTable();
+    syncSheet('TopUp', topUpList);
+    saveAllData();
+    navigateTo('customer', null);
+    switchCustomerTab('termination');
+    // Update tab button active state
+    $$('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    var termBtn = g('tab-termination'); if (termBtn) termBtn.classList.add('active');
+    showToast('Customer terminated and moved to Termination list.', 'info');
+    return;
   }
   closeModal('modal-topUp');
   renderTopUpTable();
@@ -2245,8 +2261,12 @@ function renderDepositChart() {
     },
     options: {
       responsive: true,
-      plugins: { legend: { position: 'top' } },
-      scales: { x: { stacked: true }, y: { beginAtZero: true, stacked: true } }
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 10 } } },
+        y: { beginAtZero: true, stacked: true, ticks: { font: { size: 10 } } }
+      }
     }
   });
 }
