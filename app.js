@@ -29,7 +29,10 @@ let _cKpiGauges = [];
 
 // Coverage map instances
 var _covMapSmartHome = null, _covMapSmartHome5G = null, _covMapSmartFiber = null;
-var _covPickerMap = null, _covPickerMarker = null;
+var _covPickerMap = null, _covPickerMarker = null, _covPickerHighlight = null;
+
+// Commune autocomplete state
+var _covCommuneDebounce = null;
 
 // Approval form state
 var _approvalFormData = null;
@@ -4028,7 +4031,22 @@ function switchCoverageTab(tab) {
   }, 50);
 }
 
+// Called from sidebar nav — shows only the selected coverage type (tab header hidden)
+function openCoverageFromNav(tab, navItem) {
+  navigateTo('coverage', null);
+  setActiveSubItem(navItem);
+  var tabHeader = document.querySelector('#page-coverage .tab-header');
+  if (tabHeader) tabHeader.style.display = 'none';
+  $$('#page-coverage .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  var activeBtn = g('cov-tab-' + tab);
+  if (activeBtn) activeBtn.classList.add('active');
+  switchCoverageTab(tab);
+}
+
+// Called from the tab buttons inside the page — shows the tab header
 function openCoverageTab(tab, btn) {
+  var tabHeader = document.querySelector('#page-coverage .tab-header');
+  if (tabHeader) tabHeader.style.display = '';
   switchCoverageTab(tab);
   $$('#page-coverage .tab-btn').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
@@ -4194,7 +4212,7 @@ function openAddCoverageModal() {
 
   setTimeout(function() {
     if (typeof L === 'undefined') return; // Leaflet not loaded
-    if (_covPickerMap) { _covPickerMap.remove(); _covPickerMap = null; _covPickerMarker = null; }
+    if (_covPickerMap) { _covPickerMap.remove(); _covPickerMap = null; _covPickerMarker = null; _covPickerHighlight = null; }
     var pickerEl = g('cov-picker-map');
     if (!pickerEl) return;
     _covPickerMap = L.map('cov-picker-map').setView(KH_CENTER, 7);
@@ -4237,7 +4255,7 @@ function editCoverageLocation(id) {
 
   setTimeout(function() {
     if (typeof L === 'undefined') return; // Leaflet not loaded
-    if (_covPickerMap) { _covPickerMap.remove(); _covPickerMap = null; _covPickerMarker = null; }
+    if (_covPickerMap) { _covPickerMap.remove(); _covPickerMap = null; _covPickerMarker = null; _covPickerHighlight = null; }
     var pickerEl = g('cov-picker-map');
     if (!pickerEl) return;
     var center = (loc.lat && loc.lng) ? [loc.lat, loc.lng] : KH_CENTER;
@@ -4329,4 +4347,104 @@ function deleteCoverageLocation(id) {
     renderCoverageTable('smart-home-5g');
     renderCoverageTable('smart-fiber');
   });
+}
+
+// ------------------------------------------------------------
+// Commune Autocomplete (Nominatim)
+// ------------------------------------------------------------
+function onCommuneInput(input) {
+  var q = input.value.trim();
+  var dropdown = g('cov-commune-suggestions');
+  if (!dropdown) return;
+
+  clearTimeout(_covCommuneDebounce);
+  if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+  _covCommuneDebounce = setTimeout(function() {
+    var url = 'https://nominatim.openstreetmap.org/search?q=' +
+      encodeURIComponent(q + ' Cambodia') +
+      '&countrycodes=kh&format=json&addressdetails=1&limit=6';
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(results) {
+        if (!results || !results.length) { dropdown.style.display = 'none'; return; }
+        dropdown.innerHTML = results.map(function(r, i) {
+          var displayName = r.display_name || '';
+          return '<div class="cov-suggestion-item" onmousedown="selectCommuneSuggestion(' + i + ')" data-idx="' + i + '">' +
+            '<i class="fas fa-location-dot" style="color:#1B7D3D;margin-right:6px;flex-shrink:0;"></i>' +
+            '<span>' + esc(displayName) + '</span>' +
+            '</div>';
+        }).join('');
+        dropdown._results = results;
+        dropdown.style.display = 'block';
+      })
+      .catch(function() { dropdown.style.display = 'none'; });
+  }, 320);
+}
+
+function selectCommuneSuggestion(idx) {
+  var dropdown = g('cov-commune-suggestions');
+  if (!dropdown || !dropdown._results) return;
+  var r = dropdown._results[idx];
+  if (!r) return;
+  dropdown.style.display = 'none';
+
+  var addr = r.address || {};
+
+  // Fill commune field
+  var communeVal = addr.village || addr.commune || addr.suburb || addr.neighbourhood || addr.quarter || r.name || '';
+  var communeEl = g('cov-commune');
+  if (communeEl) communeEl.value = communeVal;
+
+  // Fill district
+  var districtVal = addr.county || addr.city_district || addr.district || addr.town || addr.city || '';
+  var districtEl = g('cov-district');
+  if (districtEl) districtEl.value = districtVal;
+
+  // Fill province
+  var provinceVal = addr.state || addr.province || '';
+  var provinceEl = g('cov-province');
+  if (provinceEl) provinceEl.value = provinceVal;
+
+  // Fill lat/lng with centre
+  var lat = parseFloat(r.lat);
+  var lng = parseFloat(r.lon);
+  if (!isNaN(lat) && !isNaN(lng)) {
+    var latEl = g('cov-lat'); var lngEl = g('cov-lng');
+    if (latEl) latEl.value = lat.toFixed(6);
+    if (lngEl) lngEl.value = lng.toFixed(6);
+  }
+
+  // Highlight on picker map
+  if (typeof L !== 'undefined' && _covPickerMap) {
+    // Remove old highlight and marker
+    if (_covPickerHighlight) { _covPickerMap.removeLayer(_covPickerHighlight); _covPickerHighlight = null; }
+    if (_covPickerMarker)    { _covPickerMap.removeLayer(_covPickerMarker);    _covPickerMarker = null; }
+
+    // Draw bounding box highlight
+    if (r.boundingbox && r.boundingbox.length === 4) {
+      var s = parseFloat(r.boundingbox[0]), n = parseFloat(r.boundingbox[1]);
+      var w = parseFloat(r.boundingbox[2]), e = parseFloat(r.boundingbox[3]);
+      if (!isNaN(s) && !isNaN(n) && !isNaN(w) && !isNaN(e)) {
+        _covPickerHighlight = L.rectangle([[s, w], [n, e]], {
+          color: '#1B7D3D', weight: 2, fillColor: '#1B7D3D', fillOpacity: 0.2
+        }).addTo(_covPickerMap);
+        _covPickerMap.fitBounds([[s, w], [n, e]], { padding: [30, 30] });
+      } else if (!isNaN(lat) && !isNaN(lng)) {
+        _covPickerMap.setView([lat, lng], 14);
+      }
+    } else if (!isNaN(lat) && !isNaN(lng)) {
+      _covPickerMap.setView([lat, lng], 14);
+    }
+
+    // Add centre marker
+    if (!isNaN(lat) && !isNaN(lng)) {
+      _covPickerMarker = L.marker([lat, lng]).addTo(_covPickerMap);
+    }
+  }
+}
+
+function closeCommuneSuggestions() {
+  var dropdown = g('cov-commune-suggestions');
+  if (dropdown) dropdown.style.display = 'none';
 }
