@@ -494,6 +494,27 @@
         </li>
       </ul>
 
+      <!-- Coverage (with submenu) -->
+      <li class="nav-item has-submenu" id="nav-coverage" onclick="toggleSubmenu('submenu-coverage', this)">
+        <i class="fas fa-map-location-dot nav-icon"></i>
+        <span class="nav-label">Coverage</span>
+        <i class="fas fa-chevron-down nav-chevron"></i>
+      </li>
+      <ul class="submenu" id="submenu-coverage">
+        <li class="submenu-item" id="nav-cov-smarthome" onclick="navigateTo('coverage', null); switchCoverageTab('smart-home'); setActiveSubItem(this)">
+          <i class="fas fa-house-signal submenu-icon"></i>
+          <span>Smart@Home</span>
+        </li>
+        <li class="submenu-item" id="nav-cov-smarthome5g" onclick="navigateTo('coverage', null); switchCoverageTab('smart-home-5g'); setActiveSubItem(this)">
+          <i class="fas fa-tower-broadcast submenu-icon"></i>
+          <span>Smart@Home 5G</span>
+        </li>
+        <li class="submenu-item" id="nav-cov-smartfiber" onclick="navigateTo('coverage', null); switchCoverageTab('smart-fiber'); setActiveSubItem(this)">
+          <i class="fas fa-network-wired submenu-icon"></i>
+          <span>Smart Fiber+</span>
+        </li>
+      </ul>
+
       <li class="nav-section-label">CONFIGURATION</li>
 
       <!-- Settings (with submenu) -->
@@ -1232,6 +1253,120 @@
               </thead>
               <tbody id="shop-stock-table"></tbody>
             </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========== COVERAGE PAGE ========== -->
+      <section class="page" id="page-coverage">
+
+        <div class="page-header">
+          <h2 class="page-header-title"><i class="fas fa-map-location-dot" style="color:#1B7D3D;margin-right:8px"></i>Coverage</h2>
+          <button class="btn btn-primary" id="cov-add-btn" onclick="openAddCoverageModal()" style="display:none;">
+            <i class="fas fa-circle-plus"></i> Add Location
+          </button>
+        </div>
+
+        <div class="tab-header">
+          <button class="tab-btn active" id="cov-tab-smart-home" onclick="openCoverageTab('smart-home', this)">
+            <i class="fas fa-house-signal"></i> Smart@Home
+          </button>
+          <button class="tab-btn" id="cov-tab-smart-home-5g" onclick="openCoverageTab('smart-home-5g', this)">
+            <i class="fas fa-tower-broadcast"></i> Smart@Home 5G
+          </button>
+          <button class="tab-btn" id="cov-tab-smart-fiber" onclick="openCoverageTab('smart-fiber', this)">
+            <i class="fas fa-network-wired"></i> Smart Fiber+
+          </button>
+        </div>
+
+        <!-- Smart@Home Tab -->
+        <div class="cov-tab-content active" id="cov-content-smart-home">
+          <div class="coverage-layout">
+            <div class="coverage-map-panel">
+              <div class="coverage-map-header">
+                <span class="coverage-map-title"><i class="fas fa-house-signal" style="color:#1B7D3D;margin-right:6px;"></i>Smart@Home Coverage Map</span>
+                <span class="cov-count-badge" id="cov-count-smart-home">0 locations</span>
+              </div>
+              <div id="cov-map-smart-home" class="coverage-map"></div>
+              <div class="coverage-legend">
+                <span class="legend-item"><span class="legend-dot" style="background:#1B7D3D;"></span> Smart@Home Available</span>
+              </div>
+            </div>
+            <div class="coverage-table-panel">
+              <div class="coverage-map-header">
+                <span class="coverage-map-title"><i class="fas fa-list" style="color:#1B7D3D;margin-right:6px;"></i>Available Locations</span>
+              </div>
+              <div class="cov-search-bar">
+                <input type="text" class="form-input" id="cov-search-smart-home" placeholder="Search by commune, district or province…" oninput="renderCoverageTable('smart-home')" />
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead><tr><th>#</th><th>Commune</th><th>District</th><th>Province</th><th>Updated</th><th class="cov-admin-col" style="display:none;">Actions</th></tr></thead>
+                  <tbody id="cov-table-smart-home"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Smart@Home 5G Tab -->
+        <div class="cov-tab-content" id="cov-content-smart-home-5g">
+          <div class="coverage-layout">
+            <div class="coverage-map-panel">
+              <div class="coverage-map-header">
+                <span class="coverage-map-title"><i class="fas fa-tower-broadcast" style="color:#1565C0;margin-right:6px;"></i>Smart@Home 5G Coverage Map</span>
+                <span class="cov-count-badge cov-count-blue" id="cov-count-smart-home-5g">0 locations</span>
+              </div>
+              <div id="cov-map-smart-home-5g" class="coverage-map"></div>
+              <div class="coverage-legend">
+                <span class="legend-item"><span class="legend-dot" style="background:#1565C0;"></span> Smart@Home 5G Available</span>
+              </div>
+            </div>
+            <div class="coverage-table-panel">
+              <div class="coverage-map-header">
+                <span class="coverage-map-title"><i class="fas fa-list" style="color:#1565C0;margin-right:6px;"></i>Available Locations</span>
+              </div>
+              <div class="cov-search-bar">
+                <input type="text" class="form-input" id="cov-search-smart-home-5g" placeholder="Search by commune, district or province…" oninput="renderCoverageTable('smart-home-5g')" />
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead><tr><th>#</th><th>Commune</th><th>District</th><th>Province</th><th>Updated</th><th class="cov-admin-col" style="display:none;">Actions</th></tr></thead>
+                  <tbody id="cov-table-smart-home-5g"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Smart Fiber+ Tab -->
+        <div class="cov-tab-content" id="cov-content-smart-fiber">
+          <div class="coverage-layout">
+            <div class="coverage-map-panel">
+              <div class="coverage-map-header">
+                <span class="coverage-map-title"><i class="fas fa-network-wired" style="color:#FB8C00;margin-right:6px;"></i>Smart Fiber+ Coverage Map</span>
+                <span class="cov-count-badge cov-count-orange" id="cov-count-smart-fiber">0 locations</span>
+              </div>
+              <div id="cov-map-smart-fiber" class="coverage-map"></div>
+              <div class="coverage-legend">
+                <span class="legend-item"><span class="legend-dot" style="background:#FB8C00;"></span> Smart Fiber+ Available</span>
+              </div>
+            </div>
+            <div class="coverage-table-panel">
+              <div class="coverage-map-header">
+                <span class="coverage-map-title"><i class="fas fa-list" style="color:#FB8C00;margin-right:6px;"></i>Available Locations</span>
+              </div>
+              <div class="cov-search-bar">
+                <input type="text" class="form-input" id="cov-search-smart-fiber" placeholder="Search by commune, district or province…" oninput="renderCoverageTable('smart-fiber')" />
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead><tr><th>#</th><th>Commune</th><th>District</th><th>Province</th><th>Updated</th><th class="cov-admin-col" style="display:none;">Actions</th></tr></thead>
+                  <tbody id="cov-table-smart-fiber"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2037,6 +2172,76 @@
         <button class="btn btn-outline" onclick="closeModal('modal-contactSupport')">Cancel</button>
         <button class="btn btn-primary" onclick="submitContactSupport()"><i class="fas fa-paper-plane"></i> Send</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===================== COVERAGE LOCATION MODAL ===================== -->
+  <div class="modal-overlay" id="modal-coverage" onclick="handleOverlay(event,'modal-coverage')">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-coverage-title"><i class="fas fa-map-location-dot" style="color:#1B7D3D;margin-right:8px;"></i>Add Coverage Location</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-coverage')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-coverage" onsubmit="submitCoverageLocation(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group" style="flex:1;">
+              <label class="form-label">Province <span class="required">*</span></label>
+              <input type="text" id="cov-province" class="form-input" placeholder="e.g. Phnom Penh" required />
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label class="form-label">District <span class="required">*</span></label>
+              <input type="text" id="cov-district" class="form-input" placeholder="e.g. Tuol Kouk" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Commune <span class="required">*</span></label>
+            <input type="text" id="cov-commune" class="form-input" placeholder="e.g. Boeng Kak Ti Muoy" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Available Products <span class="required">*</span></label>
+            <div class="cov-product-checks">
+              <label class="cov-check-label">
+                <input type="checkbox" id="cov-prod-smart-home" />
+                <span class="cov-check-icon" style="background:#E8F5E9;color:#1B7D3D;"><i class="fas fa-house-signal"></i></span>
+                <span>Smart@Home</span>
+              </label>
+              <label class="cov-check-label">
+                <input type="checkbox" id="cov-prod-smart-home-5g" />
+                <span class="cov-check-icon" style="background:#E3F2FD;color:#1565C0;"><i class="fas fa-tower-broadcast"></i></span>
+                <span>Smart@Home 5G</span>
+              </label>
+              <label class="cov-check-label">
+                <input type="checkbox" id="cov-prod-smart-fiber" />
+                <span class="cov-check-icon" style="background:#FFF3E0;color:#FB8C00;"><i class="fas fa-network-wired"></i></span>
+                <span>Smart Fiber+</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="flex:1;">
+              <label class="form-label">Latitude</label>
+              <input type="number" id="cov-lat" class="form-input" placeholder="e.g. 11.5564" step="any" />
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label class="form-label">Longitude</label>
+              <input type="number" id="cov-lng" class="form-input" placeholder="e.g. 104.9282" step="any" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Click on map to set coordinates</label>
+            <div id="cov-picker-map" class="coverage-picker-map"></div>
+            <p class="form-hint"><i class="fas fa-info-circle"></i> Click the map to pick exact coordinates, or enter them manually above.</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-coverage')">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i> Save Location</button>
+        </div>
+      </form>
     </div>
   </div>
 

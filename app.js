@@ -11,6 +11,7 @@ let currentPage = 'dashboard';
 let currentSaleTab = 'report';
 let currentCustomerTab = 'new-customer';
 let currentSettingsTab = 'permission';
+let currentCoverageTab = 'smart-home';
 let currentPromoView = 'new'; // 'new' or 'expired'
 let currentReportView = 'table'; // 'table' or 'summary'
 let filteredSales = [];
@@ -25,6 +26,10 @@ let _cTrend = null, _cMix = null, _cAgent = null, _cGrowth = null;
 let _cSaleMix = null, _cSaleAgent = null;
 let _cDepositPerf = null;
 let _cKpiGauges = [];
+
+// Coverage map instances
+var _covMapSmartHome = null, _covMapSmartHome5G = null, _covMapSmartFiber = null;
+var _covPickerMap = null, _covPickerMarker = null;
 
 // Approval form state
 var _approvalFormData = null;
@@ -116,6 +121,8 @@ let promotionList = [];
 
 let depositList = [];
 
+let coverageLocations = [];
+
 let notifications = [];
 
 // ------------------------------------------------------------
@@ -130,7 +137,8 @@ const LS_KEYS = {
   staff: 'smart5g_staff',
   kpis: 'smart5g_kpis',
   promotions: 'smart5g_promotions',
-  deposits: 'smart5g_deposits'
+  deposits: 'smart5g_deposits',
+  coverage: 'smart5g_coverage'
 };
 
 function lsSave(key, data) {
@@ -154,6 +162,7 @@ function saveAllData() {
   lsSave(LS_KEYS.kpis, kpiList);
   lsSave(LS_KEYS.promotions, promotionList);
   lsSave(LS_KEYS.deposits, depositList);
+  lsSave(LS_KEYS.coverage, coverageLocations);
 }
 
 function loadAllData() {
@@ -166,6 +175,7 @@ function loadAllData() {
   kpiList = lsLoad(LS_KEYS.kpis, kpiList);
   promotionList = lsLoad(LS_KEYS.promotions, promotionList);
   depositList = lsLoad(LS_KEYS.deposits, depositList);
+  coverageLocations = lsLoad(LS_KEYS.coverage, coverageLocations);
   // Ensure admin user always exists
   var hasAdmin = staffList.some(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
   if (!hasAdmin) {
@@ -339,7 +349,8 @@ function navigateTo(page, btn) {
     customer: 'Customer',
     settings: 'Settings',
     'inv-sale-stock': 'Inventory – Sale Stock',
-    'inv-shop-stock': 'Inventory – Shop Stock'
+    'inv-shop-stock': 'Inventory – Shop Stock',
+    coverage: 'Coverage'
   };
   const titleEl = g('page-title');
   if (titleEl) titleEl.textContent = titles[page] || page;
@@ -370,6 +381,9 @@ function navigateTo(page, btn) {
   }
   if (page === 'inv-shop-stock') {
     renderShopStockTable();
+  }
+  if (page === 'coverage') {
+    initCoveragePage();
   }
 }
 
@@ -535,10 +549,14 @@ function switchRole(role) {
   var saleNewBtn = g('sale-new-btn');
   if (saleNewBtn) saleNewBtn.style.display = (currentRole === 'cluster') ? 'none' : '';
 
+  var covAddBtn = g('cov-add-btn');
+  if (covAddBtn) covAddBtn.style.display = (currentRole === 'admin' || currentRole === 'cluster') ? '' : 'none';
+
   if (currentPage === 'dashboard') renderDashboard();
   if (currentPage === 'settings') renderAccessContent(currentSettingsTab);
   if (currentPage === 'kpi') renderKpiTable();
   if (currentPage === 'sale') applyReportFilters();
+  if (currentPage === 'coverage') initCoveragePage();
 }
 
 function toggleRoleWidget() {
@@ -3979,3 +3997,336 @@ document.addEventListener('click', function(e) {
     }
   }
 });
+
+// ============================================================
+// Coverage Feature
+// ============================================================
+
+var COV_TABS = [
+  { id: 'smart-home',    field: 'smartHome',    color: '#1B7D3D', mapVar: '_covMapSmartHome' },
+  { id: 'smart-home-5g', field: 'smartHome5G',  color: '#1565C0', mapVar: '_covMapSmartHome5G' },
+  { id: 'smart-fiber',   field: 'smartFiber',   color: '#FB8C00', mapVar: '_covMapSmartFiber' }
+];
+
+var KH_CENTER = [12.5657, 104.9910]; // Cambodia center
+
+function switchCoverageTab(tab) {
+  currentCoverageTab = tab;
+  $$('.cov-tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var tc = g('cov-content-' + tab);
+  if (tc) tc.classList.add('active');
+
+  // Invalidate the map so it renders correctly when becoming visible
+  setTimeout(function() {
+    if (typeof L !== 'undefined') {
+      if (tab === 'smart-home' && _covMapSmartHome) { _covMapSmartHome.invalidateSize(); }
+      if (tab === 'smart-home-5g' && _covMapSmartHome5G) { _covMapSmartHome5G.invalidateSize(); }
+      if (tab === 'smart-fiber' && _covMapSmartFiber) { _covMapSmartFiber.invalidateSize(); }
+    }
+    renderCoverageMap(tab);
+    renderCoverageTable(tab);
+  }, 50);
+}
+
+function openCoverageTab(tab, btn) {
+  switchCoverageTab(tab);
+  $$('#page-coverage .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+}
+
+function initCoveragePage() {
+  // Show Add button for admin/cluster only
+  var addBtn = g('cov-add-btn');
+  if (addBtn) addBtn.style.display = (currentRole === 'admin' || currentRole === 'cluster') ? '' : 'none';
+
+  // Show/hide Actions column based on role
+  var isAdmin = (currentRole === 'admin' || currentRole === 'cluster');
+  $$('.cov-admin-col').forEach(function(el) { el.style.display = isAdmin ? '' : 'none'; });
+
+  // Initialize maps if not already done
+  initCoverageMap('smart-home');
+  initCoverageMap('smart-home-5g');
+  initCoverageMap('smart-fiber');
+
+  // Render tables
+  renderCoverageTable('smart-home');
+  renderCoverageTable('smart-home-5g');
+  renderCoverageTable('smart-fiber');
+
+  // Activate current tab button
+  $$('#page-coverage .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  var activeBtn = g('cov-tab-' + currentCoverageTab);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  // Show/hide correct tab content
+  $$('.cov-tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var tc = g('cov-content-' + currentCoverageTab);
+  if (tc) tc.classList.add('active');
+
+  setTimeout(function() {
+    if (typeof L !== 'undefined') {
+      if (_covMapSmartHome) _covMapSmartHome.invalidateSize();
+      if (_covMapSmartHome5G) _covMapSmartHome5G.invalidateSize();
+      if (_covMapSmartFiber) _covMapSmartFiber.invalidateSize();
+    }
+    renderCoverageMap('smart-home');
+    renderCoverageMap('smart-home-5g');
+    renderCoverageMap('smart-fiber');
+  }, 100);
+}
+
+function initCoverageMap(tab) {
+  if (typeof L === 'undefined') return; // Leaflet not loaded
+  var mapId = 'cov-map-' + tab;
+  var el = g(mapId);
+  if (!el) return;
+
+  var tabInfo = COV_TABS.find(function(t) { return t.id === tab; });
+  if (!tabInfo) return;
+
+  // Destroy existing map instance if any
+  if (tab === 'smart-home' && _covMapSmartHome) { _covMapSmartHome.remove(); _covMapSmartHome = null; }
+  if (tab === 'smart-home-5g' && _covMapSmartHome5G) { _covMapSmartHome5G.remove(); _covMapSmartHome5G = null; }
+  if (tab === 'smart-fiber' && _covMapSmartFiber) { _covMapSmartFiber.remove(); _covMapSmartFiber = null; }
+
+  var map = L.map(mapId).setView(KH_CENTER, 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  if (tab === 'smart-home') _covMapSmartHome = map;
+  if (tab === 'smart-home-5g') _covMapSmartHome5G = map;
+  if (tab === 'smart-fiber') _covMapSmartFiber = map;
+}
+
+function getMapForTab(tab) {
+  if (tab === 'smart-home') return _covMapSmartHome;
+  if (tab === 'smart-home-5g') return _covMapSmartHome5G;
+  if (tab === 'smart-fiber') return _covMapSmartFiber;
+  return null;
+}
+
+function renderCoverageMap(tab) {
+  var tabInfo = COV_TABS.find(function(t) { return t.id === tab; });
+  if (!tabInfo) return;
+
+  // Update count badge regardless of Leaflet availability
+  var locs = coverageLocations.filter(function(loc) { return loc[tabInfo.field]; });
+  var badge = g('cov-count-' + tab);
+  if (badge) badge.textContent = locs.length + ' location' + (locs.length !== 1 ? 's' : '');
+
+  if (typeof L === 'undefined') return; // Leaflet not loaded
+  var map = getMapForTab(tab);
+  if (!map) return;
+
+  // Remove existing layers (except tile layer)
+  map.eachLayer(function(layer) {
+    if (layer instanceof L.CircleMarker || layer instanceof L.Marker) {
+      map.removeLayer(layer);
+    }
+  });
+
+  locs.forEach(function(loc) {
+    if (!loc.lat || !loc.lng) return;
+    var circle = L.circleMarker([loc.lat, loc.lng], {
+      radius: 10,
+      fillColor: tabInfo.color,
+      color: '#fff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.85
+    }).addTo(map);
+    circle.bindPopup(
+      '<strong>' + esc(loc.commune) + '</strong><br/>' +
+      '<small>' + esc(loc.district) + ', ' + esc(loc.province) + '</small>'
+    );
+  });
+
+}
+
+function renderCoverageTable(tab) {
+  var tbody = g('cov-table-' + tab);
+  if (!tbody) return;
+
+  var tabInfo = COV_TABS.find(function(t) { return t.id === tab; });
+  if (!tabInfo) return;
+
+  var searchEl = g('cov-search-' + tab);
+  var q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+  var locs = coverageLocations.filter(function(loc) { return loc[tabInfo.field]; });
+  if (q) {
+    locs = locs.filter(function(loc) {
+      return (loc.commune || '').toLowerCase().includes(q) ||
+             (loc.district || '').toLowerCase().includes(q) ||
+             (loc.province || '').toLowerCase().includes(q);
+    });
+  }
+
+  var isAdmin = (currentRole === 'admin' || currentRole === 'cluster');
+
+  if (!locs.length) {
+    tbody.innerHTML = '<tr><td colspan="' + (isAdmin ? 6 : 5) + '" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-map" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No coverage locations found</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = locs.map(function(loc, i) {
+    return '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td>' + esc(loc.commune) + '</td>' +
+      '<td>' + esc(loc.district) + '</td>' +
+      '<td>' + esc(loc.province) + '</td>' +
+      '<td>' + esc(loc.date || '') + '</td>' +
+      (isAdmin ? '<td><button class="btn-edit" onclick="editCoverageLocation(\'' + loc.id + '\')" title="Edit"><i class="fas fa-pen"></i></button> <button class="btn-delete" onclick="deleteCoverageLocation(\'' + loc.id + '\')" title="Delete"><i class="fas fa-trash-can"></i></button></td>' : '<td style="display:none;"></td>') +
+      '</tr>';
+  }).join('');
+}
+
+function openAddCoverageModal() {
+  var f = g('form-coverage');
+  if (f) f.reset();
+  var titleEl = g('modal-coverage-title');
+  if (titleEl) titleEl.innerHTML = '<i class="fas fa-map-location-dot" style="color:#1B7D3D;margin-right:8px;"></i>Add Coverage Location';
+  if (f) f.removeAttribute('data-edit-id');
+
+  openModal('modal-coverage');
+
+  setTimeout(function() {
+    if (typeof L === 'undefined') return; // Leaflet not loaded
+    if (_covPickerMap) { _covPickerMap.remove(); _covPickerMap = null; _covPickerMarker = null; }
+    var pickerEl = g('cov-picker-map');
+    if (!pickerEl) return;
+    _covPickerMap = L.map('cov-picker-map').setView(KH_CENTER, 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(_covPickerMap);
+    _covPickerMap.on('click', function(e) {
+      var lat = parseFloat(e.latlng.lat.toFixed(6));
+      var lng = parseFloat(e.latlng.lng.toFixed(6));
+      var latEl = g('cov-lat'); var lngEl = g('cov-lng');
+      if (latEl) latEl.value = lat;
+      if (lngEl) lngEl.value = lng;
+      if (_covPickerMarker) _covPickerMap.removeLayer(_covPickerMarker);
+      _covPickerMarker = L.marker([lat, lng]).addTo(_covPickerMap);
+    });
+  }, 200);
+}
+
+function editCoverageLocation(id) {
+  var loc = coverageLocations.find(function(l) { return l.id === id; });
+  if (!loc) return;
+
+  var titleEl = g('modal-coverage-title');
+  if (titleEl) titleEl.innerHTML = '<i class="fas fa-pen" style="color:#1B7D3D;margin-right:8px;"></i>Edit Coverage Location';
+
+  var f = g('form-coverage');
+  if (f) f.setAttribute('data-edit-id', id);
+
+  var prov = g('cov-province'); if (prov) prov.value = loc.province || '';
+  var dist = g('cov-district'); if (dist) dist.value = loc.district || '';
+  var comm = g('cov-commune'); if (comm) comm.value = loc.commune || '';
+  var latEl = g('cov-lat'); if (latEl) latEl.value = loc.lat || '';
+  var lngEl = g('cov-lng'); if (lngEl) lngEl.value = loc.lng || '';
+  var sh = g('cov-prod-smart-home'); if (sh) sh.checked = !!loc.smartHome;
+  var sh5g = g('cov-prod-smart-home-5g'); if (sh5g) sh5g.checked = !!loc.smartHome5G;
+  var sf = g('cov-prod-smart-fiber'); if (sf) sf.checked = !!loc.smartFiber;
+
+  openModal('modal-coverage');
+
+  setTimeout(function() {
+    if (typeof L === 'undefined') return; // Leaflet not loaded
+    if (_covPickerMap) { _covPickerMap.remove(); _covPickerMap = null; _covPickerMarker = null; }
+    var pickerEl = g('cov-picker-map');
+    if (!pickerEl) return;
+    var center = (loc.lat && loc.lng) ? [loc.lat, loc.lng] : KH_CENTER;
+    var zoom = (loc.lat && loc.lng) ? 14 : 7;
+    _covPickerMap = L.map('cov-picker-map').setView(center, zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(_covPickerMap);
+    if (loc.lat && loc.lng) {
+      _covPickerMarker = L.marker([loc.lat, loc.lng]).addTo(_covPickerMap);
+    }
+    _covPickerMap.on('click', function(e) {
+      var lat = parseFloat(e.latlng.lat.toFixed(6));
+      var lng = parseFloat(e.latlng.lng.toFixed(6));
+      var latEl = g('cov-lat'); var lngEl = g('cov-lng');
+      if (latEl) latEl.value = lat;
+      if (lngEl) lngEl.value = lng;
+      if (_covPickerMarker) _covPickerMap.removeLayer(_covPickerMarker);
+      _covPickerMarker = L.marker([lat, lng]).addTo(_covPickerMap);
+    });
+  }, 200);
+}
+
+function submitCoverageLocation(e) {
+  e.preventDefault();
+  var province = (g('cov-province').value || '').trim();
+  var district = (g('cov-district').value || '').trim();
+  var commune  = (g('cov-commune').value || '').trim();
+  var lat      = parseFloat(g('cov-lat').value) || null;
+  var lng      = parseFloat(g('cov-lng').value) || null;
+  var smartHome    = g('cov-prod-smart-home').checked;
+  var smartHome5G  = g('cov-prod-smart-home-5g').checked;
+  var smartFiber   = g('cov-prod-smart-fiber').checked;
+
+  if (!province || !district || !commune) {
+    showToast('Please fill in Province, District, and Commune.', 'error'); return;
+  }
+  if (!smartHome && !smartHome5G && !smartFiber) {
+    showToast('Please select at least one product.', 'error'); return;
+  }
+
+  var today = new Date().toISOString().slice(0, 10);
+  var f = g('form-coverage');
+  var editId = f ? f.getAttribute('data-edit-id') : null;
+
+  if (editId) {
+    var idx = coverageLocations.findIndex(function(l) { return l.id === editId; });
+    if (idx !== -1) {
+      coverageLocations[idx] = Object.assign(coverageLocations[idx], {
+        province: province, district: district, commune: commune,
+        lat: lat, lng: lng,
+        smartHome: smartHome, smartHome5G: smartHome5G, smartFiber: smartFiber,
+        date: today
+      });
+    }
+  } else {
+    coverageLocations.push({
+      id: 'cv_' + Date.now(),
+      province: province, district: district, commune: commune,
+      lat: lat, lng: lng,
+      smartHome: smartHome, smartHome5G: smartHome5G, smartFiber: smartFiber,
+      date: today
+    });
+  }
+
+  lsSave(LS_KEYS.coverage, coverageLocations);
+  closeModal('modal-coverage');
+  showToast('Coverage location saved.', 'success');
+
+  // Refresh all maps and tables
+  renderCoverageMap('smart-home');
+  renderCoverageMap('smart-home-5g');
+  renderCoverageMap('smart-fiber');
+  renderCoverageTable('smart-home');
+  renderCoverageTable('smart-home-5g');
+  renderCoverageTable('smart-fiber');
+}
+
+function deleteCoverageLocation(id) {
+  showConfirm('Delete this coverage location?', function() {
+    coverageLocations = coverageLocations.filter(function(l) { return l.id !== id; });
+    lsSave(LS_KEYS.coverage, coverageLocations);
+    showToast('Coverage location deleted.', 'success');
+    renderCoverageMap('smart-home');
+    renderCoverageMap('smart-home-5g');
+    renderCoverageMap('smart-fiber');
+    renderCoverageTable('smart-home');
+    renderCoverageTable('smart-home-5g');
+    renderCoverageTable('smart-fiber');
+  });
+}
