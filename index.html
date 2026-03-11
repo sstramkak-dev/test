@@ -739,10 +739,20 @@
             <i class="fas fa-circle-plus"></i> Add KPI
           </button>
         </div>
+        <!-- KPI Month Filter Bar -->
+        <div class="filter-bar" id="kpi-month-filter-bar">
+          <div class="filter-group">
+            <label class="filter-label"><i class="fas fa-calendar-alt"></i> Month Period</label>
+            <input type="month" class="form-input" id="kpi-month-picker" onchange="onKpiMonthChange()" />
+          </div>
+          <button class="btn btn-outline" onclick="setKpiMonth('prev')"><i class="fas fa-chevron-left"></i> Prev Month</button>
+          <button class="btn btn-outline" onclick="setKpiMonth('current')"><i class="fas fa-calendar-check"></i> This Month</button>
+          <button class="btn btn-outline" onclick="setKpiMonth('')"><i class="fas fa-list"></i> All KPIs</button>
+        </div>
         <div class="table-card">
           <div class="table-responsive">
             <table class="data-table">
-              <thead><tr><th>#</th><th>KPI Name</th><th>Type</th><th>For</th><th>Target</th><th>Period</th><th>Actions</th></tr></thead>
+              <thead><tr><th>#</th><th>KPI Name</th><th>Type</th><th>For</th><th>Target</th><th>Actual</th><th>Achievement</th><th>Period</th><th>Actions</th></tr></thead>
               <tbody id="kpi-table"></tbody>
             </table>
           </div>
@@ -835,11 +845,15 @@
         <div class="filter-bar">
           <div class="filter-group">
             <label class="filter-label"><i class="fas fa-calendar"></i> From</label>
-            <input type="date" class="form-input" id="sale-date-from" onchange="applySaleFilters()" />
+            <input type="date" class="form-input" id="sale-date-from" onchange="clearSaleDateSearch();applySaleFilters()" />
           </div>
           <div class="filter-group">
             <label class="filter-label">To</label>
-            <input type="date" class="form-input" id="sale-date-to" onchange="applySaleFilters()" />
+            <input type="date" class="form-input" id="sale-date-to" onchange="clearSaleDateSearch();applySaleFilters()" />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label"><i class="fas fa-magnifying-glass"></i> Search Date</label>
+            <input type="date" class="form-input" id="sale-date-search" onchange="setSaleDateSearch(this.value)" title="Search by specific date" />
           </div>
           <div class="filter-group">
             <label class="filter-label"><i class="fas fa-user"></i> Agent</label>
@@ -925,6 +939,13 @@
               <i class="fas fa-circle-plus"></i> Add New Customer
             </button>
           </div>
+          <div class="filter-bar" style="padding:8px 0;">
+            <div class="filter-group" style="flex:1;max-width:340px;">
+              <label class="filter-label"><i class="fas fa-magnifying-glass"></i> Search</label>
+              <input type="text" class="form-input" id="nc-search" placeholder="Search by name or phone…" oninput="renderNewCustomerTable()" />
+            </div>
+            <button class="btn btn-outline" onclick="document.getElementById('nc-search').value='';renderNewCustomerTable()"><i class="fas fa-xmark"></i> Clear</button>
+          </div>
           <div class="table-card">
             <div class="table-responsive">
               <table class="data-table">
@@ -941,6 +962,13 @@
             <button class="btn btn-primary" onclick="openAddModal('topup')">
               <i class="fas fa-circle-plus"></i> Add Top Up
             </button>
+          </div>
+          <div class="filter-bar" style="padding:8px 0;">
+            <div class="filter-group" style="flex:1;max-width:340px;">
+              <label class="filter-label"><i class="fas fa-magnifying-glass"></i> Search</label>
+              <input type="text" class="form-input" id="tu-search" placeholder="Search by name or phone…" oninput="renderTopUpTable()" />
+            </div>
+            <button class="btn btn-outline" onclick="document.getElementById('tu-search').value='';renderTopUpTable()"><i class="fas fa-xmark"></i> Clear</button>
           </div>
           <div id="topup-expiry-notice"></div>
           <div class="table-card">
@@ -959,6 +987,13 @@
             <button class="btn btn-primary" onclick="openAddModal('termination')">
               <i class="fas fa-circle-plus"></i> Add Termination
             </button>
+          </div>
+          <div class="filter-bar" style="padding:8px 0;">
+            <div class="filter-group" style="flex:1;max-width:340px;">
+              <label class="filter-label"><i class="fas fa-magnifying-glass"></i> Search</label>
+              <input type="text" class="form-input" id="term-search" placeholder="Search by name or phone…" oninput="renderTerminationTable()" />
+            </div>
+            <button class="btn btn-outline" onclick="document.getElementById('term-search').value='';renderTerminationTable()"><i class="fas fa-xmark"></i> Clear</button>
           </div>
           <div class="table-card">
             <div class="table-responsive">
