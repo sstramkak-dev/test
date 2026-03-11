@@ -1986,27 +1986,104 @@ input, select, textarea, button {
 }
 
 /* ── Login Screen ── */
-.login-card {
-  background: #fff;
-  border-radius: 20px;
-  padding: 44px 40px;
+/* Professional two-panel login layout */
+#login-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #0d3d1e 0%, #1B7D3D 60%, #155f2e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+.login-panel {
+  display: flex;
   width: 100%;
-  max-width: 420px;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.25);
-  animation: slideUpModal 0.3s ease;
+  max-width: 900px;
+  min-height: 540px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.3);
+  overflow: hidden;
+  animation: slideUpModal 0.35s ease;
+}
+.login-brand-panel {
+  flex: 1;
+  background: linear-gradient(160deg, #1B7D3D 0%, #0d3d1e 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 40px;
+  min-width: 0;
+}
+.login-brand-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.login-brand-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+.login-brand-sub {
+  font-size: 0.9375rem;
+  opacity: 0.75;
+  margin-bottom: 36px;
+}
+.login-brand-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.login-brand-features li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.875rem;
+  opacity: 0.88;
+}
+.login-brand-features li i {
+  width: 20px;
+  text-align: center;
+  opacity: 0.9;
+}
+.login-form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 36px;
+  min-width: 0;
+  background: #fff;
+}
+.login-card {
+  width: 100%;
+  max-width: 380px;
 }
 .login-title {
-  text-align: center;
-  font-size: 1.375rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: #1A1A2E;
   margin-bottom: 6px;
 }
 .login-subtitle {
-  text-align: center;
   font-size: .875rem;
   color: #888;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 .login-error {
   background: #FFEBEE;
@@ -2018,24 +2095,61 @@ input, select, textarea, button {
   margin-bottom: 14px;
   border: 1px solid #FFCDD2;
 }
-.login-logo {
+.login-divider {
   display: flex;
   align-items: center;
-  justify-content: center;
+  text-align: center;
+  margin: 20px 0 16px;
+  color: #bbb;
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
   gap: 10px;
-  margin-bottom: 24px;
 }
-.login-logo-img { width: 160px; height: auto; display: block; }
-#login-screen {
-  position: fixed;
-  inset: 0;
-  background: linear-gradient(135deg, #1B7D3D 0%, #155f2e 50%, #0d3d1e 100%);
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #E8E8E8;
+}
+.login-social-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.login-social-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
-  padding: 20px;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #E0E0E0;
+  background: #fff;
+  color: #444;
+  font-size: .8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s, box-shadow .15s;
+  white-space: nowrap;
 }
+.login-social-btn:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+  border-color: #bbb;
+}
+.login-social-facebook { }
+.login-social-facebook:hover { border-color: #1877F2; color: #1877F2; background: #F0F5FF; }
+.login-social-google:hover { border-color: #EA4335; color: #EA4335; background: #FFF5F5; }
+.login-social-telegram:hover { border-color: #229ED9; color: #229ED9; background: #F0F8FF; }
+.login-social-phone:hover { border-color: #1B7D3D; color: #1B7D3D; background: #F0FFF4; }
+.login-social-btn i { font-size: 1rem; }
+.login-social-facebook i { color: #1877F2; }
+.login-social-google i { color: #EA4335; }
+.login-social-telegram i { color: #229ED9; }
+.login-social-phone i { color: #1B7D3D; }
 .login-input {
   width: 100%;
   padding-left: 40px !important;
@@ -2059,16 +2173,25 @@ input, select, textarea, button {
 }
 .login-support-hint {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 16px;
   font-size: .8125rem;
   color: #888;
 }
 .login-support-hint a {
-  color: #1B7D3D;
+  color: #229ED9;
   text-decoration: none;
   font-weight: 600;
 }
 .login-support-hint a:hover { text-decoration: underline; }
+
+/* Responsive login panel */
+@media (max-width: 680px) {
+  .login-panel { flex-direction: column; min-height: unset; max-width: 440px; }
+  .login-brand-panel { padding: 28px 28px 20px; }
+  .login-brand-features { display: none; }
+  .login-brand-sub { margin-bottom: 0; }
+  .login-form-panel { padding: 28px 24px; }
+}
 
 /* ── Promo Section Header ── */
 .promo-section-header {
@@ -2350,3 +2473,27 @@ input, select, textarea, button {
 .expiry-days-left {
   font-weight: 700;
 }
+
+/* ── Inventory Badges ─────────────────────────────────────── */
+.inv-badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.inv-badge-pending  { background: #FFF3E0; color: #E65100; border: 1px solid #FFCC80; }
+.inv-badge-approved { background: #E8F5E9; color: #2E7D32; border: 1px solid #A5D6A7; }
+.inv-badge-rejected { background: #FFEBEE; color: #C62828; border: 1px solid #FFCDD2; }
+.inv-badge-low      { background: #FFEBEE; color: #C62828; }
+.inv-badge-ok       { background: #E8F5E9; color: #2E7D32; }
+
+.inv-tab-content { display: none; }
+.inv-tab-content.active { display: block; }
+
+.inv-type-in  { color: #2E7D32; font-weight: 700; }
+.inv-type-out { color: #C62828; font-weight: 700; }

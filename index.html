@@ -288,43 +288,107 @@
 
   <!-- ===================== LOGIN SCREEN ===================== -->
   <div id="login-screen">
-    <div class="login-card">
-      <div class="login-logo">
-        <svg xmlns="http://www.w3.org/2000/svg" class="login-logo-img" viewBox="0 0 200 80" role="img" aria-label="Smart Axiata Logo">
-          <rect width="200" height="80" rx="14" fill="#0066B3"/>
-          <text x="100" y="55" font-family="Arial,Helvetica,sans-serif" font-size="46" font-weight="bold" font-style="italic" fill="#ffffff" text-anchor="middle">smart</text>
-        </svg>
+    <div class="login-panel">
+      <!-- Left branding panel -->
+      <div class="login-brand-panel">
+        <div class="login-brand-icon"><i class="fas fa-tower-broadcast"></i></div>
+        <h1 class="login-brand-title">Smart 5G</h1>
+        <p class="login-brand-sub">Intelligent Network Dashboard</p>
+        <ul class="login-brand-features">
+          <li><i class="fas fa-chart-line"></i> Real-time Sales Analytics</li>
+          <li><i class="fas fa-users"></i> Team Performance Tracking</li>
+          <li><i class="fas fa-boxes-stacked"></i> Inventory Management</li>
+          <li><i class="fas fa-shield-halved"></i> Role-Based Access Control</li>
+        </ul>
       </div>
-      <h2 class="login-title">Welcome Back</h2>
-      <p class="login-subtitle">Sign in to your dashboard</p>
-      <form id="login-form" onsubmit="handleLogin(event)">
-        <div class="form-group">
-          <label class="form-label">Username <span class="required">*</span></label>
-          <div class="input-with-icon">
-            <i class="fas fa-user input-prefix-icon"></i>
-            <input type="text" id="login-username" class="form-input login-input" placeholder="Enter username" autocomplete="username" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password <span class="required">*</span></label>
-          <div class="input-with-icon">
-            <i class="fas fa-lock input-prefix-icon"></i>
-            <input type="password" id="login-password" class="form-input login-input" placeholder="Enter password" autocomplete="current-password" />
-            <button type="button" class="input-icon-btn" onclick="toggleLoginPwd()"><i class="fas fa-eye" id="login-pwd-eye"></i></button>
-          </div>
-        </div>
-        <div id="login-error" class="login-error" style="display:none;"></div>
-        <button type="submit" id="login-submit-btn" class="btn btn-primary login-submit-btn">
-          <i class="fas fa-right-to-bracket"></i> Sign In
-        </button>
-      </form>
-      <div class="login-support-hint">
-        Need access? <a href="#" onclick="loginContactSupport();return false;">Contact Support</a>
-      </div>
+      <!-- Right form panel -->
+      <div class="login-form-panel">
+        <div class="login-card">
+          <h2 class="login-title">Welcome Back</h2>
+          <p class="login-subtitle">Sign in to continue to your dashboard</p>
 
+          <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+              <label class="form-label">Username <span class="required">*</span></label>
+              <div class="input-with-icon">
+                <i class="fas fa-user input-prefix-icon"></i>
+                <input type="text" id="login-username" class="form-input login-input" placeholder="Enter username" autocomplete="username" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password <span class="required">*</span></label>
+              <div class="input-with-icon">
+                <i class="fas fa-lock input-prefix-icon"></i>
+                <input type="password" id="login-password" class="form-input login-input" placeholder="Enter password" autocomplete="current-password" />
+                <button type="button" class="input-icon-btn" onclick="toggleLoginPwd()"><i class="fas fa-eye" id="login-pwd-eye"></i></button>
+              </div>
+            </div>
+            <div id="login-error" class="login-error" style="display:none;"></div>
+            <button type="submit" id="login-submit-btn" class="btn btn-primary login-submit-btn">
+              <i class="fas fa-right-to-bracket"></i> Sign In
+            </button>
+          </form>
+
+          <div class="login-divider"><span>or continue with</span></div>
+
+          <div class="login-social-grid">
+            <button class="login-social-btn login-social-facebook" onclick="loginWithSocial('facebook')" title="Sign in with Facebook">
+              <i class="fab fa-facebook-f"></i>
+              <span>Facebook</span>
+            </button>
+            <button class="login-social-btn login-social-google" onclick="loginWithSocial('google')" title="Sign in with Google">
+              <i class="fab fa-google"></i>
+              <span>Google</span>
+            </button>
+            <button class="login-social-btn login-social-telegram" onclick="loginWithSocial('telegram')" title="Sign in with Telegram">
+              <i class="fab fa-telegram-plane"></i>
+              <span>Telegram</span>
+            </button>
+            <button class="login-social-btn login-social-phone" onclick="loginWithSocial('phone')" title="Sign in with Phone">
+              <i class="fas fa-phone"></i>
+              <span>Phone</span>
+            </button>
+          </div>
+
+          <div class="login-support-hint">
+            Need access? <a href="https://t.me/saray2026123" target="_blank" rel="noopener noreferrer"><i class="fab fa-telegram-plane"></i> Contact Admin @saray2026123</a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <!-- END LOGIN SCREEN -->
+
+  <!-- Phone Login Modal -->
+  <div id="modal-phone-login" class="modal-overlay" style="display:none;" onclick="handleOverlay(event,'modal-phone-login')">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <span class="modal-title"><i class="fas fa-phone" style="color:#1B7D3D;margin-right:8px;"></i>Phone Registration</span>
+        <button class="modal-close" onclick="closeModal('modal-phone-login')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:.875rem;color:#666;margin-bottom:16px;">Enter your phone number to register or sign in. Our admin will contact you to set up your account.</p>
+        <div class="form-group">
+          <label class="form-label">Phone Number <span class="required">*</span></label>
+          <div class="input-with-icon">
+            <i class="fas fa-phone input-prefix-icon"></i>
+            <input type="tel" id="phone-login-number" class="form-input login-input" placeholder="+855 XX XXX XXX" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Full Name <span class="required">*</span></label>
+          <input type="text" id="phone-login-name" class="form-input" placeholder="Enter your full name" />
+        </div>
+        <div style="background:#E8F5E9;border-radius:8px;padding:12px 14px;font-size:.8125rem;color:#2E7D32;margin-bottom:4px;">
+          <i class="fab fa-telegram-plane"></i> After submitting, contact admin via Telegram <strong><a href="https://t.me/saray2026123" target="_blank" rel="noopener noreferrer" style="color:#1B7D3D;">@saray2026123</a></strong> to complete setup.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-phone-login')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitPhoneLogin()"><i class="fas fa-paper-plane"></i> Submit Request</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ===================== APP SHELL ===================== -->
   <div id="app-shell" style="display:none;flex:1;height:100vh;overflow:hidden;flex-direction:row;">
@@ -404,6 +468,23 @@
         <li class="submenu-item" id="nav-termination" onclick="navigateTo('customer', null); switchCustomerTab('termination')">
           <i class="fas fa-user-xmark submenu-icon"></i>
           <span>Termination</span>
+        </li>
+      </ul>
+
+      <!-- Inventory (with submenu) -->
+      <li class="nav-item has-submenu" id="nav-inventory" onclick="toggleSubmenu('submenu-inventory', this)">
+        <i class="fas fa-boxes-stacked nav-icon"></i>
+        <span class="nav-label">Inventory</span>
+        <i class="fas fa-chevron-down nav-chevron"></i>
+      </li>
+      <ul class="submenu" id="submenu-inventory">
+        <li class="submenu-item" id="nav-inv-sale-stock" onclick="navigateTo('inv-sale-stock', null); setActiveSubItem(this)">
+          <i class="fas fa-cart-flatbed submenu-icon"></i>
+          <span>Sale Stock</span>
+        </li>
+        <li class="submenu-item" id="nav-inv-shop-stock" onclick="navigateTo('inv-shop-stock', null); setActiveSubItem(this)">
+          <i class="fas fa-store submenu-icon"></i>
+          <span>Shop Stock</span>
         </li>
       </ul>
 
@@ -922,6 +1003,196 @@
                 <tbody id="staff-table"></tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========== SALE STOCK PAGE ========== -->
+      <section class="page" id="page-inv-sale-stock">
+
+        <div class="page-toolbar">
+          <div class="toolbar-left">
+            <h2 style="font-size:1.1rem;font-weight:700;color:#1A1A2E;"><i class="fas fa-cart-flatbed" style="color:#1B7D3D;margin-right:8px;"></i>Sale Stock</h2>
+          </div>
+          <div class="toolbar-right" id="inv-sale-sup-actions" style="display:none;">
+            <button class="btn btn-primary" onclick="openAddStockModal()">
+              <i class="fas fa-plus"></i> Add Stock
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Summary Bar -->
+        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-green"><i class="fas fa-boxes-stacked"></i></div>
+            <div class="kpi-card-body">
+              <p class="kpi-label">Total Items In Stock</p>
+              <p class="kpi-value" id="inv-kv-total">0</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-blue"><i class="fas fa-cart-flatbed"></i></div>
+            <div class="kpi-card-body">
+              <p class="kpi-label">Allocated</p>
+              <p class="kpi-value" id="inv-kv-allocated">0</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon kpi-icon-orange"><i class="fas fa-clock"></i></div>
+            <div class="kpi-card-body">
+              <p class="kpi-label">Pending Requests</p>
+              <p class="kpi-value" id="inv-kv-pending">0</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab header -->
+        <div class="tab-header" style="margin-bottom:16px;">
+          <button class="tab-btn active" id="invtab-stock" onclick="openInvTab('stock', this)">
+            <i class="fas fa-warehouse"></i> Current Stock
+          </button>
+          <button class="tab-btn" id="invtab-requests" onclick="openInvTab('requests', this)">
+            <i class="fas fa-list-check"></i> Allocation Requests
+          </button>
+          <button class="tab-btn" id="invtab-history" onclick="openInvTab('history', this)">
+            <i class="fas fa-clock-rotate-left"></i> Stock History
+          </button>
+        </div>
+
+        <!-- Current Stock Tab -->
+        <div class="tab-content active inv-tab-content" id="invtab-content-stock">
+          <div class="table-card">
+            <div class="table-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+              <span class="table-card-title"><i class="fas fa-warehouse" style="color:#1B7D3D;margin-right:6px;"></i>Stock Levels</span>
+              <button class="btn btn-sm btn-outline" onclick="openAllocateModal()" id="inv-allocate-btn" style="display:none;">
+                <i class="fas fa-share-from-square"></i> Request Allocation
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Item Name</th>
+                    <th>Category</th>
+                    <th>In Stock</th>
+                    <th>Allocated</th>
+                    <th>Available</th>
+                    <th>Last Updated</th>
+                    <th id="inv-stock-actions-col" style="display:none;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="inv-stock-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Allocation Requests Tab -->
+        <div class="tab-content inv-tab-content" id="invtab-content-requests">
+          <div class="page-toolbar" style="margin-bottom:12px;">
+            <div class="toolbar-left">
+              <select class="form-select toolbar-select" id="inv-req-status-filter" onchange="renderInvRequestsTable()">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div class="toolbar-right">
+              <button class="btn btn-outline" id="inv-new-request-btn" onclick="openAllocateModal()" style="display:none;">
+                <i class="fas fa-plus"></i> New Request
+              </button>
+            </div>
+          </div>
+          <div class="table-card">
+            <div class="table-card-header">
+              <span class="table-card-title"><i class="fas fa-list-check" style="color:#1565C0;margin-right:6px;"></i>Allocation Requests</span>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Request Date</th>
+                    <th>Requested By</th>
+                    <th>Item</th>
+                    <th>Qty Requested</th>
+                    <th>Purpose</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="inv-requests-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stock History Tab -->
+        <div class="tab-content inv-tab-content" id="invtab-content-history">
+          <div class="table-card">
+            <div class="table-card-header">
+              <span class="table-card-title"><i class="fas fa-clock-rotate-left" style="color:#9C27B0;margin-right:6px;"></i>Stock In/Out History</span>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Item</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Before</th>
+                    <th>After</th>
+                    <th>By</th>
+                    <th>Note</th>
+                  </tr>
+                </thead>
+                <tbody id="inv-history-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========== SHOP STOCK PAGE ========== -->
+      <section class="page" id="page-inv-shop-stock">
+
+        <div class="page-toolbar">
+          <div class="toolbar-left">
+            <h2 style="font-size:1.1rem;font-weight:700;color:#1A1A2E;"><i class="fas fa-store" style="color:#1B7D3D;margin-right:8px;"></i>Shop Stock</h2>
+          </div>
+          <div class="toolbar-right">
+            <select class="form-select toolbar-select" id="shop-stock-branch-filter" onchange="renderShopStockTable()">
+              <option value="">All Branches</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-card-header">
+            <span class="table-card-title"><i class="fas fa-store" style="color:#1B7D3D;margin-right:6px;"></i>Shop Stock Overview</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Branch</th>
+                  <th>Item Name</th>
+                  <th>Allocated Qty</th>
+                  <th>Used Qty</th>
+                  <th>Remaining</th>
+                  <th>Allocated On</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="shop-stock-table"></tbody>
+            </table>
           </div>
         </div>
 
@@ -1538,6 +1809,92 @@
       <div class="modal-body" id="modal-viewPromo-body"></div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal('modal-viewPromo')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Stock Modal (Supervisor only) -->
+  <div class="modal-overlay" id="modal-addStock" onclick="handleOverlay(event,'modal-addStock')">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-plus-circle" style="color:#1B7D3D;margin-right:8px;"></i>Add Stock</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-addStock')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-addStock" onsubmit="submitAddStock(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Item <span class="required">*</span></label>
+            <select class="form-select" id="addstock-item" required>
+              <option value="">Select item</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quantity <span class="required">*</span></label>
+            <input type="number" class="form-input" id="addstock-qty" min="1" placeholder="Enter quantity" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Note</label>
+            <input type="text" class="form-input" id="addstock-note" placeholder="Optional note (e.g., supplier name)" />
+          </div>
+          <input type="hidden" id="addstock-edit-id" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-addStock')">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add to Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Allocation Request Modal -->
+  <div class="modal-overlay" id="modal-allocate" onclick="handleOverlay(event,'modal-allocate')">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-share-from-square" style="color:#1565C0;margin-right:8px;"></i>Request Allocation</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-allocate')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <form id="form-allocate" onsubmit="submitAllocationRequest(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Item <span class="required">*</span></label>
+            <select class="form-select" id="allocate-item" required onchange="updateAllocateAvailable()">
+              <option value="">Select item</option>
+            </select>
+          </div>
+          <div id="allocate-available-info" style="background:#E8F5E9;border-radius:8px;padding:10px 14px;font-size:.8125rem;color:#2E7D32;margin-bottom:12px;display:none;">
+            <i class="fas fa-boxes-stacked"></i> Available in stock: <strong id="allocate-avail-qty">0</strong> units
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quantity Requested <span class="required">*</span></label>
+            <input type="number" class="form-input" id="allocate-qty" min="1" placeholder="Enter quantity" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Purpose / Reason <span class="required">*</span></label>
+            <input type="text" class="form-input" id="allocate-purpose" placeholder="e.g., Weekly sale allocation for Phnom Penh branch" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-allocate')">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Submit Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Approve/Review Allocation Modal (Supervisor only) -->
+  <div class="modal-overlay" id="modal-reviewAlloc" onclick="handleOverlay(event,'modal-reviewAlloc')">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-clipboard-check" style="color:#1B7D3D;margin-right:8px;"></i>Review Allocation Request</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-reviewAlloc')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" id="review-alloc-body">
+        <!-- Filled dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-reviewAlloc')">Cancel</button>
+        <button class="btn btn-danger" id="review-reject-btn" onclick="processAllocation('rejected')"><i class="fas fa-xmark"></i> Reject</button>
+        <button class="btn btn-primary" id="review-approve-btn" onclick="processAllocation('approved')"><i class="fas fa-check"></i> Approve</button>
       </div>
     </div>
   </div>

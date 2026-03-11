@@ -325,7 +325,9 @@ function navigateTo(page, btn) {
     sale: 'Sale',
     kpi: 'KPI Setting',
     customer: 'Customer',
-    settings: 'Settings'
+    settings: 'Settings',
+    'inv-sale-stock': 'Inventory – Sale Stock',
+    'inv-shop-stock': 'Inventory – Shop Stock'
   };
   const titleEl = g('page-title');
   if (titleEl) titleEl.textContent = titles[page] || page;
@@ -345,6 +347,17 @@ function navigateTo(page, btn) {
   if (page === 'settings') {
     renderStaffTable();
     renderAccessContent(currentSettingsTab);
+  }
+  if (page === 'inv-sale-stock') {
+    // Reset to stock tab
+    $$('.inv-tab-content').forEach(function(c) { c.classList.remove('active'); });
+    var tc = g('invtab-content-stock'); if (tc) tc.classList.add('active');
+    $$('.tab-btn[id^="invtab-"]').forEach(function(b) { b.classList.remove('active'); });
+    var stockTabBtn = g('invtab-stock'); if (stockTabBtn) stockTabBtn.classList.add('active');
+    renderInvSaleStock();
+  }
+  if (page === 'inv-shop-stock') {
+    renderShopStockTable();
   }
 }
 
@@ -2959,10 +2972,459 @@ function toggleSidebar() {
 }
 
 // ------------------------------------------------------------
+// Social Login
+// ------------------------------------------------------------
+function loginWithSocial(provider) {
+  if (provider === 'telegram') {
+    window.open('https://t.me/saray2026123', '_blank', 'noopener,noreferrer');
+    return;
+  }
+  if (provider === 'phone') {
+    openModal('modal-phone-login');
+    return;
+  }
+  var names = { facebook: 'Facebook', google: 'Google' };
+  showAlert(
+    'To register with ' + names[provider] + ', please contact the admin on Telegram:\n\n@saray2026123\n\nThey will help set up your account.',
+    'info',
+    'Register with ' + names[provider]
+  );
+}
+
+function submitPhoneLogin() {
+  var phone = g('phone-login-number') ? g('phone-login-number').value.trim() : '';
+  var name = g('phone-login-name') ? g('phone-login-name').value.trim() : '';
+  if (!phone || !name) { showToast('Please fill in all required fields.', 'error'); return; }
+  closeModal('modal-phone-login');
+  showToast('Request submitted! Please contact @saray2026123 on Telegram to complete setup.', 'success');
+}
+
+// ------------------------------------------------------------
+// Inventory Management
+// ------------------------------------------------------------
+var LS_INV_STOCK = 'smart5g_inv_stock';
+var LS_INV_REQUESTS = 'smart5g_inv_requests';
+var LS_INV_HISTORY = 'smart5g_inv_history';
+
+var invStock = [];       // { id, itemId, itemName, category, inStock, allocated, lastUpdated }
+var invRequests = [];    // { id, date, requestedBy, itemId, itemName, qty, purpose, status, reviewedBy, reviewNote }
+var invHistory = [];     // { id, date, itemId, itemName, type('in'/'out'), qty, before, after, by, note }
+var _reviewAllocId = null;
+
+function loadInvData() {
+  try { invStock = JSON.parse(localStorage.getItem(LS_INV_STOCK)) || []; } catch(e) { invStock = []; }
+  try { invRequests = JSON.parse(localStorage.getItem(LS_INV_REQUESTS)) || []; } catch(e) { invRequests = []; }
+  try { invHistory = JSON.parse(localStorage.getItem(LS_INV_HISTORY)) || []; } catch(e) { invHistory = []; }
+}
+
+function saveInvData() {
+  localStorage.setItem(LS_INV_STOCK, JSON.stringify(invStock));
+  localStorage.setItem(LS_INV_REQUESTS, JSON.stringify(invRequests));
+  localStorage.setItem(LS_INV_HISTORY, JSON.stringify(invHistory));
+}
+
+function getAvailableQty(itemId) {
+  var entry = invStock.find(function(s) { return s.itemId === itemId; });
+  if (!entry) return 0;
+  return Math.max(0, (entry.inStock || 0) - (entry.allocated || 0));
+}
+
+function openInvTab(tab, btn) {
+  $$('.inv-tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var tc = g('invtab-content-' + tab);
+  if (tc) tc.classList.add('active');
+  $$('.tab-btn[id^="invtab-"]').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  if (tab === 'requests') renderInvRequestsTable();
+  if (tab === 'history') renderInvHistoryTable();
+}
+
+function renderInvSaleStock() {
+  loadInvData();
+  // Update KPI
+  var totalIn = invStock.reduce(function(s, x) { return s + (x.inStock || 0); }, 0);
+  var totalAlloc = invStock.reduce(function(s, x) { return s + (x.allocated || 0); }, 0);
+  var pending = invRequests.filter(function(r) { return r.status === 'pending'; }).length;
+  var kvTotal = g('inv-kv-total'); if (kvTotal) kvTotal.textContent = totalIn;
+  var kvAlloc = g('inv-kv-allocated'); if (kvAlloc) kvAlloc.textContent = totalAlloc;
+  var kvPending = g('inv-kv-pending'); if (kvPending) kvPending.textContent = pending;
+
+  // Role-based UI
+  var isSup = currentRole === 'supervisor' || currentRole === 'admin' || currentRole === 'cluster';
+  var supActions = g('inv-sale-sup-actions'); if (supActions) supActions.style.display = isSup ? '' : 'none';
+  var allocBtn = g('inv-allocate-btn'); if (allocBtn) allocBtn.style.display = isSup ? '' : 'none';
+  var newReqBtn = g('inv-new-request-btn'); if (newReqBtn) newReqBtn.style.display = isSup ? '' : 'none';
+  var actionsCol = g('inv-stock-actions-col'); if (actionsCol) actionsCol.style.display = isSup ? '' : 'none';
+
+  // Render stock table
+  var tbody = g('inv-stock-table');
+  if (!tbody) return;
+  if (!invStock.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#999;"><i class="fas fa-inbox fa-2x" style="display:block;margin-bottom:10px;"></i>No stock items yet.' + (isSup ? ' Click <strong>Add Stock</strong> to get started.' : '') + '</td></tr>';
+    return;
+  }
+  tbody.innerHTML = invStock.map(function(s, idx) {
+    var avail = Math.max(0, (s.inStock || 0) - (s.allocated || 0));
+    var statusBadge = avail <= 5
+      ? '<span class="inv-badge-status inv-badge-low"><i class="fas fa-triangle-exclamation"></i> Low</span>'
+      : '<span class="inv-badge-status inv-badge-ok"><i class="fas fa-check"></i> OK</span>';
+    return '<tr>' +
+      '<td>' + (idx + 1) + '</td>' +
+      '<td style="font-weight:600;">' + esc(s.itemName) + '</td>' +
+      '<td>' + esc(s.category || '-') + '</td>' +
+      '<td style="font-weight:700;color:#1B7D3D;">' + (s.inStock || 0) + '</td>' +
+      '<td style="color:#1565C0;">' + (s.allocated || 0) + '</td>' +
+      '<td style="font-weight:700;">' + avail + ' ' + statusBadge + '</td>' +
+      '<td style="color:#888;font-size:.8rem;">' + esc(s.lastUpdated || '-') + '</td>' +
+      (isSup ? '<td><button class="btn-edit" onclick="openAddStockModal(\'' + esc(s.id) + '\')"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteStockItem(\'' + esc(s.id) + '\')"><i class="fas fa-trash"></i></button></td>' : '<td></td>') +
+      '</tr>';
+  }).join('');
+}
+
+function renderInvRequestsTable() {
+  loadInvData();
+  var filter = g('inv-req-status-filter') ? g('inv-req-status-filter').value : '';
+  var isSup = currentRole === 'supervisor' || currentRole === 'admin' || currentRole === 'cluster';
+  var tbody = g('inv-requests-table');
+  if (!tbody) return;
+  var data = invRequests.filter(function(r) { return !filter || r.status === filter; });
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#999;"><i class="fas fa-inbox fa-2x" style="display:block;margin-bottom:10px;"></i>No requests found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(function(r, idx) {
+    var statusClass = { pending: 'inv-badge-pending', approved: 'inv-badge-approved', rejected: 'inv-badge-rejected' }[r.status] || 'inv-badge-pending';
+    var statusLabel = r.status ? (r.status.charAt(0).toUpperCase() + r.status.slice(1)) : 'Pending';
+    var actions = '';
+    if (isSup && r.status === 'pending') {
+      actions = '<button class="btn btn-sm btn-primary" onclick="openReviewAllocModal(\'' + esc(r.id) + '\')"><i class="fas fa-clipboard-check"></i> Review</button>';
+    }
+    return '<tr>' +
+      '<td>' + (idx + 1) + '</td>' +
+      '<td>' + esc(r.date || '-') + '</td>' +
+      '<td>' + esc(r.requestedBy || '-') + '</td>' +
+      '<td style="font-weight:600;">' + esc(r.itemName || '-') + '</td>' +
+      '<td style="font-weight:700;">' + (r.qty || 0) + '</td>' +
+      '<td style="color:#888;">' + esc(r.purpose || '-') + '</td>' +
+      '<td><span class="inv-badge-status ' + statusClass + '">' + statusLabel + '</span></td>' +
+      '<td>' + (actions || '<span style="color:#ccc;font-size:.8rem;">—</span>') + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function renderInvHistoryTable() {
+  loadInvData();
+  var tbody = g('inv-history-table');
+  if (!tbody) return;
+  var data = invHistory.slice().reverse();
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:#999;"><i class="fas fa-inbox fa-2x" style="display:block;margin-bottom:10px;"></i>No history yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(function(h, idx) {
+    var typeLabel = h.type === 'in'
+      ? '<span class="inv-type-in"><i class="fas fa-arrow-down"></i> IN</span>'
+      : '<span class="inv-type-out"><i class="fas fa-arrow-up"></i> OUT</span>';
+    return '<tr>' +
+      '<td>' + (idx + 1) + '</td>' +
+      '<td>' + esc(h.date || '-') + '</td>' +
+      '<td style="font-weight:600;">' + esc(h.itemName || '-') + '</td>' +
+      '<td>' + typeLabel + '</td>' +
+      '<td style="font-weight:700;">' + (h.qty || 0) + '</td>' +
+      '<td>' + (h.before || 0) + '</td>' +
+      '<td>' + (h.after || 0) + '</td>' +
+      '<td>' + esc(h.by || '-') + '</td>' +
+      '<td style="color:#888;font-size:.8rem;">' + esc(h.note || '-') + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function openAddStockModal(editId) {
+  var form = g('form-addStock');
+  if (form) form.reset();
+  // Populate item select
+  var sel = g('addstock-item');
+  if (sel) {
+    sel.innerHTML = '<option value="">Select item</option>' +
+      itemCatalogue.filter(function(x) { return x.status === 'active'; }).map(function(it) {
+        return '<option value="' + esc(it.id) + '">' + esc(it.name) + '</option>';
+      }).join('');
+  }
+  var editIdEl = g('addstock-edit-id');
+  if (editIdEl) editIdEl.value = '';
+  if (editId) {
+    loadInvData();
+    var entry = invStock.find(function(s) { return s.id === editId; });
+    if (entry) {
+      if (editIdEl) editIdEl.value = editId;
+      if (sel) sel.value = entry.itemId;
+      var qtyEl = g('addstock-qty'); if (qtyEl) qtyEl.value = entry.inStock || '';
+      var noteEl = g('addstock-note'); if (noteEl) noteEl.value = entry.note || '';
+    }
+  }
+  openModal('modal-addStock');
+}
+
+function submitAddStock(e) {
+  e.preventDefault();
+  loadInvData();
+  var itemId = rv('addstock-item');
+  var qty = parseInt(rv('addstock-qty'), 10);
+  var note = rv('addstock-note');
+  if (!itemId) { showToast('Please select an item.', 'error'); return; }
+  if (!qty || qty < 1) { showToast('Please enter a valid quantity.', 'error'); return; }
+  var item = itemCatalogue.find(function(x) { return x.id === itemId; });
+  if (!item) { showToast('Item not found.', 'error'); return; }
+  var editId = rv('addstock-edit-id');
+  var now = new Date().toISOString().slice(0, 10);
+  var byUser = currentUser ? currentUser.name : currentRole;
+
+  var existing = invStock.find(function(s) { return s.id === editId; }) ||
+                 invStock.find(function(s) { return s.itemId === itemId; });
+
+  if (existing && !editId) {
+    // Add to existing stock
+    var before = existing.inStock || 0;
+    existing.inStock = before + qty;
+    existing.lastUpdated = now;
+    invHistory.push({ id: 'ih' + Date.now(), date: now, itemId: itemId, itemName: item.name, type: 'in', qty: qty, before: before, after: existing.inStock, by: byUser, note: note || 'Stock added' });
+  } else if (existing && editId) {
+    var before2 = existing.inStock || 0;
+    existing.inStock = qty;
+    existing.lastUpdated = now;
+    invHistory.push({ id: 'ih' + Date.now(), date: now, itemId: itemId, itemName: item.name, type: 'in', qty: qty, before: before2, after: qty, by: byUser, note: note || 'Stock adjusted' });
+  } else {
+    invStock.push({ id: 'is' + Date.now(), itemId: itemId, itemName: item.name, category: item.category || '-', inStock: qty, allocated: 0, lastUpdated: now });
+    invHistory.push({ id: 'ih' + Date.now(), date: now, itemId: itemId, itemName: item.name, type: 'in', qty: qty, before: 0, after: qty, by: byUser, note: note || 'Initial stock' });
+  }
+  saveInvData();
+  closeModal('modal-addStock');
+  showToast('Stock updated successfully!', 'success');
+  renderInvSaleStock();
+}
+
+function deleteStockItem(id) {
+  showConfirm('Are you sure you want to delete this stock entry?', function() {
+    loadInvData();
+    invStock = invStock.filter(function(s) { return s.id !== id; });
+    saveInvData();
+    showToast('Stock entry deleted.', 'success');
+    renderInvSaleStock();
+  }, 'Delete Stock Entry', 'Delete', true);
+}
+
+function openAllocateModal() {
+  var form = g('form-allocate');
+  if (form) form.reset();
+  loadInvData();
+  var sel = g('allocate-item');
+  if (sel) {
+    sel.innerHTML = '<option value="">Select item</option>' +
+      invStock.map(function(s) {
+        var avail = Math.max(0, (s.inStock || 0) - (s.allocated || 0));
+        return '<option value="' + esc(s.itemId) + '">' + esc(s.itemName) + ' (Available: ' + avail + ')</option>';
+      }).join('');
+  }
+  var infoEl = g('allocate-available-info');
+  if (infoEl) infoEl.style.display = 'none';
+  openModal('modal-allocate');
+}
+
+function updateAllocateAvailable() {
+  var itemId = g('allocate-item') ? g('allocate-item').value : '';
+  var infoEl = g('allocate-available-info');
+  var qtyEl = g('allocate-avail-qty');
+  if (!itemId) { if (infoEl) infoEl.style.display = 'none'; return; }
+  var avail = getAvailableQty(itemId);
+  if (infoEl) infoEl.style.display = '';
+  if (qtyEl) qtyEl.textContent = avail;
+}
+
+function submitAllocationRequest(e) {
+  e.preventDefault();
+  loadInvData();
+  var itemId = rv('allocate-item');
+  var qty = parseInt(rv('allocate-qty'), 10);
+  var purpose = rv('allocate-purpose');
+  if (!itemId) { showToast('Please select an item.', 'error'); return; }
+  if (!qty || qty < 1) { showToast('Please enter a valid quantity.', 'error'); return; }
+
+  // Verify stock exists
+  var stockEntry = invStock.find(function(s) { return s.itemId === itemId; });
+  if (!stockEntry) { showToast('No stock found for this item.', 'error'); return; }
+
+  // Verify available quantity
+  var avail = getAvailableQty(itemId);
+  if (qty > avail) {
+    showToast('Requested quantity (' + qty + ') exceeds available stock (' + avail + ').', 'error');
+    return;
+  }
+
+  var now = new Date().toISOString().slice(0, 10);
+  var byUser = currentUser ? currentUser.name : currentRole;
+  invRequests.push({
+    id: 'ir' + Date.now(),
+    date: now,
+    requestedBy: byUser,
+    itemId: itemId,
+    itemName: stockEntry.itemName,
+    qty: qty,
+    purpose: purpose,
+    status: 'pending'
+  });
+  saveInvData();
+  closeModal('modal-allocate');
+  showToast('Allocation request submitted! Awaiting supervisor approval.', 'success');
+  renderInvRequestsTable();
+  renderInvSaleStock();
+}
+
+function openReviewAllocModal(requestId) {
+  loadInvData();
+  var req = invRequests.find(function(r) { return r.id === requestId; });
+  if (!req) return;
+  _reviewAllocId = requestId;
+  var avail = getAvailableQty(req.itemId);
+  var body = g('review-alloc-body');
+  if (body) {
+    var match = req.itemName && req.qty;
+    body.innerHTML =
+      '<div class="form-group">' +
+        '<div style="background:#F5F5F5;border-radius:10px;padding:16px;">' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:10px;">' +
+            '<span style="font-size:.8125rem;color:#888;">Request ID</span>' +
+            '<span style="font-size:.8125rem;font-weight:600;">' + esc(req.id) + '</span>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:10px;">' +
+            '<span style="font-size:.8125rem;color:#888;">Requested By</span>' +
+            '<span style="font-size:.8125rem;font-weight:600;">' + esc(req.requestedBy) + '</span>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:10px;">' +
+            '<span style="font-size:.8125rem;color:#888;">Date</span>' +
+            '<span style="font-size:.8125rem;">' + esc(req.date) + '</span>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:center;">' +
+            '<span style="font-size:.8125rem;color:#888;">Item Name</span>' +
+            '<span style="font-size:.875rem;font-weight:700;color:#1A1A2E;">' + esc(req.itemName) + '</span>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:center;">' +
+            '<span style="font-size:.8125rem;color:#888;">Qty Requested</span>' +
+            '<span style="font-size:1rem;font-weight:800;color:#1565C0;">' + req.qty + '</span>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:10px;">' +
+            '<span style="font-size:.8125rem;color:#888;">Available in Stock</span>' +
+            '<span style="font-size:.875rem;font-weight:700;color:' + (avail >= req.qty ? '#2E7D32' : '#C62828') + ';">' + avail + '</span>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+            '<span style="font-size:.8125rem;color:#888;">Purpose</span>' +
+            '<span style="font-size:.8125rem;max-width:55%;text-align:right;">' + esc(req.purpose) + '</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      (avail < req.qty ? '<div style="background:#FFEBEE;border-radius:8px;padding:10px 14px;font-size:.8125rem;color:#C62828;margin-top:8px;"><i class="fas fa-triangle-exclamation"></i> <strong>Warning:</strong> Available stock (' + avail + ') is less than requested (' + req.qty + '). Approval will not be possible.</div>' : '') +
+      '<div class="form-group" style="margin-top:12px;">' +
+        '<label class="form-label">Review Note (optional)</label>' +
+        '<input type="text" class="form-input" id="review-note-input" placeholder="e.g., Approved for weekly allocation" />' +
+      '</div>';
+  }
+  // Disable approve if not enough stock
+  var approveBtn = g('review-approve-btn');
+  if (approveBtn) approveBtn.disabled = avail < req.qty;
+  openModal('modal-reviewAlloc');
+}
+
+function processAllocation(action) {
+  loadInvData();
+  var req = invRequests.find(function(r) { return r.id === _reviewAllocId; });
+  if (!req) return;
+  var reviewNote = g('review-note-input') ? g('review-note-input').value.trim() : '';
+  var now = new Date().toISOString().slice(0, 10);
+  var byUser = currentUser ? currentUser.name : currentRole;
+
+  if (action === 'approved') {
+    // Verify item name and amount one more time
+    var stockEntry = invStock.find(function(s) { return s.itemId === req.itemId; });
+    if (!stockEntry) { showToast('Stock entry not found. Cannot approve.', 'error'); return; }
+    var avail = getAvailableQty(req.itemId);
+    if (req.qty > avail) {
+      showToast('Insufficient stock (' + avail + ' available, ' + req.qty + ' requested). Cannot approve.', 'error');
+      return;
+    }
+    // Auto-calculate: deduct from available (add to allocated)
+    var before = stockEntry.inStock || 0;
+    stockEntry.allocated = (stockEntry.allocated || 0) + req.qty;
+    invHistory.push({
+      id: 'ih' + Date.now(),
+      date: now,
+      itemId: req.itemId,
+      itemName: req.itemName,
+      type: 'out',
+      qty: req.qty,
+      before: before,
+      after: before,  // inStock doesn't change, allocated increases
+      by: byUser,
+      note: 'Allocated: ' + (reviewNote || req.purpose)
+    });
+    req.status = 'approved';
+    req.reviewedBy = byUser;
+    req.reviewNote = reviewNote;
+    saveInvData();
+    closeModal('modal-reviewAlloc');
+    showToast('Allocation approved! ' + req.qty + ' units of ' + req.itemName + ' allocated.', 'success');
+  } else {
+    req.status = 'rejected';
+    req.reviewedBy = byUser;
+    req.reviewNote = reviewNote;
+    saveInvData();
+    closeModal('modal-reviewAlloc');
+    showToast('Allocation request rejected.', 'info');
+  }
+  _reviewAllocId = null;
+  renderInvRequestsTable();
+  renderInvSaleStock();
+}
+
+function renderShopStockTable() {
+  loadInvData();
+  var branchFilter = g('shop-stock-branch-filter') ? g('shop-stock-branch-filter').value : '';
+  var tbody = g('shop-stock-table');
+  if (!tbody) return;
+
+  // Build shop stock from approved allocations
+  var approved = invRequests.filter(function(r) {
+    return r.status === 'approved';
+  });
+
+  if (!approved.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#999;"><i class="fas fa-store fa-2x" style="display:block;margin-bottom:10px;"></i>No allocated stock for shops yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = approved.filter(function(r) {
+    return !branchFilter || (r.purpose && r.purpose.toLowerCase().indexOf(branchFilter.toLowerCase()) !== -1);
+  }).map(function(r, idx) {
+    var stockEntry = invStock.find(function(s) { return s.itemId === r.itemId; });
+    var remaining = r.qty;  // simplified: show full allocated qty
+    var statusBadge = '<span class="inv-badge-status inv-badge-approved">Active</span>';
+    return '<tr>' +
+      '<td>' + (idx + 1) + '</td>' +
+      '<td>' + esc(r.purpose || '-') + '</td>' +
+      '<td style="font-weight:600;">' + esc(r.itemName) + '</td>' +
+      '<td style="font-weight:700;color:#1565C0;">' + (r.qty || 0) + '</td>' +
+      '<td>0</td>' +
+      '<td style="font-weight:700;color:#1B7D3D;">' + remaining + '</td>' +
+      '<td>' + esc(r.date || '-') + '</td>' +
+      '<td>' + statusBadge + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+// ------------------------------------------------------------
 // Init
 // ------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function() {
   loadAllData();
+  loadInvData();
   filteredSales = saleRecords.slice();
   populateBranchSelects();
   renderItemChips();
@@ -2976,6 +3438,16 @@ document.addEventListener('DOMContentLoaded', function() {
   updateDepositKpis();
   renderSaleTable();
   updateSaleKpis();
+
+  // Populate shop stock branch filter
+  var shopFilter = g('shop-stock-branch-filter');
+  if (shopFilter) {
+    BRANCHES.forEach(function(b) {
+      var opt = document.createElement('option');
+      opt.value = b; opt.textContent = b;
+      shopFilter.appendChild(opt);
+    });
+  }
 });
 
 document.addEventListener('click', function(e) {
