@@ -3431,8 +3431,11 @@ function renderShopStockTable() {
 // ------------------------------------------------------------
 
 function initApprovalSignaturePad() {
-  var canvas = g('approval-sig-canvas');
-  if (!canvas) return;
+  var oldCanvas = g('approval-sig-canvas');
+  if (!oldCanvas || !oldCanvas.parentNode) return;
+  // Replace canvas with a fresh clone to remove any stale event listeners
+  var canvas = oldCanvas.cloneNode(false);
+  oldCanvas.parentNode.replaceChild(canvas, oldCanvas);
   _sigCanvas = canvas;
   _sigCtx = canvas.getContext('2d');
   _sigCtx.strokeStyle = '#1A1A2E';
@@ -3470,19 +3473,11 @@ function showApprovalFormModal(type, data) {
   var submitterEl = g('approval-submitter-name');
   var approverEl = g('approval-approver-name');
 
-  var isDeposit = (type === 'deposit');
-  var formTitle = isDeposit ? 'Daily Cash & Credit Deposit Approval' : 'Stock Allocation Approval';
-  if (titleEl) titleEl.innerHTML = '<i class="fas fa-file-contract" style="color:#1B7D3D;margin-right:8px;"></i>' + formTitle;
-
-  var submitter = isDeposit ? (data.agent || '') : (data.requestedBy || '');
-  var approver  = isDeposit ? (data.approvedBy || '') : (data.reviewedBy || '');
-  var dateSubmitted = data.date || '';
-  var dateApproved  = isDeposit ? (data.approvedAt || '') : (data.reviewedAt || new Date().toISOString().slice(0,10));
-  var branch   = isDeposit ? (data.branch || '') : '';
-  var remark   = isDeposit ? (data.remark || '') : (data.reviewNote || data.purpose || '');
+  var v = _getApprovalFormVars(type, data);
+  if (titleEl) titleEl.innerHTML = '<i class="fas fa-file-contract" style="color:#1B7D3D;margin-right:8px;"></i>' + v.formTitle;
 
   var detailRows = '';
-  if (isDeposit) {
+  if (v.isDeposit) {
     detailRows =
       '<tr><td style="padding:7px 12px;font-weight:600;color:#555;background:#f5f7fa;border-bottom:1px solid #eee;width:45%;">Cash Amount</td>' +
         '<td style="padding:7px 12px;border-bottom:1px solid #eee;font-weight:700;color:#1B7D3D;">$' + (data.cash ? Number(data.cash).toFixed(2) : '0.00') + '</td></tr>' +
@@ -3505,26 +3500,26 @@ function showApprovalFormModal(type, data) {
       '<div style="border:2px solid #1B7D3D;border-radius:8px;overflow:hidden;">' +
         '<div style="background:#1B7D3D;color:#fff;padding:12px 16px;text-align:center;">' +
           '<div style="font-size:1.1rem;font-weight:700;letter-spacing:.5px;">SMART 5G DASHBOARD</div>' +
-          '<div style="font-size:.85rem;opacity:.9;margin-top:2px;">' + formTitle.toUpperCase() + '</div>' +
+          '<div style="font-size:.85rem;opacity:.9;margin-top:2px;">' + v.formTitle.toUpperCase() + '</div>' +
         '</div>' +
         '<table style="width:100%;border-collapse:collapse;">' +
           '<tr><td style="padding:7px 12px;font-weight:600;color:#555;background:#f5f7fa;border-bottom:1px solid #eee;width:45%;">Submitter Name</td>' +
-            '<td style="padding:7px 12px;border-bottom:1px solid #eee;font-weight:600;">' + esc(submitter) + '</td></tr>' +
-          (branch ? '<tr><td style="padding:7px 12px;font-weight:600;color:#555;background:#f5f7fa;border-bottom:1px solid #eee;">Branch</td><td style="padding:7px 12px;border-bottom:1px solid #eee;">' + esc(branch) + '</td></tr>' : '') +
+            '<td style="padding:7px 12px;border-bottom:1px solid #eee;font-weight:600;">' + esc(v.submitter) + '</td></tr>' +
+          (v.branch ? '<tr><td style="padding:7px 12px;font-weight:600;color:#555;background:#f5f7fa;border-bottom:1px solid #eee;">Branch</td><td style="padding:7px 12px;border-bottom:1px solid #eee;">' + esc(v.branch) + '</td></tr>' : '') +
           '<tr><td style="padding:7px 12px;font-weight:600;color:#555;background:#f5f7fa;border-bottom:1px solid #eee;">Date Submitted</td>' +
-            '<td style="padding:7px 12px;border-bottom:1px solid #eee;">' + esc(dateSubmitted) + '</td></tr>' +
+            '<td style="padding:7px 12px;border-bottom:1px solid #eee;">' + esc(v.dateSubmitted) + '</td></tr>' +
           detailRows +
-          (remark ? '<tr><td style="padding:7px 12px;font-weight:600;color:#555;background:#f5f7fa;border-bottom:1px solid #eee;">Remark / Note</td><td style="padding:7px 12px;border-bottom:1px solid #eee;">' + esc(remark) + '</td></tr>' : '') +
+          (v.remark ? '<tr><td style="padding:7px 12px;font-weight:600;color:#555;background:#f5f7fa;border-bottom:1px solid #eee;">Remark / Note</td><td style="padding:7px 12px;border-bottom:1px solid #eee;">' + esc(v.remark) + '</td></tr>' : '') +
           '<tr><td style="padding:7px 12px;font-weight:600;color:#555;background:#f5f7fa;border-bottom:1px solid #eee;">Approved By</td>' +
-            '<td style="padding:7px 12px;border-bottom:1px solid #eee;font-weight:600;color:#1B7D3D;">' + esc(approver) + '</td></tr>' +
+            '<td style="padding:7px 12px;border-bottom:1px solid #eee;font-weight:600;color:#1B7D3D;">' + esc(v.approver) + '</td></tr>' +
           '<tr><td style="padding:7px 12px;font-weight:600;color:#555;background:#f5f7fa;">Date Approved</td>' +
-            '<td style="padding:7px 12px;font-weight:600;">' + esc(dateApproved) + '</td></tr>' +
+            '<td style="padding:7px 12px;font-weight:600;">' + esc(v.dateApproved) + '</td></tr>' +
         '</table>' +
       '</div>';
   }
 
-  if (submitterEl) submitterEl.textContent = submitter;
-  if (approverEl) approverEl.textContent = approver;
+  if (submitterEl) submitterEl.textContent = v.submitter;
+  if (approverEl) approverEl.textContent = v.approver;
 
   // Clear previous signature
   clearApprovalSignature();
@@ -3534,34 +3529,44 @@ function showApprovalFormModal(type, data) {
   setTimeout(initApprovalSignaturePad, 50);
 }
 
+function _escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function _getApprovalFormVars(type, data) {
+  var isDeposit = (type === 'deposit');
+  return {
+    isDeposit: isDeposit,
+    formTitle: isDeposit ? 'Daily Cash & Credit Deposit Approval' : 'Stock Allocation Approval',
+    submitter: isDeposit ? (data.agent || '') : (data.requestedBy || ''),
+    approver:  isDeposit ? (data.approvedBy || '') : (data.reviewedBy || ''),
+    dateSubmitted: data.date || '',
+    dateApproved:  isDeposit ? (data.approvedAt || '') : (data.reviewedAt || ''),
+    branch: isDeposit ? (data.branch || '') : '',
+    remark: isDeposit ? (data.remark || '') : (data.reviewNote || data.purpose || '')
+  };
+}
+
 function printApprovalForm() {
   if (!_approvalFormData) return;
-  var isDeposit = (_approvalFormData.type === 'deposit');
+  var v = _getApprovalFormVars(_approvalFormData.type, _approvalFormData.data);
   var data = _approvalFormData.data;
-  var formTitle = isDeposit ? 'Daily Cash & Credit Deposit Approval' : 'Stock Allocation Approval';
-  var submitter = isDeposit ? (data.agent || '') : (data.requestedBy || '');
-  var approver  = isDeposit ? (data.approvedBy || '') : (data.reviewedBy || '');
-  var dateSubmitted = data.date || '';
-  var dateApproved  = isDeposit ? (data.approvedAt || '') : (data.reviewedAt || new Date().toISOString().slice(0,10));
-  var branch   = isDeposit ? (data.branch || '') : '';
-  var remark   = isDeposit ? (data.remark || '') : (data.reviewNote || data.purpose || '');
-
   var sigDataUrl = (_sigCanvas && _sigCanvas.getContext) ? _sigCanvas.toDataURL('image/png') : '';
 
   var detailHtml = '';
-  if (isDeposit) {
+  if (v.isDeposit) {
     detailHtml =
       '<tr><td class="lbl">Cash Amount</td><td class="val" style="color:#1B7D3D;">$' + (data.cash ? Number(data.cash).toFixed(2) : '0.00') + '</td></tr>' +
       '<tr><td class="lbl">Credit Amount</td><td class="val" style="color:#1565C0;">$' + (data.credit ? Number(data.credit).toFixed(2) : '0.00') + '</td></tr>' +
       '<tr><td class="lbl">Total Amount</td><td class="val" style="font-weight:700;color:#E65100;">$' + ((Number(data.cash)||0) + (Number(data.credit)||0)).toFixed(2) + '</td></tr>';
   } else {
     detailHtml =
-      '<tr><td class="lbl">Item Name</td><td class="val">' + (data.itemName || '') + '</td></tr>' +
-      '<tr><td class="lbl">Quantity Allocated</td><td class="val" style="color:#1565C0;font-weight:700;">' + (data.qty || 0) + '</td></tr>' +
-      '<tr><td class="lbl">Purpose</td><td class="val">' + (data.purpose || '') + '</td></tr>';
+      '<tr><td class="lbl">Item Name</td><td class="val">' + _escHtml(data.itemName) + '</td></tr>' +
+      '<tr><td class="lbl">Quantity Allocated</td><td class="val" style="color:#1565C0;font-weight:700;">' + _escHtml(String(data.qty || 0)) + '</td></tr>' +
+      '<tr><td class="lbl">Purpose</td><td class="val">' + _escHtml(data.purpose) + '</td></tr>';
   }
 
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + formTitle + '</title><style>' +
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + _escHtml(v.formTitle) + '</title><style>' +
     'body{font-family:Arial,sans-serif;padding:32px;color:#1A1A2E;font-size:13px;max-width:700px;margin:0 auto;}' +
     '.header{background:#1B7D3D;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;text-align:center;}' +
     '.header h1{margin:0;font-size:1.1rem;letter-spacing:.5px;}' +
@@ -3580,23 +3585,23 @@ function printApprovalForm() {
     '@media print{body{padding:16px;} button{display:none!important;} .no-print{display:none!important;}}' +
     '</style></head><body>' +
     '<div class="no-print" style="margin-bottom:16px;text-align:right;">' +
-      '<button onclick="window.print()" style="background:#1B7D3D;color:#fff;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-size:.875rem;">🖨 Print / Save as PDF</button>' +
+      '<button onclick="window.print()" style="background:#1B7D3D;color:#fff;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-size:.875rem;">\uD83D\uDDB6 Print / Save as PDF</button>' +
     '</div>' +
-    '<div class="header"><h1>SMART 5G DASHBOARD</h1><p>' + formTitle.toUpperCase() + '</p></div>' +
+    '<div class="header"><h1>SMART 5G DASHBOARD</h1><p>' + _escHtml(v.formTitle).toUpperCase() + '</p></div>' +
     '<table>' +
-      '<tr><td class="lbl">Submitter Name</td><td class="val">' + submitter + '</td></tr>' +
-      (branch ? '<tr><td class="lbl">Branch</td><td class="val">' + branch + '</td></tr>' : '') +
-      '<tr><td class="lbl">Date Submitted</td><td class="val">' + dateSubmitted + '</td></tr>' +
+      '<tr><td class="lbl">Submitter Name</td><td class="val">' + _escHtml(v.submitter) + '</td></tr>' +
+      (v.branch ? '<tr><td class="lbl">Branch</td><td class="val">' + _escHtml(v.branch) + '</td></tr>' : '') +
+      '<tr><td class="lbl">Date Submitted</td><td class="val">' + _escHtml(v.dateSubmitted) + '</td></tr>' +
       detailHtml +
-      (remark ? '<tr><td class="lbl">Remark / Note</td><td class="val">' + remark + '</td></tr>' : '') +
-      '<tr><td class="lbl">Approved By</td><td class="val" style="color:#1B7D3D;font-weight:600;">' + approver + '</td></tr>' +
-      '<tr><td class="lbl">Date Approved</td><td class="val">' + dateApproved + '</td></tr>' +
+      (v.remark ? '<tr><td class="lbl">Remark / Note</td><td class="val">' + _escHtml(v.remark) + '</td></tr>' : '') +
+      '<tr><td class="lbl">Approved By</td><td class="val" style="color:#1B7D3D;font-weight:600;">' + _escHtml(v.approver) + '</td></tr>' +
+      '<tr><td class="lbl">Date Approved</td><td class="val">' + _escHtml(v.dateApproved) + '</td></tr>' +
     '</table>' +
     '<div class="sig-section">' +
-      '<div class="sig-box"><p>Submitter Signature:</p><div class="sig-line"></div><div class="sig-name">' + submitter + '</div></div>' +
+      '<div class="sig-box"><p>Submitter Signature:</p><div class="sig-line"></div><div class="sig-name">' + _escHtml(v.submitter) + '</div></div>' +
       '<div class="sig-box"><p>Supervisor / Approver Signature:</p>' +
-        (sigDataUrl ? '<img src="' + sigDataUrl + '" class="sig-img" alt="Signature" />' : '<div class="sig-line"></div>') +
-        '<div class="sig-name">' + approver + '</div></div>' +
+        (sigDataUrl ? '<img src="' + _escHtml(sigDataUrl) + '" class="sig-img" alt="Signature" />' : '<div class="sig-line"></div>') +
+        '<div class="sig-name">' + _escHtml(v.approver) + '</div></div>' +
     '</div>' +
     '<div class="footer">Generated by Smart 5G Dashboard &bull; ' + new Date().toLocaleString() + '</div>' +
     '</body></html>';
@@ -3611,29 +3616,22 @@ function printApprovalForm() {
 
 function emailApprovalForm() {
   if (!_approvalFormData) return;
-  var isDeposit = (_approvalFormData.type === 'deposit');
+  var v = _getApprovalFormVars(_approvalFormData.type, _approvalFormData.data);
   var data = _approvalFormData.data;
-  var formTitle = isDeposit ? 'Daily Cash & Credit Deposit Approval' : 'Stock Allocation Approval';
-  var submitter = isDeposit ? (data.agent || '') : (data.requestedBy || '');
-  var approver  = isDeposit ? (data.approvedBy || '') : (data.reviewedBy || '');
-  var dateSubmitted = data.date || '';
-  var dateApproved  = isDeposit ? (data.approvedAt || '') : (data.reviewedAt || new Date().toISOString().slice(0,10));
-  var branch   = isDeposit ? (data.branch || '') : '';
-  var remark   = isDeposit ? (data.remark || '') : (data.reviewNote || data.purpose || '');
 
-  var subject = 'Smart 5G — ' + formTitle + ' — ' + dateApproved;
+  var subject = 'Smart 5G \u2014 ' + v.formTitle + ' \u2014 ' + v.dateApproved;
 
   var bodyLines = [
     'SMART 5G DASHBOARD',
-    formTitle.toUpperCase(),
-    '='.repeat(40),
+    v.formTitle.toUpperCase(),
+    '========================================',
     '',
-    'Submitter Name  : ' + submitter,
+    'Submitter Name  : ' + v.submitter,
   ];
-  if (branch) bodyLines.push('Branch          : ' + branch);
-  bodyLines.push('Date Submitted  : ' + dateSubmitted);
+  if (v.branch) bodyLines.push('Branch          : ' + v.branch);
+  bodyLines.push('Date Submitted  : ' + v.dateSubmitted);
 
-  if (isDeposit) {
+  if (v.isDeposit) {
     bodyLines.push('Cash Amount     : $' + (data.cash ? Number(data.cash).toFixed(2) : '0.00'));
     bodyLines.push('Credit Amount   : $' + (data.credit ? Number(data.credit).toFixed(2) : '0.00'));
     bodyLines.push('Total Amount    : $' + ((Number(data.cash)||0) + (Number(data.credit)||0)).toFixed(2));
@@ -3643,17 +3641,17 @@ function emailApprovalForm() {
     bodyLines.push('Purpose         : ' + (data.purpose || ''));
   }
 
-  if (remark) bodyLines.push('Remark / Note   : ' + remark);
-  bodyLines.push('Approved By     : ' + approver);
-  bodyLines.push('Date Approved   : ' + dateApproved);
+  if (v.remark) bodyLines.push('Remark / Note   : ' + v.remark);
+  bodyLines.push('Approved By     : ' + v.approver);
+  bodyLines.push('Date Approved   : ' + v.dateApproved);
   bodyLines.push('');
   bodyLines.push('---');
   bodyLines.push('Note: Please print the approval form (use "Print / Save PDF" button), sign it, and attach to this email for records.');
   bodyLines.push('');
-  bodyLines.push('Generated by Smart 5G Dashboard — ' + new Date().toLocaleString());
+  bodyLines.push('Generated by Smart 5G Dashboard \u2014 ' + new Date().toLocaleString());
 
   var mailtoLink = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(bodyLines.join('\r\n'));
-  window.location.href = mailtoLink;
+  window.open(mailtoLink);
 }
 
 // ------------------------------------------------------------
