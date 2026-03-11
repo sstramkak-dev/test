@@ -1314,7 +1314,7 @@ input, select, textarea, button {
    ============================================================ */
 #sale-total-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
   gap: 20px;
   padding: 12px 20px;
