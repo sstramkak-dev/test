@@ -4409,9 +4409,11 @@ function selectCommuneSuggestion(idx) {
   // Fill lat/lng with centre
   var lat = parseFloat(r.lat);
   var lng = parseFloat(r.lon);
-  var latEl = g('cov-lat'); var lngEl = g('cov-lng');
-  if (latEl) latEl.value = lat.toFixed(6);
-  if (lngEl) lngEl.value = lng.toFixed(6);
+  if (!isNaN(lat) && !isNaN(lng)) {
+    var latEl = g('cov-lat'); var lngEl = g('cov-lng');
+    if (latEl) latEl.value = lat.toFixed(6);
+    if (lngEl) lngEl.value = lng.toFixed(6);
+  }
 
   // Highlight on picker map
   if (typeof L !== 'undefined' && _covPickerMap) {
@@ -4423,16 +4425,22 @@ function selectCommuneSuggestion(idx) {
     if (r.boundingbox && r.boundingbox.length === 4) {
       var s = parseFloat(r.boundingbox[0]), n = parseFloat(r.boundingbox[1]);
       var w = parseFloat(r.boundingbox[2]), e = parseFloat(r.boundingbox[3]);
-      _covPickerHighlight = L.rectangle([[s, w], [n, e]], {
-        color: '#1B7D3D', weight: 2, fillColor: '#1B7D3D', fillOpacity: 0.2
-      }).addTo(_covPickerMap);
-      _covPickerMap.fitBounds([[s, w], [n, e]], { padding: [30, 30] });
-    } else {
+      if (!isNaN(s) && !isNaN(n) && !isNaN(w) && !isNaN(e)) {
+        _covPickerHighlight = L.rectangle([[s, w], [n, e]], {
+          color: '#1B7D3D', weight: 2, fillColor: '#1B7D3D', fillOpacity: 0.2
+        }).addTo(_covPickerMap);
+        _covPickerMap.fitBounds([[s, w], [n, e]], { padding: [30, 30] });
+      } else if (!isNaN(lat) && !isNaN(lng)) {
+        _covPickerMap.setView([lat, lng], 14);
+      }
+    } else if (!isNaN(lat) && !isNaN(lng)) {
       _covPickerMap.setView([lat, lng], 14);
     }
 
     // Add centre marker
-    _covPickerMarker = L.marker([lat, lng]).addTo(_covPickerMap);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      _covPickerMarker = L.marker([lat, lng]).addTo(_covPickerMap);
+    }
   }
 }
 
