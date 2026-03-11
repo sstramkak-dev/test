@@ -18,6 +18,7 @@ let itemGroupSelected = 'unit'; // 'unit' or 'dollar'
 let kpiValueMode = 'unit'; // 'unit' or 'currency'
 let kpiTypeSelected = 'Sales';
 let kpiForSelected = 'shop'; // 'shop' or 'agent'
+let kpiSelectedMonth = ''; // '' means no filter (show all)
 
 // Chart instances
 let _cTrend = null, _cMix = null, _cAgent = null, _cGrowth = null;
@@ -347,7 +348,7 @@ function navigateTo(page, btn) {
 
   if (page === 'dashboard') renderDashboard();
   if (page === 'promotionPage') renderPromotionCards();
-  if (page === 'kpi') renderKpiTable();
+  if (page === 'kpi') { initKpiMonthPicker(); renderKpiTable(); }
   if (page === 'deposit') { renderDepositTable(); updateDepositKpis(); }
   if (page === 'sale') { renderItemChips(); applyReportFilters(); }
   if (page === 'customer') {
@@ -951,12 +952,26 @@ function applyReportFilters() {
 }
 
 function clearReportFilters() {
-  ['sale-date-from', 'sale-date-to', 'sale-filter-agent', 'sale-filter-branch'].forEach(function(id) {
+  ['sale-date-from', 'sale-date-to', 'sale-date-search', 'sale-filter-agent', 'sale-filter-branch'].forEach(function(id) {
     const el = g(id); if (el) el.value = '';
   });
   filteredSales = getSaleBaseRecords();
   renderSaleTable();
   updateSaleKpis();
+}
+
+function setSaleDateSearch(dateVal) {
+  // Set both From and To to the same date for a quick single-date search
+  const fromEl = g('sale-date-from');
+  const toEl = g('sale-date-to');
+  if (fromEl) fromEl.value = dateVal;
+  if (toEl) toEl.value = dateVal;
+  applyReportFilters();
+}
+
+function clearSaleDateSearch() {
+  const el = g('sale-date-search');
+  if (el) el.value = '';
 }
 
 function setReportView(view) {
@@ -1452,8 +1467,8 @@ function renderDashboard() {
 // ------------------------------------------------------------
 // KPI vs Actual Achievement Dashboard
 // ------------------------------------------------------------
-function calcKpiActual(kpi) {
-  const ym = ymNow();
+function calcKpiActual(kpi, ym) {
+  if (!ym) ym = ymNow();
   const currSales = saleRecords.filter(function(s) { return ymOf(s.date) === ym; });
   let filtered = currSales;
   if (kpi.kpiFor === 'agent') {
@@ -1803,13 +1818,20 @@ function deleteNewCustomer(id) {
 function renderNewCustomerTable() {
   const tbody = g('new-customer-table');
   if (!tbody) return;
-  if (!newCustomers.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No customers yet</td></tr>';
+  const searchVal = (rv('nc-search') || '').toLowerCase().trim();
+  const list = searchVal
+    ? newCustomers.filter(function(c) {
+        return (c.name || '').toLowerCase().includes(searchVal) ||
+               (c.phone || '').toLowerCase().includes(searchVal);
+      })
+    : newCustomers;
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users" style="font-size:2rem;display:block;margin-bottom:8px;"></i>' + (searchVal ? 'No results found' : 'No customers yet') + '</td></tr>';
     return;
   }
   const statusPillMap = { follow: 'pill-gray', lead: 'pill-blue', 'hot-prospect': 'pill-orange', close: 'pill-green' };
   const statusLabelMap = { follow: 'Follow', lead: 'Lead', 'hot-prospect': 'Hot Prospect', close: 'Close' };
-  tbody.innerHTML = newCustomers.map(function(c, i) {
+  tbody.innerHTML = list.map(function(c, i) {
     const avIdx = i % 8;
     const st = c.status || 'follow';
     const stPill = statusPillMap[st] || 'pill-gray';
@@ -1957,7 +1979,18 @@ function renderTopUpTable() {
     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-coins" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No top up records yet</td></tr>';
     return;
   }
-  tbody.innerHTML = topUpList.map(function(c, i) {
+  const tuSearchVal = (rv('tu-search') || '').toLowerCase().trim();
+  const tuList = tuSearchVal
+    ? topUpList.filter(function(c) {
+        return (c.name || '').toLowerCase().includes(tuSearchVal) ||
+               (c.phone || '').toLowerCase().includes(tuSearchVal);
+      })
+    : topUpList;
+  if (!tuList.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-coins" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No results found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = tuList.map(function(c, i) {
     const avIdx = i % 8;
     const tuSt = c.tuStatus || 'active';
     const stPill = tuSt === 'active' ? 'pill-green' : 'pill-red';
@@ -2044,7 +2077,18 @@ function renderTerminationTable() {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-times-circle" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No termination records yet</td></tr>';
     return;
   }
-  tbody.innerHTML = terminationList.map(function(c, i) {
+  const termSearchVal = (rv('term-search') || '').toLowerCase().trim();
+  const termList = termSearchVal
+    ? terminationList.filter(function(c) {
+        return (c.name || '').toLowerCase().includes(termSearchVal) ||
+               (c.phone || '').toLowerCase().includes(termSearchVal);
+      })
+    : terminationList;
+  if (!termList.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-times-circle" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No results found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = termList.map(function(c, i) {
     const avIdx = i % 8;
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
@@ -2886,11 +2930,38 @@ function deleteKpi(id) {
   }, 'Delete KPI', 'Delete');
 }
 
+function setKpiMonth(mode) {
+  const picker = g('kpi-month-picker');
+  if (mode === 'current') {
+    kpiSelectedMonth = ymNow();
+  } else if (mode === 'prev') {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    kpiSelectedMonth = d.toISOString().substring(0, 7);
+  } else {
+    kpiSelectedMonth = '';
+  }
+  if (picker) picker.value = kpiSelectedMonth;
+  renderKpiTable();
+}
+
+function onKpiMonthChange() {
+  const picker = g('kpi-month-picker');
+  kpiSelectedMonth = picker ? picker.value : '';
+  renderKpiTable();
+}
+
+function initKpiMonthPicker() {
+  if (!kpiSelectedMonth) kpiSelectedMonth = ymNow();
+  const picker = g('kpi-month-picker');
+  if (picker) picker.value = kpiSelectedMonth;
+}
+
 function renderKpiTable() {
   const tbody = g('kpi-table');
   if (!tbody) return;
   if (!kpiList.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-chart-line" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No KPIs defined yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-chart-line" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No KPIs defined yet</td></tr>';
     return;
   }
   tbody.innerHTML = kpiList.map(function(k, i) {
@@ -2901,12 +2972,24 @@ function renderKpiTable() {
     const assignee = staffList.find(function(u) { return u.id === k.assigneeId; });
     const forLabel = k.kpiFor === 'shop' ? '<span class="pill pill-blue"><i class="fas fa-store"></i> Shop</span>' : '<span class="pill pill-orange"><i class="fas fa-user"></i> Agent</span>';
     const assigneeName = assignee ? esc(assignee.name) : (k.assigneeBranch ? esc(k.assigneeBranch) : '—');
+    // Compute actual & achievement for selected month
+    const ym = kpiSelectedMonth || ymNow();
+    const actual = Math.round(calcKpiActual(k, ym) * 100) / 100;
+    const pct = k.target > 0 ? Math.round(actual / k.target * 100) : 0;
+    const pctClass = pct >= 100 ? 'pill-green' : pct >= 70 ? 'pill-orange' : 'pill-red';
+    const actualDisplay = k.valueMode === 'currency'
+      ? fmtMoney(actual, esc(k.currency) + ' ')
+      : actual + ' ' + esc(k.unit || '');
+    const progressBar = '<div style="background:#eee;border-radius:4px;height:6px;width:80px;display:inline-block;vertical-align:middle;margin-right:4px;">' +
+      '<div style="background:' + (pct >= 100 ? '#1B7D3D' : pct >= 70 ? '#FF9800' : '#E53935') + ';width:' + Math.min(pct, 100) + '%;height:100%;border-radius:4px;"></div></div>';
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
       '<td>' + esc(k.name) + '</td>' +
       '<td><span class="pill ' + typePill + '">' + esc(k.type) + '</span></td>' +
       '<td>' + forLabel + '<br><small style="color:#888;">' + assigneeName + '</small></td>' +
       '<td>' + valueDisplay + '</td>' +
+      '<td>' + actualDisplay + '</td>' +
+      '<td>' + progressBar + '<span class="pill ' + pctClass + '" style="font-size:.72rem;">' + pct + '%</span></td>' +
       '<td>' + esc(k.period || '') + '</td>' +
       '<td style="white-space:nowrap;">' +
         '<button class="btn-edit" onclick="editKpi(\'' + esc(k.id) + '\')"><i class="fas fa-edit"></i></button> ' +
