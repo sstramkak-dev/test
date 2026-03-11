@@ -1969,6 +1969,43 @@
     </div>
   </div>
 
+  <!-- ===================== APPROVAL FORM MODAL ===================== -->
+  <div class="modal-overlay" id="modal-approvalForm" onclick="handleOverlay(event,'modal-approvalForm')">
+    <div class="modal" style="max-width:620px;width:100%;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="approval-form-title"><i class="fas fa-file-contract" style="color:#1B7D3D;margin-right:8px;"></i>Approval Form</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-approvalForm')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <!-- Form content filled dynamically -->
+        <div id="approval-form-content"></div>
+
+        <!-- Signature Section -->
+        <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div>
+            <p style="font-weight:600;font-size:.85rem;color:#555;margin:0 0 6px;">Submitter Signature:</p>
+            <div style="border-bottom:2px solid #333;height:56px;border-radius:0;"></div>
+            <p id="approval-submitter-name" style="font-size:.8rem;color:#333;margin:4px 0 0;font-style:italic;"></p>
+          </div>
+          <div>
+            <p style="font-weight:600;font-size:.85rem;color:#555;margin:0 0 6px;">Supervisor / Approver Signature:
+              <button onclick="clearApprovalSignature()" title="Clear signature" style="float:right;background:none;border:none;cursor:pointer;font-size:.75rem;color:#999;padding:0;"><i class="fas fa-eraser"></i> Clear</button>
+            </p>
+            <canvas id="approval-sig-canvas" width="240" height="56" style="border:1px solid #bbb;border-radius:4px;display:block;background:#fafafa;cursor:crosshair;touch-action:none;width:100%;"></canvas>
+            <p id="approval-approver-name" style="font-size:.8rem;color:#333;margin:4px 0 0;font-style:italic;"></p>
+          </div>
+        </div>
+
+        <p style="font-size:.75rem;color:#999;margin:16px 0 0;text-align:center;"><i class="fas fa-info-circle"></i> Print and sign this form to keep as a physical record.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-approvalForm')">Close</button>
+        <button class="btn btn-outline" onclick="emailApprovalForm()"><i class="fas fa-envelope"></i> Send via Outlook</button>
+        <button class="btn btn-primary" onclick="printApprovalForm()"><i class="fas fa-print"></i> Print / Save PDF</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== ROLE WIDGET ===================== -->
   <div id="role-widget">
     <div id="role-widget-dropdown">
