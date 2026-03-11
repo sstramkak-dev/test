@@ -4167,7 +4167,7 @@ function renderCoverageTable(tab) {
   var isAdmin = (currentRole === 'admin' || currentRole === 'cluster');
 
   if (!locs.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-map" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No coverage locations found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="' + (isAdmin ? 6 : 5) + '" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-map" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No coverage locations found</td></tr>';
     return;
   }
 
@@ -4203,8 +4203,8 @@ function openAddCoverageModal() {
       attribution: '© OpenStreetMap contributors'
     }).addTo(_covPickerMap);
     _covPickerMap.on('click', function(e) {
-      var lat = e.latlng.lat.toFixed(6);
-      var lng = e.latlng.lng.toFixed(6);
+      var lat = parseFloat(e.latlng.lat.toFixed(6));
+      var lng = parseFloat(e.latlng.lng.toFixed(6));
       var latEl = g('cov-lat'); var lngEl = g('cov-lng');
       if (latEl) latEl.value = lat;
       if (lngEl) lngEl.value = lng;
@@ -4251,8 +4251,8 @@ function editCoverageLocation(id) {
       _covPickerMarker = L.marker([loc.lat, loc.lng]).addTo(_covPickerMap);
     }
     _covPickerMap.on('click', function(e) {
-      var lat = e.latlng.lat.toFixed(6);
-      var lng = e.latlng.lng.toFixed(6);
+      var lat = parseFloat(e.latlng.lat.toFixed(6));
+      var lng = parseFloat(e.latlng.lng.toFixed(6));
       var latEl = g('cov-lat'); var lngEl = g('cov-lng');
       if (latEl) latEl.value = lat;
       if (lngEl) lngEl.value = lng;
