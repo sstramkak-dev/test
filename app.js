@@ -2311,6 +2311,94 @@ function renderPromoSettingTable() {
 // ------------------------------------------------------------
 // Deposit Functions
 // ------------------------------------------------------------
+var USD_DENOMS = [100, 50, 20, 10, 5, 1];
+var KHR_DENOMS = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 100];
+
+function formatKHR(n) {
+  return (n || 0).toLocaleString('en-US') + ' ៛';
+}
+
+function toggleDenomSection() {
+  var section = g('denom-section');
+  var btn = g('denom-toggle-btn');
+  if (!section) return;
+  var isOpen = section.style.display !== 'none';
+  section.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.classList.toggle('open', !isOpen);
+}
+
+function calcDenomTotals() {
+  var usdTotal = 0;
+  USD_DENOMS.forEach(function(d) {
+    var el = g('usd-qty-' + d);
+    var qty = el ? (parseInt(el.value) || 0) : 0;
+    var sub = qty * d;
+    usdTotal += sub;
+    var subEl = g('usd-sub-' + d);
+    if (subEl) {
+      subEl.textContent = qty > 0 ? '$' + sub.toFixed(2) : '—';
+      subEl.classList.toggle('has-value', qty > 0);
+    }
+  });
+  var usdHeaderEl = g('usd-denom-total');
+  if (usdHeaderEl) usdHeaderEl.textContent = '$' + usdTotal.toFixed(2);
+  var usdRowEl = g('usd-denom-total-row');
+  if (usdRowEl) usdRowEl.textContent = '$' + usdTotal.toFixed(2);
+  var cashEl = g('dep-cash'); if (cashEl) cashEl.value = usdTotal > 0 ? usdTotal.toFixed(2) : '';
+
+  var khrTotal = 0;
+  KHR_DENOMS.forEach(function(d) {
+    var el = g('khr-qty-' + d);
+    var qty = el ? (parseInt(el.value) || 0) : 0;
+    var sub = qty * d;
+    khrTotal += sub;
+    var subEl = g('khr-sub-' + d);
+    if (subEl) {
+      subEl.textContent = qty > 0 ? formatKHR(sub) : '—';
+      subEl.classList.toggle('has-value', qty > 0);
+    }
+  });
+  var khrHeaderEl = g('khr-denom-total');
+  if (khrHeaderEl) khrHeaderEl.textContent = formatKHR(khrTotal);
+  var khrRowEl = g('khr-denom-total-row');
+  if (khrRowEl) khrRowEl.textContent = formatKHR(khrTotal);
+  var rielEl = g('dep-riel'); if (rielEl) rielEl.value = khrTotal > 0 ? khrTotal : '';
+}
+
+function _resetDenomSection() {
+  var section = g('denom-section');
+  var btn = g('denom-toggle-btn');
+  if (section) section.style.display = 'none';
+  if (btn) btn.classList.remove('open');
+  USD_DENOMS.forEach(function(d) {
+    var el = g('usd-qty-' + d); if (el) el.value = '';
+    var subEl = g('usd-sub-' + d); if (subEl) { subEl.textContent = '—'; subEl.classList.remove('has-value'); }
+  });
+  KHR_DENOMS.forEach(function(d) {
+    var el = g('khr-qty-' + d); if (el) el.value = '';
+    var subEl = g('khr-sub-' + d); if (subEl) { subEl.textContent = '—'; subEl.classList.remove('has-value'); }
+  });
+  var usdH = g('usd-denom-total'); if (usdH) usdH.textContent = '$0.00';
+  var usdR = g('usd-denom-total-row'); if (usdR) usdR.textContent = '$0.00';
+  var khrH = g('khr-denom-total'); if (khrH) khrH.textContent = '0 ៛';
+  var khrR = g('khr-denom-total-row'); if (khrR) khrR.textContent = '0 ៛';
+}
+
+function _loadDenomSection(cashDetail) {
+  if (!cashDetail) return;
+  var section = g('denom-section');
+  var btn = g('denom-toggle-btn');
+  if (section) section.style.display = 'block';
+  if (btn) btn.classList.add('open');
+  (cashDetail.usd || []).forEach(function(entry) {
+    var el = g('usd-qty-' + entry.denom); if (el) el.value = entry.qty;
+  });
+  (cashDetail.khr || []).forEach(function(entry) {
+    var el = g('khr-qty-' + entry.denom); if (el) el.value = entry.qty;
+  });
+  calcDenomTotals();
+}
+
 function openAddDeposit(el) {
   navigateTo('deposit', null);
   openModal('modal-addDeposit');
@@ -2322,6 +2410,7 @@ function openDepositModal(item) {
   if (form) form.reset();
   const editEl = g('dep-edit-id');
   if (editEl) editEl.value = '';
+  _resetDenomSection();
 
   const title = g('modal-addDeposit-title');
   const btn = g('dep-submit-btn');
@@ -2335,8 +2424,10 @@ function openDepositModal(item) {
     const brEl = g('dep-branch'); if (brEl) brEl.value = item.branch || '';
     const cashEl = g('dep-cash'); if (cashEl) cashEl.value = item.cash || '';
     const creditEl = g('dep-credit'); if (creditEl) creditEl.value = item.credit || '';
+    const rielEl = g('dep-riel'); if (rielEl) rielEl.value = item.riel || '';
     const dtEl = g('dep-date'); if (dtEl) dtEl.value = item.date || '';
     const ntEl = g('dep-remark'); if (ntEl) ntEl.value = item.remark || item.note || '';
+    if (item.cashDetail) _loadDenomSection(item.cashDetail);
   } else {
     if (title) title.textContent = 'Add Deposit';
     if (btn) btn.textContent = 'Add Deposit';
@@ -2354,19 +2445,34 @@ function submitDeposit(e) {
   const editId = rv('dep-edit-id');
   const cash = parseFloat(rv('dep-cash')) || 0;
   const credit = parseFloat(rv('dep-credit')) || 0;
+  const riel = parseFloat(rv('dep-riel')) || 0;
+  const cashDetailUsd = [];
+  const cashDetailKhr = [];
+  USD_DENOMS.forEach(function(d) {
+    var el = g('usd-qty-' + d);
+    var qty = el ? (parseInt(el.value) || 0) : 0;
+    if (qty > 0) cashDetailUsd.push({ denom: d, qty: qty });
+  });
+  KHR_DENOMS.forEach(function(d) {
+    var el = g('khr-qty-' + d);
+    var qty = el ? (parseInt(el.value) || 0) : 0;
+    if (qty > 0) cashDetailKhr.push({ denom: d, qty: qty });
+  });
   const obj = {
     id: editId || uid(),
     agent: rv('dep-agent'),
     branch: rv('dep-branch'),
     cash: cash,
     credit: credit,
+    riel: riel,
+    cashDetail: (cashDetailUsd.length || cashDetailKhr.length) ? { usd: cashDetailUsd, khr: cashDetailKhr } : null,
     amount: cash + credit,
     date: rv('dep-date'),
     remark: rv('dep-remark'),
     status: editId ? (depositList.find(function(x){return x.id===editId;})||{}).status || 'pending' : 'pending'
   };
   if (!obj.agent) { showAlert('Please enter agent name'); return; }
-  if (obj.amount <= 0) { showAlert('Please enter a cash and/or credit amount greater than zero'); return; }
+  if (obj.amount <= 0 && riel <= 0) { showAlert('Please enter a cash, credit, and/or KHR riel amount greater than zero'); return; }
   if (!obj.date) { showAlert('Please select a date'); return; }
   if (editId) {
     const idx = depositList.findIndex(function(x) { return x.id === editId; });
