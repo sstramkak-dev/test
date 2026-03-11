@@ -246,15 +246,6 @@
     .chip:hover { border-color:#1B7D3D; color:#1B7D3D; }
     .chip.active { border-color:#1B7D3D; background:#1B7D3D; color:#fff; font-weight:600; }
 
-    /* Role widget */
-    #role-widget { position:fixed; bottom:20px; right:20px; z-index:2000; display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
-    #role-widget-btn { display:flex; align-items:center; gap:8px; padding:8px 14px; background:#1B7D3D; color:#fff; border:none; border-radius:24px; cursor:pointer; font-size:.8125rem; font-weight:600; box-shadow:0 4px 14px rgba(27,125,61,.35); transition:background .15s; }
-    #role-widget-btn:hover { background:#155f2e; }
-    #role-widget-dropdown { background:#fff; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.15); padding:8px 0; min-width:180px; display:none; flex-direction:column; }
-    .role-widget-header { font-size:.7rem; font-weight:700; color:#999; text-transform:uppercase; letter-spacing:.08em; padding:6px 16px 4px; }
-    .role-widget-option { display:flex; align-items:center; gap:10px; padding:10px 16px; font-size:.875rem; font-weight:500; color:#333; cursor:pointer; transition:background .12s; border:none; background:none; width:100%; text-align:left; }
-    .role-widget-option:hover { background:#F5F5F5; }
-
     /* Access denied */
     .access-denied { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; text-align:center; gap:12px; }
     .access-denied h3 { font-size:1rem; font-weight:700; color:#555; }
@@ -444,11 +435,22 @@
         </li>
       </ul>
 
-      <!-- Deposit -->
-      <li class="nav-item" id="nav-deposit" onclick="navigateTo('deposit', this)">
+      <!-- Deposit (with submenu) -->
+      <li class="nav-item has-submenu" id="nav-deposit" onclick="toggleSubmenu('submenu-deposit', this)">
         <i class="fas fa-vault nav-icon"></i>
         <span class="nav-label">Deposit</span>
+        <i class="fas fa-chevron-down nav-chevron"></i>
       </li>
+      <ul class="submenu" id="submenu-deposit">
+        <li class="submenu-item" id="nav-daily-deposit" onclick="navigateTo('deposit', null); setActiveSubItem(this)">
+          <i class="fas fa-calendar-check submenu-icon"></i>
+          <span>Daily Deposit</span>
+        </li>
+        <li class="submenu-item" id="nav-add-deposit" onclick="openAddDeposit(this)">
+          <i class="fas fa-circle-plus submenu-icon"></i>
+          <span>Add Deposit</span>
+        </li>
+      </ul>
 
       <!-- Customer (with submenu) -->
       <li class="nav-item has-submenu" id="nav-customer" onclick="toggleSubmenu('submenu-customer', this)">
@@ -763,9 +765,6 @@
       <section class="page" id="page-deposit">
         <div class="page-header">
           <h2 class="page-header-title"><i class="fas fa-vault" style="color:#1B7D3D;margin-right:8px"></i>Deposit</h2>
-          <button class="btn btn-primary" onclick="openModal('modal-addDeposit')">
-            <i class="fas fa-circle-plus"></i> Add Deposit
-          </button>
         </div>
 
         <!-- Deposit KPI Cards -->
@@ -2042,19 +2041,6 @@
     </div>
   </div>
 
-  <!-- ===================== ROLE WIDGET ===================== -->
-  <div id="role-widget">
-    <div id="role-widget-dropdown">
-      <div class="role-widget-header">Switch Role</div>
-      <button class="role-widget-option" onclick="switchRole('admin')"><i class="fas fa-user-shield"></i> Admin</button>
-      <button class="role-widget-option" onclick="switchRole('cluster')"><i class="fas fa-layer-group"></i> Cluster</button>
-      <button class="role-widget-option" onclick="switchRole('supervisor')"><i class="fas fa-user-tie"></i> Supervisor</button>
-      <button class="role-widget-option" onclick="switchRole('agent')"><i class="fas fa-user"></i> Agent</button>
-    </div>
-    <button id="role-widget-btn" onclick="toggleRoleWidget()">
-      <i class="fas fa-user-shield"></i> Admin
-    </button>
-  </div>
 
   </div>
   <!-- END APP SHELL -->
