@@ -2115,6 +2115,8 @@ input, select, textarea, button {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
+  text-align: center;
   padding: 48px 40px;
   min-width: 0;
 }
@@ -2152,6 +2154,7 @@ input, select, textarea, button {
 .login-brand-features li {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   font-size: 0.875rem;
   opacity: 0.88;
@@ -2174,16 +2177,44 @@ input, select, textarea, button {
   width: 100%;
   max-width: 380px;
 }
+.login-logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.login-logo-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #1B7D3D 0%, #0d3d1e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #fff;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 14px rgba(27,125,61,0.35);
+}
+.login-logo-label {
+  font-size: .8125rem;
+  font-weight: 700;
+  color: #1B7D3D;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
 .login-title {
   font-size: 1.5rem;
   font-weight: 800;
   color: #1A1A2E;
   margin-bottom: 6px;
+  text-align: center;
 }
 .login-subtitle {
   font-size: .875rem;
   color: #888;
   margin-bottom: 24px;
+  text-align: center;
 }
 .login-error {
   background: #FFEBEE;
