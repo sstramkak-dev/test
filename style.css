@@ -2597,3 +2597,134 @@ input, select, textarea, button {
 
 .inv-type-in  { color: #2E7D32; font-weight: 700; }
 .inv-type-out { color: #C62828; font-weight: 700; }
+
+/* ── Cash Denomination Breakdown ─────────────────────────── */
+.denom-toggle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #F0F8F3;
+  border: 1.5px solid #C8E6C9;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #1B7D3D;
+  transition: background 0.15s;
+  user-select: none;
+}
+.denom-toggle-header:hover { background: #E8F5E9; }
+.denom-toggle-header .denom-chevron { transition: transform 0.2s; }
+.denom-toggle-header.open .denom-chevron { transform: rotate(180deg); }
+
+.denom-section-body { margin-top: 10px; }
+
+.denom-currency-block {
+  border: 1.5px solid #E0E0E0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.denom-currency-block:last-child { margin-bottom: 0; }
+
+.denom-currency-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: #F5F7FA;
+  border-bottom: 1.5px solid #E0E0E0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #333;
+}
+.denom-currency-total {
+  margin-left: auto;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1B7D3D;
+  white-space: nowrap;
+}
+
+.denom-grid-header {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 2fr;
+  padding: 5px 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #FAFAFA;
+  border-bottom: 1px solid #EEEEEE;
+}
+.denom-grid-header span:nth-child(2) { text-align: center; }
+.denom-grid-header span:nth-child(3) { text-align: right; }
+
+.denom-row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 2fr;
+  align-items: center;
+  padding: 5px 14px;
+  border-bottom: 1px solid #F0F0F0;
+  gap: 8px;
+}
+.denom-row:last-child { border-bottom: none; }
+
+.denom-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.denom-qty-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1.5px solid #D0D0D0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  text-align: center;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -moz-appearance: textfield;
+}
+.denom-qty-input::-webkit-inner-spin-button,
+.denom-qty-input::-webkit-outer-spin-button { opacity: 1; }
+.denom-qty-input:focus {
+  outline: none;
+  border-color: #1B7D3D;
+  box-shadow: 0 0 0 3px rgba(27, 125, 61, 0.12);
+}
+
+.denom-subtotal {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #555;
+  text-align: right;
+  white-space: nowrap;
+}
+.denom-subtotal.has-value { color: #1B7D3D; }
+
+.denom-total-row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 2fr;
+  align-items: center;
+  padding: 8px 14px;
+  background: #E8F5E9;
+  border-top: 1.5px solid #C8E6C9;
+  gap: 8px;
+}
+.denom-total-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #1B7D3D;
+  grid-column: span 2;
+}
+.denom-total-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1B7D3D;
+  text-align: right;
+  white-space: nowrap;
+}
