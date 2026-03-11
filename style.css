@@ -2019,14 +2019,15 @@ input, select, textarea, button {
   border: 1px solid #FFCDD2;
 }
 .login-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  display: block;
+  text-align: center;
   margin-bottom: 24px;
 }
-.login-logo i { font-size: 2rem; color: #1B7D3D; }
-.login-logo span { font-size: 1.5rem; font-weight: 800; color: #1A1A2E; }
+.login-logo-img {
+  height: 64px;
+  width: auto;
+  display: inline-block;
+}
 #login-screen {
   position: fixed;
   inset: 0;
