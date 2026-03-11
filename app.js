@@ -23,7 +23,7 @@ let kpiForSelected = 'shop'; // 'shop' or 'agent'
 let _cTrend = null, _cMix = null, _cAgent = null, _cGrowth = null;
 let _cSaleMix = null, _cSaleAgent = null;
 let _cDepositPerf = null;
-let _cKpiAchieve = null;
+let _cKpiGauges = [];
 
 // Approval form state
 var _approvalFormData = null;
@@ -499,13 +499,25 @@ function switchRole(role) {
   const roleBadges = { admin: 'Admin', cluster: 'Cluster', supervisor: 'Supervisor', agent: 'Agent', user: 'Agent' };
   const roleColors = { admin: '#1B7D3D', cluster: '#6A1B9A', supervisor: '#1565C0', agent: '#E65100', user: '#E65100' };
 
+  // For demo role switching: pick an appropriate representative user from staffList
+  if (role === 'supervisor') {
+    var sup = staffList.find(function(u) { return u.role === 'Supervisor' && u.status === 'active'; });
+    if (sup) currentUser = sup;
+  } else if (role === 'agent') {
+    var agent = staffList.find(function(u) { return u.role === 'Agent' && u.status === 'active'; });
+    if (agent) currentUser = agent;
+  } else if (role === 'admin' || role === 'cluster') {
+    var adminUser = staffList.find(function(u) { return (u.role === 'Admin' || u.role === 'Cluster') && u.status === 'active'; });
+    if (adminUser) currentUser = adminUser;
+  }
+
   const nameEl = g('topbar-name');
   const roleEl = g('topbar-role');
   const avatarEl = g('topbar-avatar');
 
-  if (nameEl) nameEl.textContent = roleNames[role];
+  if (nameEl) nameEl.textContent = currentUser ? currentUser.name : roleNames[role];
   if (roleEl) { roleEl.textContent = roleBadges[role]; roleEl.style.background = roleColors[role]; }
-  if (avatarEl) { avatarEl.textContent = ini(roleNames[role]); avatarEl.style.background = roleColors[role]; }
+  if (avatarEl) { avatarEl.textContent = ini(currentUser ? currentUser.name : roleNames[role]); avatarEl.style.background = roleColors[role]; }
 
   const rb = g('role-widget-btn');
   if (rb) { const lbl = rb.querySelector('#role-widget-label'); if (lbl) lbl.textContent = roleBadges[role]; }
@@ -522,6 +534,7 @@ function switchRole(role) {
   var saleNewBtn = g('sale-new-btn');
   if (saleNewBtn) saleNewBtn.style.display = (currentRole === 'cluster') ? 'none' : '';
 
+  if (currentPage === 'dashboard') renderDashboard();
   if (currentPage === 'settings') renderAccessContent(currentSettingsTab);
   if (currentPage === 'kpi') renderKpiTable();
   if (currentPage === 'sale') applyReportFilters();
@@ -1510,69 +1523,93 @@ function renderDashboardKpiSection() {
   }
   section.style.display = '';
 
-  // Build chart data
-  var labels = [], targets = [], actuals = [], pcts = [];
-  relevantKpis.forEach(function(k) {
+  // Build KPI data with actuals and percentages
+  var kpiData = relevantKpis.map(function(k) {
     var assignee = staffList.find(function(u) { return u.id === k.assigneeId; });
-    var label = k.name + (assignee ? ' (' + assignee.name + ')' : '');
     var actual = calcKpiActual(k);
     var pct = k.target > 0 ? Math.round(actual / k.target * 100) : 0;
-    labels.push(label);
-    targets.push(k.target);
-    actuals.push(Math.round(actual * 100) / 100);
-    pcts.push(pct);
+    return { k: k, assignee: assignee, actual: Math.round(actual * 100) / 100, pct: pct };
   });
 
-  // Render chart
-  _cKpiAchieve = destroyChart(_cKpiAchieve);
-  clearCanvas('cKpiAchieve');
-  var ctx = g('cKpiAchieve');
-  if (ctx && typeof Chart !== 'undefined') {
-    _cKpiAchieve = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [
-          { label: 'Target', data: targets, backgroundColor: 'rgba(21,101,192,0.7)', borderColor: '#1565C0', borderWidth: 1 },
-          { label: 'Actual', data: actuals, backgroundColor: 'rgba(27,125,61,0.85)', borderColor: '#1B7D3D', borderWidth: 1 }
-        ]
-      },
-      options: {
-        responsive: true,
-        indexAxis: 'y',
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: {
-            callbacks: {
-              afterLabel: function(ctx) {
-                if (ctx.datasetIndex === 1) {
-                  var pct = pcts[ctx.dataIndex];
-                  return 'Achievement: ' + pct + '%';
-                }
-                return '';
-              }
-            }
+  // Destroy existing gauge charts
+  _cKpiGauges.forEach(function(c) { if (c) { try { c.destroy(); } catch (e) { console.warn('Chart destroy error:', e); } } });
+  _cKpiGauges = [];
+
+  // Color helper for gauge achievement level
+  function gaugeColor(pct) { return pct >= 100 ? '#1B7D3D' : pct >= 70 ? '#FF9800' : '#E53935'; }
+  function gaugePillClass(pct) { return pct >= 100 ? 'pill-green' : pct >= 70 ? 'pill-orange' : 'pill-red'; }
+
+  // Render gauge cards
+  var gaugeGrid = g('dash-kpi-gauge-grid');
+  if (gaugeGrid) {
+    gaugeGrid.innerHTML = kpiData.map(function(d, i) {
+      var color = gaugeColor(d.pct);
+      var pctClass = gaugePillClass(d.pct);
+      var forPill = d.k.kpiFor === 'shop'
+        ? '<span class="pill pill-blue" style="font-size:.7rem;padding:2px 7px;">Shop</span>'
+        : '<span class="pill pill-orange" style="font-size:.7rem;padding:2px 7px;">Agent</span>';
+      var assigneeName = d.assignee ? esc(d.assignee.name) : (d.k.assigneeBranch ? esc(d.k.assigneeBranch) : '—');
+      var valueDisplay = d.k.valueMode === 'currency'
+        ? fmtMoney(d.k.target, esc(d.k.currency) + ' ') + ' / ' + fmtMoney(d.actual, esc(d.k.currency) + ' ')
+        : d.k.target + ' / ' + d.actual + (d.k.unit ? ' ' + esc(d.k.unit) : '');
+      return '<div class="kpi-gauge-card">' +
+        '<div class="kpi-gauge-canvas-wrap">' +
+        '<canvas id="kpiGauge_' + i + '" height="130"></canvas>' +
+        '<div class="kpi-gauge-pct-text" style="color:' + color + '">' + d.pct + '%</div>' +
+        '</div>' +
+        '<div class="kpi-gauge-name">' + esc(d.k.name) + '</div>' +
+        '<div class="kpi-gauge-assignee">' + forPill + ' <span>' + assigneeName + '</span></div>' +
+        '<div class="kpi-gauge-value"><span class="pill ' + pctClass + '" style="font-size:.72rem;">' + valueDisplay + '</span></div>' +
+        '</div>';
+    }).join('');
+
+    // Create Chart.js gauge (semicircle doughnut) for each KPI
+    if (typeof Chart !== 'undefined') {
+      kpiData.forEach(function(d, i) {
+        var canvas = document.getElementById('kpiGauge_' + i);
+        if (!canvas) return;
+        var color = gaugeColor(d.pct);
+        var fillPct = Math.min(d.pct, 100);
+        var chart = new Chart(canvas, {
+          type: 'doughnut',
+          data: {
+            datasets: [{
+              data: [fillPct, 100 - fillPct],
+              backgroundColor: [color, '#EEEEEE'],
+              borderWidth: 0,
+              circumference: 180,
+              rotation: -90
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '72%',
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: false }
+            },
+            animation: { animateRotate: true, duration: 700 }
           }
-        },
-        scales: { x: { beginAtZero: true } }
-      }
-    });
+        });
+        _cKpiGauges.push(chart);
+      });
+    }
   }
 
   // Render summary table
   var tableWrap = g('dash-kpi-table-wrap');
   if (tableWrap) {
-    var rows = relevantKpis.map(function(k, i) {
-      var pct = pcts[i];
-      var pctClass = pct >= 100 ? 'pill-green' : pct >= 70 ? 'pill-orange' : 'pill-red';
-      var assignee = staffList.find(function(u) { return u.id === k.assigneeId; });
-      var assigneeName = assignee ? esc(assignee.name) : (k.assigneeBranch ? esc(k.assigneeBranch) : '—');
-      var forLabel = k.kpiFor === 'shop' ? '<span class="pill pill-blue">Shop</span>' : '<span class="pill pill-orange">Agent</span>';
-      var valueDisplay = k.valueMode === 'currency'
-        ? fmtMoney(k.target, esc(k.currency) + ' ') + ' / ' + fmtMoney(actuals[i], esc(k.currency) + ' ')
-        : k.target + ' / ' + actuals[i] + ' ' + esc(k.unit || '');
+    var rows = kpiData.map(function(d) {
+      var pct = d.pct;
+      var pctClass = gaugePillClass(pct);
+      var forLabel = d.k.kpiFor === 'shop' ? '<span class="pill pill-blue">Shop</span>' : '<span class="pill pill-orange">Agent</span>';
+      var assigneeName = d.assignee ? esc(d.assignee.name) : (d.k.assigneeBranch ? esc(d.k.assigneeBranch) : '—');
+      var valueDisplay = d.k.valueMode === 'currency'
+        ? fmtMoney(d.k.target, esc(d.k.currency) + ' ') + ' / ' + fmtMoney(d.actual, esc(d.k.currency) + ' ')
+        : d.k.target + ' / ' + d.actual + (d.k.unit ? ' ' + esc(d.k.unit) : '');
       return '<tr>' +
-        '<td>' + esc(k.name) + '</td>' +
+        '<td>' + esc(d.k.name) + '</td>' +
         '<td>' + forLabel + ' <small style="color:#888;">' + assigneeName + '</small></td>' +
         '<td>' + valueDisplay + '</td>' +
         '<td><span class="pill ' + pctClass + '">' + pct + '%</span></td>' +
