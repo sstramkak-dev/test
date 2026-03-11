@@ -1231,36 +1231,36 @@ function renderDashboard() {
   const currSales = viewSales.filter(function(s) { return ymOf(s.date) === ym; });
   const prevSales = viewSales.filter(function(s) { return ymOf(s.date) === ymP; });
 
-  let currUnits = 0, prevUnits = 0, currRev = 0, prevRev = 0;
-  const currAgents = new Set(), prevAgents = new Set();
+  let currRevenue = 0, prevRevenue = 0;
+  let currRecharge = 0, prevRecharge = 0;
+  let currGrossAds = 0, prevGrossAds = 0;
+  let currHomeInternet = 0, prevHomeInternet = 0;
 
   currSales.forEach(function(s) {
-    currAgents.add(s.agent);
-    Object.values(s.items || {}).forEach(function(v) { currUnits += v; });
-    Object.keys(s.dollarItems || {}).forEach(function(iid) {
-      const item = itemCatalogue.find(function(x) { return x.id === iid; });
-      if (item && !item.noAutoSum) currRev += s.dollarItems[iid] * (item.price || 1);
-    });
+    if (s.dollarItems && s.dollarItems[ITEM_ID_REVENUE]) currRevenue += s.dollarItems[ITEM_ID_REVENUE];
+    if (s.dollarItems && s.dollarItems[ITEM_ID_RECHARGE]) currRecharge += s.dollarItems[ITEM_ID_RECHARGE];
+    if (s.items && s.items[ITEM_ID_GROSS_ADS]) currGrossAds += s.items[ITEM_ID_GROSS_ADS];
+    if (s.items && s.items[ITEM_ID_SMART_HOME]) currHomeInternet += s.items[ITEM_ID_SMART_HOME];
+    if (s.items && s.items[ITEM_ID_SMART_FIBER]) currHomeInternet += s.items[ITEM_ID_SMART_FIBER];
   });
 
   prevSales.forEach(function(s) {
-    prevAgents.add(s.agent);
-    Object.values(s.items || {}).forEach(function(v) { prevUnits += v; });
-    Object.keys(s.dollarItems || {}).forEach(function(iid) {
-      const item = itemCatalogue.find(function(x) { return x.id === iid; });
-      if (item && !item.noAutoSum) prevRev += s.dollarItems[iid] * (item.price || 1);
-    });
+    if (s.dollarItems && s.dollarItems[ITEM_ID_REVENUE]) prevRevenue += s.dollarItems[ITEM_ID_REVENUE];
+    if (s.dollarItems && s.dollarItems[ITEM_ID_RECHARGE]) prevRecharge += s.dollarItems[ITEM_ID_RECHARGE];
+    if (s.items && s.items[ITEM_ID_GROSS_ADS]) prevGrossAds += s.items[ITEM_ID_GROSS_ADS];
+    if (s.items && s.items[ITEM_ID_SMART_HOME]) prevHomeInternet += s.items[ITEM_ID_SMART_HOME];
+    if (s.items && s.items[ITEM_ID_SMART_FIBER]) prevHomeInternet += s.items[ITEM_ID_SMART_FIBER];
   });
 
-  const kv = g('kv-sales'); if (kv) kv.textContent = currSales.length;
-  const ku = g('kv-units'); if (ku) ku.textContent = currUnits;
-  const kr = g('kv-revenue'); if (kr) kr.textContent = fmtMoney(currRev);
-  const ka = g('kv-agents'); if (ka) ka.textContent = currAgents.size;
+  const kr = g('kv-revenue'); if (kr) kr.textContent = fmtMoney(currRevenue);
+  const krc = g('kv-recharge'); if (krc) krc.textContent = fmtMoney(currRecharge);
+  const kg = g('kv-gross-ads'); if (kg) kg.textContent = currGrossAds;
+  const kh = g('kv-home-internet'); if (kh) kh.textContent = currHomeInternet;
 
-  setTrend('tr-sales', currSales.length, prevSales.length);
-  setTrend('tr-units', currUnits, prevUnits);
-  setTrend('tr-revenue', currRev, prevRev);
-  setTrend('tr-agents', currAgents.size, prevAgents.size);
+  setTrend('tr-revenue', currRevenue, prevRevenue);
+  setTrend('tr-recharge', currRecharge, prevRecharge);
+  setTrend('tr-gross-ads', currGrossAds, prevGrossAds);
+  setTrend('tr-home-internet', currHomeInternet, prevHomeInternet);
 
   // Chart 1: Monthly Trend
   _cTrend = destroyChart(_cTrend);
