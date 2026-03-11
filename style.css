@@ -2025,8 +2025,7 @@ input, select, textarea, button {
   gap: 10px;
   margin-bottom: 24px;
 }
-.login-logo i { font-size: 2rem; color: #1B7D3D; }
-.login-logo span { font-size: 1.5rem; font-weight: 800; color: #1A1A2E; }
+.login-logo-img { width: 160px; height: auto; display: block; }
 #login-screen {
   position: fixed;
   inset: 0;
