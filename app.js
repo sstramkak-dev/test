@@ -11,6 +11,7 @@ let currentPage = 'dashboard';
 let currentSaleTab = 'report';
 let currentCustomerTab = 'new-customer';
 let currentSettingsTab = 'permission';
+let currentPromoView = 'new'; // 'new' or 'expired'
 let currentReportView = 'table'; // 'table' or 'summary'
 let filteredSales = [];
 let itemGroupSelected = 'unit'; // 'unit' or 'dollar'
@@ -25,8 +26,8 @@ let _cDepositPerf = null;
 let _cKpiAchieve = null;
 
 // Constants
-const TAB_PERM = { admin: ['permission','kpi','promo'], cluster: ['permission','kpi','promo'], supervisor: ['kpi'], agent: [], user: [] };
-const TAB_LBL = { permission: 'Permission', kpi: 'KPI Setting', promo: 'Promotion' };
+const TAB_PERM = { admin: ['permission'], cluster: ['permission'], supervisor: [], agent: [], user: [] };
+const TAB_LBL = { permission: 'Permission' };
 const AV_COLORS = ['#E53935','#8E24AA','#1565C0','#00838F','#2E7D32','#F57F17','#4E342E','#37474F'];
 const CHART_PAL = ['#1B7D3D','#2196F3','#FF9800','#9C27B0','#F44336','#00BCD4','#FFEB3B','#795548'];
 const KNOWN_CURS = ['USD','KHR','THB','VND'];
@@ -319,9 +320,10 @@ function navigateTo(page, btn) {
 
   const titles = {
     dashboard: 'Dashboard',
-    promotionPage: 'Promotion',
+    promotionPage: currentPromoView === 'expired' ? 'Expired Promotion' : 'New Promotion',
     deposit: 'Deposit',
     sale: 'Sale',
+    kpi: 'KPI Setting',
     customer: 'Customer',
     settings: 'Settings'
   };
@@ -332,6 +334,7 @@ function navigateTo(page, btn) {
 
   if (page === 'dashboard') renderDashboard();
   if (page === 'promotionPage') renderPromotionCards();
+  if (page === 'kpi') renderKpiTable();
   if (page === 'deposit') { renderDepositTable(); updateDepositKpis(); }
   if (page === 'sale') { renderItemChips(); applyReportFilters(); }
   if (page === 'customer') {
@@ -341,7 +344,6 @@ function navigateTo(page, btn) {
   }
   if (page === 'settings') {
     renderStaffTable();
-    renderKpiTable();
     renderAccessContent(currentSettingsTab);
   }
 }
@@ -404,7 +406,7 @@ function switchSettingsTab(tab) {
   // Update tab button states
   $$('.tab-btn').forEach(function(b) {
     if (b.getAttribute('data-tab') === tab) b.classList.add('active');
-    else if (['permission','kpi','promo'].includes(b.getAttribute('data-tab'))) b.classList.remove('active');
+    else if (['permission'].includes(b.getAttribute('data-tab'))) b.classList.remove('active');
   });
   const tc = g('stab-content-' + tab);
   if (tc) tc.classList.add('active');
@@ -421,9 +423,47 @@ function renderAccessContent(tab) {
     }
   } else {
     if (tab === 'permission') renderStaffTable();
-    if (tab === 'kpi') renderKpiTable();
-    if (tab === 'promo') renderPromoSettingTable();
   }
+}
+
+function setPromoView(view) {
+  currentPromoView = view;
+  var sectionAvailable = g('promo-section-available');
+  var sectionExpired = g('promo-section-expired');
+  var addBtn = g('promo-new-btn');
+  var titleEl = g('promo-page-title');
+  if (view === 'new') {
+    if (sectionAvailable) sectionAvailable.style.display = '';
+    if (sectionExpired) sectionExpired.style.display = 'none';
+    if (addBtn) addBtn.style.display = (currentRole === 'admin' || currentRole === 'cluster') ? '' : 'none';
+    if (titleEl) titleEl.innerHTML = '<i class="fas fa-tags" style="color:#1B7D3D;margin-right:8px"></i>New Promotion';
+    var pageTitleEl = g('page-title');
+    if (pageTitleEl) pageTitleEl.textContent = 'New Promotion';
+  } else {
+    if (sectionAvailable) sectionAvailable.style.display = 'none';
+    if (sectionExpired) sectionExpired.style.display = '';
+    if (addBtn) addBtn.style.display = 'none';
+    if (titleEl) titleEl.innerHTML = '<i class="fas fa-clock-rotate-left" style="color:#1B7D3D;margin-right:8px"></i>Expired Promotion';
+    var pageTitleEl = g('page-title');
+    if (pageTitleEl) pageTitleEl.textContent = 'Expired Promotion';
+  }
+}
+
+function openPromoSubMenu(view, el) {
+  navigateTo('promotionPage', null);
+  setPromoView(view);
+  setActiveSubItem(el);
+}
+
+function openSettingsMenu(el) {
+  navigateTo('settings', null);
+  switchSettingsTab('permission');
+  setActiveSubItem(el);
+}
+
+function setActiveSubItem(el) {
+  $$('.submenu-item').forEach(function(li) { li.classList.remove('active'); });
+  if (el) el.classList.add('active');
 }
 
 // ------------------------------------------------------------
@@ -459,6 +499,7 @@ function switchRole(role) {
   if (saleNewBtn) saleNewBtn.style.display = (currentRole === 'cluster') ? 'none' : '';
 
   if (currentPage === 'settings') renderAccessContent(currentSettingsTab);
+  if (currentPage === 'kpi') renderKpiTable();
   if (currentPage === 'sale') applyReportFilters();
 }
 
@@ -2037,6 +2078,8 @@ function renderPromotionCards() {
   }
   var newBtn = g('promo-new-btn');
   if (newBtn) newBtn.style.display = (currentRole === 'admin' || currentRole === 'cluster') ? '' : 'none';
+  // Apply current promo view to show/hide sections
+  setPromoView(currentPromoView);
 }
 
 function buildPromoCard(p, isExpired) {
