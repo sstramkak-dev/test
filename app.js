@@ -2311,6 +2311,12 @@ function renderPromoSettingTable() {
 // ------------------------------------------------------------
 // Deposit Functions
 // ------------------------------------------------------------
+function openAddDeposit(el) {
+  navigateTo('deposit', null);
+  openModal('modal-addDeposit');
+  setActiveSubItem(el);
+}
+
 function openDepositModal(item) {
   const form = g('form-addDeposit');
   if (form) form.reset();
