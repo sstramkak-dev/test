@@ -1502,6 +1502,8 @@ function openCustomerModal(type, item) {
       const bSel = g('nc-branch'); if (bSel) bSel.value = item.branch || '';
       g('nc-date').value = item.date || '';
       const statusSel = g('nc-status'); if (statusSel) statusSel.value = item.status || 'follow';
+      if (g('nc-lat')) g('nc-lat').value = item.lat || '';
+      if (g('nc-lng')) g('nc-lng').value = item.lng || '';
     } else {
       if (title) title.textContent = 'Add New Customer';
       g('nc-date').value = new Date().toISOString().split('T')[0];
@@ -1511,6 +1513,32 @@ function openCustomerModal(type, item) {
       }
     }
     openModal('modal-newCustomer');
+    // Initialize Leaflet map after modal animation completes (150ms matches CSS transition)
+    setTimeout(function() {
+      var latVal = parseFloat(g('nc-lat') ? g('nc-lat').value : '') || 0;
+      var lngVal = parseFloat(g('nc-lng') ? g('nc-lng').value : '') || 0;
+      // Default center: Phnom Penh, Cambodia
+      var defaultCenter = (latVal && lngVal) ? [latVal, lngVal] : [11.5564, 104.9282];
+      if (window._ncMap) { window._ncMap.remove(); window._ncMap = null; }
+      var map = L.map('nc-map').setView(defaultCenter, latVal && lngVal ? 15 : 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+      var marker = null;
+      if (latVal && lngVal) {
+        marker = L.marker([latVal, lngVal]).addTo(map);
+      }
+      map.on('click', function(e) {
+        var lat = e.latlng.lat.toFixed(6); // 6 decimal places ≈ 0.11 m precision
+        var lng = e.latlng.lng.toFixed(6);
+        if (g('nc-lat')) g('nc-lat').value = lat;
+        if (g('nc-lng')) g('nc-lng').value = lng;
+        if (marker) { map.removeLayer(marker); }
+        marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+      });
+      window._ncMap = map;
+    }, 150);
 
   } else if (type === 'topup') {
     const form = g('form-topUp');
@@ -1572,7 +1600,8 @@ function submitNewCustomer(e) {
     name: rv('nc-name'), phone: rv('nc-phone'), idNum: rv('nc-id'),
     tariff: tariffEl ? tariffEl.value : '', pkg: tariffEl ? tariffEl.value : '',
     agent: rv('nc-agent'), branch: rv('nc-branch'), date: rv('nc-date'),
-    status: statusEl ? statusEl.value : 'follow'
+    status: statusEl ? statusEl.value : 'follow',
+    lat: rv('nc-lat') || '', lng: rv('nc-lng') || ''
   };
   if (!obj.name) { showAlert('Please enter customer name'); return; }
   if (!obj.phone) { showAlert('Please enter phone number'); return; }
@@ -1640,7 +1669,7 @@ function renderNewCustomerTable() {
   const tbody = g('new-customer-table');
   if (!tbody) return;
   if (!newCustomers.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No customers yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No customers yet</td></tr>';
     return;
   }
   const statusPillMap = { follow: 'pill-gray', lead: 'pill-blue', 'hot-prospect': 'pill-orange', close: 'pill-green' };
@@ -1660,6 +1689,9 @@ function renderNewCustomerTable() {
       '<td>' + esc(c.agent || '') + '</td>' +
       '<td>' + esc(c.branch || '') + '</td>' +
       '<td>' + esc(c.date || '') + '</td>' +
+      '<td style="white-space:nowrap;">' + (c.lat && c.lng
+        ? '<a href="https://www.openstreetmap.org/?mlat=' + esc(c.lat) + '&mlon=' + esc(c.lng) + '&zoom=15" target="_blank" title="' + esc(c.lat) + ', ' + esc(c.lng) + '" style="color:#1B7D3D;text-decoration:none;"><i class="fas fa-map-marker-alt"></i> ' + esc(c.lat) + ', ' + esc(c.lng) + '</a>'
+        : '<span style="color:#ccc;font-size:0.8rem;">—</span>') + '</td>' +
       '<td style="white-space:nowrap;">' +
         '<button class="btn-edit" onclick="editNewCustomer(\'' + esc(c.id) + '\')"><i class="fas fa-edit"></i></button> ' +
         '<button class="btn-delete" onclick="deleteNewCustomer(\'' + esc(c.id) + '\')"><i class="fas fa-trash"></i></button>' +
