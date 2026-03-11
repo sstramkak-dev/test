@@ -2771,7 +2771,7 @@ function renderStaffTable() {
   const tbody = g('staff-table');
   if (!tbody) return;
   if (!staffList.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users-cog" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No users yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users-cog" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No users yet</td></tr>';
     return;
   }
   tbody.innerHTML = staffList.map(function(u, i) {
@@ -2784,6 +2784,9 @@ function renderStaffTable() {
       '<td>' + esc(u.username) + '</td>' +
       '<td><span class="pill ' + rolePill + '">' + esc(u.role) + '</span></td>' +
       '<td>' + esc(u.branch || '') + '</td>' +
+      '<td>' + (u.email
+        ? '<a href="mailto:' + encodeURIComponent(u.email) + '" style="color:#1B7D3D;text-decoration:none;"><i class="fas fa-envelope" style="margin-right:4px;font-size:.8rem;"></i>' + esc(u.email) + '</a>'
+        : '<span style="color:#ccc;">—</span>') + '</td>' +
       '<td><span class="pill ' + statusPill + '">' + esc(u.status) + '</span></td>' +
       '<td style="white-space:nowrap;">' +
         '<button class="btn-edit" onclick="editUser(\'' + esc(u.id) + '\')"><i class="fas fa-edit"></i></button> ' +
