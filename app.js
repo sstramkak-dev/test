@@ -37,6 +37,13 @@ const CHART_PAL = ['#1B7D3D','#2196F3','#FF9800','#9C27B0','#F44336','#00BCD4','
 const KNOWN_CURS = ['USD','KHR','THB','VND'];
 const KNOWN_UNITS = ['Unit','SIM','GB','MB','Minutes','SMS','Voucher'];
 
+// Item ID constants for key KPI calculations
+const ITEM_ID_REVENUE = 'i8';
+const ITEM_ID_RECHARGE = 'i7';
+const ITEM_ID_GROSS_ADS = 'i1';
+const ITEM_ID_SMART_HOME = 'i2';
+const ITEM_ID_SMART_FIBER = 'i3';
+
 const BRANCHES = ['Phnom Penh', 'Siem Reap', 'Battambang', 'Sihanoukville', 'Kampong Cham', 'Express_Tramkak'];
 
 const SUPPORT_CONTACT = { email: 'support@smart5g.com', phone: '+855 23 123 456' };
@@ -963,28 +970,24 @@ function setReportView(view) {
 
 function updateSaleKpis() {
   const data = filteredSales.length ? filteredSales : saleRecords;
-  let totalUnits = 0, totalRev = 0;
-  const agents = new Set();
+  let totalRevenue = 0, totalRecharge = 0, totalGrossAds = 0, totalHomeInternet = 0;
 
   data.forEach(function(s) {
-    agents.add(s.agent);
-    Object.keys(s.items || {}).forEach(function(iid) { totalUnits += s.items[iid]; });
-    Object.keys(s.dollarItems || {}).forEach(function(iid) {
-      const item = itemCatalogue.find(function(x) { return x.id === iid; });
-      if (!item || item.noAutoSum) return;
-      totalRev += s.dollarItems[iid] * (item.price || 1);
-    });
+    // Total Revenue: sum of Revenue (RV) dollar item
+    if (s.dollarItems && s.dollarItems[ITEM_ID_REVENUE]) totalRevenue += s.dollarItems[ITEM_ID_REVENUE];
+    // Total Recharge: sum of Recharge (RC) dollar item
+    if (s.dollarItems && s.dollarItems[ITEM_ID_RECHARGE]) totalRecharge += s.dollarItems[ITEM_ID_RECHARGE];
+    // Total Gross Ads: sum of Gross Ads (GA) unit item
+    if (s.items && s.items[ITEM_ID_GROSS_ADS]) totalGrossAds += s.items[ITEM_ID_GROSS_ADS];
+    // Total Home Internet: sum of Smart@Home (SH) + Smart Fiber+ (SF)
+    if (s.items && s.items[ITEM_ID_SMART_HOME]) totalHomeInternet += s.items[ITEM_ID_SMART_HOME];
+    if (s.items && s.items[ITEM_ID_SMART_FIBER]) totalHomeInternet += s.items[ITEM_ID_SMART_FIBER];
   });
 
-  const el1 = g('sale-kpi-sales'); if (el1) el1.textContent = data.length;
-  const el2 = g('sale-kpi-units'); if (el2) el2.textContent = totalUnits;
-  const el3 = g('sale-kpi-revenue'); if (el3) el3.textContent = fmtMoney(totalRev);
-  const el4 = g('sale-kpi-agents'); if (el4) el4.textContent = agents.size;
-  // Also update the KPI cards on the sale page
-  const s1 = g('sale-kv-sales'); if (s1) s1.textContent = data.length;
-  const s2 = g('sale-kv-units'); if (s2) s2.textContent = totalUnits;
-  const s3 = g('sale-kv-revenue'); if (s3) s3.textContent = fmtMoney(totalRev);
-  const s4 = g('sale-kv-agents'); if (s4) s4.textContent = agents.size;
+  const el1 = g('sale-kpi-revenue'); if (el1) el1.textContent = fmtMoney(totalRevenue);
+  const el2 = g('sale-kpi-recharge'); if (el2) el2.textContent = fmtMoney(totalRecharge);
+  const el3 = g('sale-kpi-gross-ads'); if (el3) el3.textContent = totalGrossAds;
+  const el4 = g('sale-kpi-home-internet'); if (el4) el4.textContent = totalHomeInternet;
 }
 
 function renderSaleTable() {
@@ -1275,16 +1278,22 @@ function renderDashboard() {
       data: {
         labels: monthLabels,
         datasets: [
-          { label: 'Units', data: unitsPerMonth, borderColor: '#1B7D3D', backgroundColor: 'rgba(27,125,61,0.1)', yAxisID: 'y', tension: 0.4, fill: true },
-          { label: 'Revenue ($)', data: revPerMonth, borderColor: '#FF9800', backgroundColor: 'rgba(255,152,0,0.1)', yAxisID: 'y1', tension: 0.4, fill: true }
+          { label: 'Units', data: unitsPerMonth, borderColor: '#1B7D3D', backgroundColor: 'rgba(27,125,61,0.08)', yAxisID: 'y', tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#1B7D3D', borderWidth: 2 },
+          { label: 'Revenue ($)', data: revPerMonth, borderColor: '#FF9800', backgroundColor: 'rgba(255,152,0,0.08)', yAxisID: 'y1', tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#FF9800', borderWidth: 2 }
         ]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11 } } },
+          tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, titleFont: { size: 12 }, bodyFont: { size: 11 } }
+        },
         scales: {
-          y: { position: 'left', title: { display: true, text: 'Units' } },
-          y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Revenue ($)' } }
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { position: 'left', title: { display: true, text: 'Units', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+          y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Revenue ($)', font: { size: 11 } }, ticks: { font: { size: 11 } } }
         }
       }
     });
@@ -1305,9 +1314,17 @@ function renderDashboard() {
       type: 'doughnut',
       data: {
         labels: unitItemsDash.map(function(x) { return x.name; }),
-        datasets: [{ data: mixData, backgroundColor: CHART_PAL }]
+        datasets: [{ data: mixData, backgroundColor: CHART_PAL, borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
       },
-      options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: { position: 'right', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 11 } } },
+          tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 } }
+        }
+      }
     });
   }
 
@@ -1327,9 +1344,21 @@ function renderDashboard() {
       type: 'bar',
       data: {
         labels: agentNames,
-        datasets: [{ label: 'Units This Month', data: agentVals, backgroundColor: CHART_PAL }]
+        datasets: [{ label: 'Units This Month', data: agentVals, backgroundColor: CHART_PAL, borderRadius: 4, borderSkipped: false }]
       },
-      options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } } }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 } }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+          y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
+      }
     });
   }
 
@@ -1350,11 +1379,22 @@ function renderDashboard() {
       data: {
         labels: growthLabels,
         datasets: [
-          { label: 'This Month', data: currItemUnits, backgroundColor: '#1B7D3D' },
-          { label: 'Last Month', data: prevItemUnits, backgroundColor: '#A5D6A7' }
+          { label: 'This Month', data: currItemUnits, backgroundColor: '#1B7D3D', borderRadius: 4, borderSkipped: false },
+          { label: 'Last Month', data: prevItemUnits, backgroundColor: '#A5D6A7', borderRadius: 4, borderSkipped: false }
         ]
       },
-      options: { responsive: true, plugins: { legend: { position: 'top' } } }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11 } } },
+          tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } }, beginAtZero: true }
+        }
+      }
     });
   }
 
