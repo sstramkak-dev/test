@@ -1126,7 +1126,7 @@ function updateTotalBar(units, rev) {
   if (!bar) return;
   bar.innerHTML =
     '<span class="total-label"><strong>Total Units:</strong> ' + units + '</span>' +
-    '<span class="total-label" style="margin-left:20px;"><strong>Total Revenue:</strong> ' + fmtMoney(rev) + '</span>';
+    '<span class="total-label"><strong>Total Revenue:</strong> ' + fmtMoney(rev) + '</span>';
 }
 
 function renderSummaryView(data, unitItems, dollarItems) {
