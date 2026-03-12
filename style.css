@@ -2492,6 +2492,11 @@ input, select, textarea, button {
 #gs-sync-indicator.error { color: #e53935 !important; }
 #gs-sync-indicator.error i { color: #e53935 !important; }
 
+/* ── Refresh Sync Button ─────────────────────────────────── */
+#refresh-sync-btn:disabled { opacity: .45; cursor: not-allowed; }
+#refresh-sync-btn:disabled i { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 /* ── Professional Alert & Confirm Dialog ─────────────────── */
 .dialog-icon-wrap {
   display: flex;
