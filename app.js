@@ -3349,6 +3349,8 @@ function handleLogin(e) {
       switchRole(roleMap[user.role] || 'user');
       var nameEl = g('topbar-name'); if (nameEl) nameEl.textContent = user.name;
       navigateTo('dashboard', null);
+      // Auto-refresh all data from Google Sheets on login so users always see the latest records
+      refreshAllData();
     } else {
       if (errEl) { errEl.textContent = 'Invalid username or password, or account is inactive.'; errEl.style.display = ''; }
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-right-to-bracket"></i> Sign In'; }
