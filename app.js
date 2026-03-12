@@ -104,6 +104,12 @@ function fetchStaffFromSheet() {
         var localAdmin = staffList.find(isAdminUser);
         if (localAdmin) normalized.unshift(localAdmin);
       }
+      // Keep default agent users as fallback if sheet doesn't contain them
+      DEFAULT_AGENT_USERS.forEach(function(du) {
+        if (!normalized.some(function(u) { return u.username === du.username; })) {
+          normalized.push(du);
+        }
+      });
       staffList = normalized;
       lsSave(LS_KEYS.staff, staffList);
     })
@@ -304,9 +310,14 @@ let topUpList = [];
 
 let terminationList = [];
 
+const DEFAULT_AGENT_USERS = [
+  { id: 'u2', name: 'RIM SARAY', username: 'rim.saray', password: '123123', role: 'Agent', branch: 'Express_Tramkak', status: 'active', email: 'rim.saray1@smart.com.kh' },
+  { id: 'u3', name: 'KUN CHAMNAN', username: 'kun.chamnan', password: '123123', role: 'Agent', branch: '', status: 'active', email: 'kun.chamnan@smart.com.kh' },
+];
+
 let staffList = [
   { id: 'u1', name: 'Admin', username: 'admin', password: 'admin@2026', role: 'Admin', branch: '', status: 'active' },
-];
+].concat(DEFAULT_AGENT_USERS);
 
 let kpiList = [];
 
@@ -375,6 +386,12 @@ function loadAllData() {
   if (!hasAdmin) {
     staffList.unshift({ id: 'u1', name: 'Admin', username: 'admin', password: 'admin@2026', role: 'Admin', branch: '', status: 'active' });
   }
+  // Ensure default agent users always exist
+  DEFAULT_AGENT_USERS.forEach(function(du) {
+    if (!staffList.some(function(u) { return u.username === du.username; })) {
+      staffList.push(du);
+    }
+  });
 }
 
 // ------------------------------------------------------------
