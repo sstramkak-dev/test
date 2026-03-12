@@ -331,7 +331,8 @@ const LS_KEYS = {
   kpis: 'smart5g_kpis',
   promotions: 'smart5g_promotions',
   deposits: 'smart5g_deposits',
-  coverage: 'smart5g_coverage'
+  coverage: 'smart5g_coverage',
+  session: 'smart5g_session'
 };
 
 function lsSave(key, data) {
@@ -3407,6 +3408,7 @@ function handleLogin(e) {
       // switchRole overwrites currentUser with a representative user for demo switching;
       // restore it to the authenticated user so all data filtering uses the correct identity.
       currentUser = user;
+      lsSave(LS_KEYS.session, user);
       var nameEl = g('topbar-name'); if (nameEl) nameEl.textContent = user.name;
       var avatarEl = g('topbar-avatar'); if (avatarEl) avatarEl.textContent = ini(user.name);
       navigateTo('dashboard', null);
@@ -3431,6 +3433,7 @@ function toggleLoginPwd() {
 function handleLogout() {
   showConfirm('Are you sure you want to sign out of Smart 5G Dashboard?', function() {
     currentUser = null;
+    localStorage.removeItem(LS_KEYS.session);
     var as = g('app-shell'); if (as) as.style.display = 'none';
     var ls = g('login-screen'); if (ls) ls.style.display = 'flex';
     var lf = g('login-form'); if (lf) lf.reset();
@@ -4228,6 +4231,20 @@ document.addEventListener('DOMContentLoaded', function() {
   updateDepositKpis();
   renderSaleTable();
   updateSaleKpis();
+
+  // Restore login session if user was previously authenticated
+  var savedSession = lsLoad(LS_KEYS.session, null);
+  if (savedSession && savedSession.username) {
+    var roleMap = { 'Admin': 'admin', 'Cluster': 'cluster', 'Supervisor': 'supervisor', 'Agent': 'agent' };
+    currentUser = savedSession;
+    var ls = g('login-screen'); if (ls) ls.style.display = 'none';
+    var as = g('app-shell'); if (as) as.style.display = 'flex';
+    switchRole(roleMap[savedSession.role] || 'user');
+    currentUser = savedSession;
+    var nameEl = g('topbar-name'); if (nameEl) nameEl.textContent = savedSession.name;
+    var avatarEl = g('topbar-avatar'); if (avatarEl) avatarEl.textContent = ini(savedSession.name);
+    navigateTo('dashboard', null);
+  }
 
   // Populate shop stock branch filter
   var shopFilter = g('shop-stock-branch-filter');
