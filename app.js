@@ -61,12 +61,11 @@ const SUPPORT_CONTACT = { email: 'support@smart5g.com', phone: '+855 23 123 456'
 const GS_URL = 'https://script.google.com/macros/s/AKfycbwonszKGWvkth03iYXzi6CdOLssRJsbbJ11YgQVk8zGqT8zNWUWF2RMNqIvXIZykgQIJQ/exec';
 
 function _gsPost(payload, retries) {
-  if (!GS_URL) return;
+  if (!GS_URL) return Promise.resolve();
   retries = retries === undefined ? 2 : retries;
   return fetch(GS_URL, {
     method: 'POST',
     mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   }).catch(function(err) {
     if (retries > 0) {
@@ -74,6 +73,7 @@ function _gsPost(payload, retries) {
         .then(function() { return _gsPost(payload, retries - 1); });
     }
     console.warn('GS post failed after retries:', err);
+    throw err;
   });
 }
 
