@@ -64,7 +64,7 @@ const SUPPORT_CONTACT = { email: 'support@smart5g.com', phone: '+855 23 123 456'
 //   2. Paste the code from google-apps-script/Code.gs.
 //   3. Deploy → New Deployment → Web App (Execute as: Me, Access: Anyone).
 //   4. Replace the URL below with the deployment URL you receive.
-const GS_URL = 'https://script.google.com/macros/s/AKfycbzg57wCoKKUgeoZKXCftikpJPVusz4U-1mIymDSUa1q_Op-RNzO7ZJnlB9SDfz7J6XL/exec';
+const GS_URL = 'https://script.google.com/macros/s/AKfycbw2Szyf7jOEzM_EoQREFKyzDtp2zCe1CQM21XR0bL1T7gJlRiIAt0yfiqnz3uWnzhpN/exec';
 
 function syncSheet(sheetName, dataArray) {
   if (!GS_URL) return;
