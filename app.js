@@ -77,6 +77,35 @@ function _gsPost(payload, retries) {
   });
 }
 
+function fetchStaffFromSheet() {
+  if (!GS_URL) return Promise.resolve();
+  return fetch(GS_URL + '?sheet=Staff&action=get')
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      if (!Array.isArray(data) || data.length === 0) return;
+      // Keep local admin as fallback if sheet doesn't contain one
+      var hasAdmin = data.some(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
+      if (!hasAdmin) {
+        var localAdmin = staffList.find(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
+        if (localAdmin) data.unshift(localAdmin);
+      }
+      staffList = data;
+      lsSave(LS_KEYS.staff, staffList);
+    })
+    .catch(function(e) {
+      console.warn('Could not load staff from Google Sheets, using local data:', e);
+      var errEl = g('login-error');
+      if (errEl) {
+        errEl.textContent = 'Could not reach the server. Signing in with cached data.';
+        errEl.style.display = '';
+        setTimeout(function() { if (errEl) errEl.style.display = 'none'; }, 4000);
+      }
+    });
+}
+
 function syncSheet(sheetName, dataArray) {
   if (!GS_URL) return;
   var ind = document.getElementById('gs-sync-indicator');
@@ -3225,7 +3254,7 @@ function handleLogin(e) {
     return;
   }
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in\u2026'; }
-  setTimeout(function() {
+  function doAuth() {
     var user = staffList.find(function(u) {
       return u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.status === 'active';
     });
@@ -3242,7 +3271,8 @@ function handleLogin(e) {
       if (errEl) { errEl.textContent = 'Invalid username or password, or account is inactive.'; errEl.style.display = ''; }
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-right-to-bracket"></i> Sign In'; }
     }
-  }, 600);
+  }
+  fetchStaffFromSheet().then(doAuth);
 }
 
 function toggleLoginPwd() {
