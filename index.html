@@ -476,6 +476,10 @@
           <i class="fas fa-user-xmark submenu-icon"></i>
           <span>Termination</span>
         </li>
+        <li class="submenu-item" id="nav-out-coverage" onclick="navigateTo('customer', null); switchCustomerTab('out-coverage')">
+          <i class="fas fa-signal submenu-icon"></i>
+          <span>Out Coverage List</span>
+        </li>
       </ul>
 
       <!-- Inventory (with submenu) -->
@@ -958,6 +962,9 @@
           <button class="tab-btn" id="tab-termination" onclick="openCustomerTab('termination', this)">
             <i class="fas fa-user-xmark"></i> Termination
           </button>
+          <button class="tab-btn" id="tab-out-coverage" onclick="openCustomerTab('out-coverage', this)">
+            <i class="fas fa-signal"></i> Out Coverage List
+          </button>
         </div>
 
         <div class="tab-content active" id="tab-content-new-customer">
@@ -1028,6 +1035,27 @@
               <table class="data-table">
                 <thead><tr><th>#</th><th>Customer Name</th><th>Phone</th><th>Reason</th><th>Agent</th><th>Branch</th><th>Date</th><th>Actions</th></tr></thead>
                 <tbody id="termination-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-content-out-coverage">
+          <div class="page-header">
+            <h2 class="page-header-title">Out Coverage List</h2>
+          </div>
+          <div class="filter-bar" style="padding:8px 0;">
+            <div class="filter-group" style="flex:1;max-width:340px;">
+              <label class="filter-label"><i class="fas fa-magnifying-glass"></i> Search</label>
+              <input type="text" class="form-input" id="oc-search" placeholder="Search by name or phone…" oninput="renderOutCoverageTable()" />
+            </div>
+            <button class="btn btn-outline" onclick="document.getElementById('oc-search').value='';renderOutCoverageTable()"><i class="fas fa-xmark"></i> Clear</button>
+          </div>
+          <div class="table-card">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>ID/Passport</th><th>Tariff</th><th>Agent</th><th>Branch</th><th>Date</th><th>Location</th><th>Actions</th></tr></thead>
+                <tbody id="out-coverage-table"></tbody>
               </table>
             </div>
           </div>
@@ -1568,6 +1596,7 @@
               <option value="lead">Lead</option>
               <option value="hot-prospect">Hot Prospect</option>
               <option value="close">Close</option>
+              <option value="out-coverage">Out Coverage</option>
             </select>
           </div>
           <div class="form-row">

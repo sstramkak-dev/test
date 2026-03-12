@@ -204,6 +204,7 @@ function syncDownAll() {
     { name: 'Customers',    lsKey: LS_KEYS.customers,    assign: function(d) { newCustomers = d; } },
     { name: 'TopUp',        lsKey: LS_KEYS.topup,        assign: function(d) { topUpList = d; } },
     { name: 'Terminations', lsKey: LS_KEYS.terminations, assign: function(d) { terminationList = d; } },
+    { name: 'OutCoverage',  lsKey: LS_KEYS.outCoverage,  assign: function(d) { outCoverageList = d; } },
     { name: 'Promotions',   lsKey: LS_KEYS.promotions,   assign: function(d) { promotionList = d; } },
     { name: 'Deposits',     lsKey: LS_KEYS.deposits,     assign: function(d) { depositList = d; } },
     { name: 'KPI',          lsKey: LS_KEYS.kpis,         assign: function(d) { kpiList = d; } },
@@ -267,7 +268,7 @@ function syncDownAll() {
     else if (currentPage === 'promotionPage') renderPromotionCards();
     else if (currentPage === 'kpi') renderKpiTable();
     else if (currentPage === 'sale') applyReportFilters();
-    else if (currentPage === 'customer') { renderNewCustomerTable(); renderTopUpTable(); renderTerminationTable(); }
+    else if (currentPage === 'customer') { renderNewCustomerTable(); renderTopUpTable(); renderTerminationTable(); renderOutCoverageTable(); }
     else if (currentPage === 'deposit') { renderDepositTable(); updateDepositKpis(); }
     else if (currentPage === 'settings') { renderStaffTable(); renderAccessContent(currentSettingsTab); }
     showToast('Data synced from Google Sheets.', 'success');
@@ -310,13 +311,15 @@ let topUpList = [];
 
 let terminationList = [];
 
+let outCoverageList = [];
+
 const DEFAULT_AGENT_USERS = [
-  { id: 'u2', name: 'RIM SARAY', username: 'rim.saray', password: '123123', role: 'Agent', branch: 'Express_Tramkak', status: 'active', email: 'rim.saray1@smart.com.kh' },
-  { id: 'u3', name: 'KUN CHAMNAN', username: 'kun.chamnan', password: '123123', role: 'Agent', branch: '', status: 'active', email: 'kun.chamnan@smart.com.kh' },
+  { id: 'u2', name: 'RIM SARAY', username: 'rim.saray', password: 'Tramkak@2026', role: 'Supervisor', branch: 'Express_Tramkak', status: 'active', email: 'rim.saray1@smart.com.kh' },
+  { id: 'u3', name: 'KUN CHAMNAN', username: 'kun.chamnan', password: 'Tramkak@2026', role: 'Agent', branch: '', status: 'active', email: 'kun.chamnan@smart.com.kh' },
 ];
 
 let staffList = [
-  { id: 'u1', name: 'Admin', username: 'admin', password: 'admin@2026', role: 'Admin', branch: '', status: 'active' },
+  { id: 'u1', name: 'Admin', username: 'admin', password: 'Tramkak@2026', role: 'Admin', branch: '', status: 'active' },
 ].concat(DEFAULT_AGENT_USERS);
 
 let kpiList = [];
@@ -338,6 +341,7 @@ const LS_KEYS = {
   customers: 'smart5g_customers',
   topup: 'smart5g_topup',
   terminations: 'smart5g_terminations',
+  outCoverage: 'smart5g_out_coverage',
   staff: 'smart5g_staff',
   kpis: 'smart5g_kpis',
   promotions: 'smart5g_promotions',
@@ -363,6 +367,7 @@ function saveAllData() {
   lsSave(LS_KEYS.customers, newCustomers);
   lsSave(LS_KEYS.topup, topUpList);
   lsSave(LS_KEYS.terminations, terminationList);
+  lsSave(LS_KEYS.outCoverage, outCoverageList);
   lsSave(LS_KEYS.staff, staffList);
   lsSave(LS_KEYS.kpis, kpiList);
   lsSave(LS_KEYS.promotions, promotionList);
@@ -376,6 +381,7 @@ function loadAllData() {
   newCustomers = lsLoad(LS_KEYS.customers, newCustomers);
   topUpList = lsLoad(LS_KEYS.topup, topUpList);
   terminationList = lsLoad(LS_KEYS.terminations, terminationList);
+  outCoverageList = lsLoad(LS_KEYS.outCoverage, outCoverageList);
   staffList = lsLoad(LS_KEYS.staff, staffList);
   kpiList = lsLoad(LS_KEYS.kpis, kpiList);
   promotionList = lsLoad(LS_KEYS.promotions, promotionList);
@@ -384,7 +390,7 @@ function loadAllData() {
   // Ensure admin user always exists
   var hasAdmin = staffList.some(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
   if (!hasAdmin) {
-    staffList.unshift({ id: 'u1', name: 'Admin', username: 'admin', password: 'admin@2026', role: 'Admin', branch: '', status: 'active' });
+    staffList.unshift({ id: 'u1', name: 'Admin', username: 'admin', password: 'Tramkak@2026', role: 'Admin', branch: '', status: 'active' });
   }
   // Ensure default agent users always exist
   DEFAULT_AGENT_USERS.forEach(function(du) {
@@ -577,6 +583,7 @@ function navigateTo(page, btn) {
     renderNewCustomerTable();
     renderTopUpTable();
     renderTerminationTable();
+    renderOutCoverageTable();
   }
   if (page === 'settings') {
     renderStaffTable();
@@ -637,7 +644,7 @@ function switchCustomerTab(tab) {
   // Update tab button states
   $$('.tab-btn').forEach(function(b) {
     if (b.getAttribute('data-tab') === tab) b.classList.add('active');
-    else if (['new-customer','topup','termination'].includes(b.getAttribute('data-tab'))) b.classList.remove('active');
+    else if (['new-customer','topup','termination','out-coverage'].includes(b.getAttribute('data-tab'))) b.classList.remove('active');
   });
   const tc = g('tab-content-' + tab);
   if (tc) tc.classList.add('active');
@@ -768,7 +775,7 @@ function switchRole(role) {
   if (currentPage === 'kpi') renderKpiTable();
   if (currentPage === 'sale') applyReportFilters();
   if (currentPage === 'coverage') initCoveragePage();
-  if (currentPage === 'customer') { renderNewCustomerTable(); renderTopUpTable(); renderTerminationTable(); }
+  if (currentPage === 'customer') { renderNewCustomerTable(); renderTopUpTable(); renderTerminationTable(); renderOutCoverageTable(); }
   if (currentPage === 'deposit') { renderDepositTable(); updateDepositKpis(); }
 }
 
@@ -2041,6 +2048,31 @@ function submitNewCustomer(e) {
     showToast('Customer marked as Closed and moved to Top Up.', 'info');
     return;
   }
+  // Move to Out Coverage List when status is Out Coverage
+  if (obj.status === 'out-coverage' && prevStatus !== 'out-coverage') {
+    var existingOutCovRecord = outCoverageList.find(function(t) { return t.customerId === obj.id; });
+    if (!existingOutCovRecord) {
+      outCoverageList.push({
+        id: uid(), customerId: obj.id, name: obj.name, phone: obj.phone,
+        idNum: obj.idNum, tariff: obj.tariff, agent: obj.agent, branch: obj.branch,
+        date: obj.date, lat: obj.lat, lng: obj.lng, note: 'Out of coverage area'
+      });
+      syncSheet('OutCoverage', outCoverageList);
+    }
+    // Remove from new customer list and navigate to Out Coverage tab
+    newCustomers = newCustomers.filter(function(x) { return x.id !== obj.id; });
+    closeModal('modal-newCustomer');
+    renderNewCustomerTable();
+    renderOutCoverageTable();
+    syncSheet('Customers', newCustomers);
+    saveAllData();
+    navigateTo('customer', null);
+    switchCustomerTab('out-coverage');
+    $$('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    var ocBtn = g('tab-out-coverage'); if (ocBtn) ocBtn.classList.add('active');
+    showToast('Customer marked as Out Coverage and moved to Out Coverage List.', 'info');
+    return;
+  }
   closeModal('modal-newCustomer');
   renderNewCustomerTable();
   renderTopUpTable();
@@ -2084,8 +2116,8 @@ function renderNewCustomerTable() {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users" style="font-size:2rem;display:block;margin-bottom:8px;"></i>' + (searchVal ? 'No results found' : 'No customers yet') + '</td></tr>';
     return;
   }
-  const statusPillMap = { follow: 'pill-gray', lead: 'pill-blue', 'hot-prospect': 'pill-orange', close: 'pill-green' };
-  const statusLabelMap = { follow: 'Follow', lead: 'Lead', 'hot-prospect': 'Hot Prospect', close: 'Close' };
+  const statusPillMap = { follow: 'pill-gray', lead: 'pill-blue', 'hot-prospect': 'pill-orange', close: 'pill-green', 'out-coverage': 'pill-red' };
+  const statusLabelMap = { follow: 'Follow', lead: 'Lead', 'hot-prospect': 'Hot Prospect', close: 'Close', 'out-coverage': 'Out Coverage' };
   tbody.innerHTML = list.map(function(c, i) {
     const avIdx = i % 8;
     const st = c.status || 'follow';
@@ -2374,6 +2406,59 @@ function renderTerminationTable() {
       '</td>' +
       '</tr>';
   }).join('');
+}
+
+// ------------------------------------------------------------
+// Out Coverage Functions
+// ------------------------------------------------------------
+function renderOutCoverageTable() {
+  const tbody = g('out-coverage-table');
+  if (!tbody) return;
+  const baseList = getBaseRecordsForRole(outCoverageList);
+  const searchVal = (rv('oc-search') || '').toLowerCase().trim();
+  const list = searchVal
+    ? baseList.filter(function(c) {
+        return (c.name || '').toLowerCase().includes(searchVal) ||
+               (c.phone || '').toLowerCase().includes(searchVal);
+      })
+    : baseList;
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-signal" style="font-size:2rem;display:block;margin-bottom:8px;"></i>' + (searchVal ? 'No results found' : 'No out of coverage records yet') + '</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(function(c, i) {
+    const avIdx = i % 8;
+    const canEdit = canModifyRecord(c);
+    return '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(c.name)) + '</span>' + esc(c.name) + '</div></td>' +
+      '<td>' + esc(c.phone) + '</td>' +
+      '<td>' + esc(c.idNum || '') + '</td>' +
+      '<td>' + esc(c.tariff || '') + '</td>' +
+      '<td>' + esc(c.agent || '') + '</td>' +
+      '<td>' + esc(c.branch || '') + '</td>' +
+      '<td>' + esc(c.date || '') + '</td>' +
+      '<td style="white-space:nowrap;">' + (c.lat && c.lng
+        ? '<a href="https://www.openstreetmap.org/?mlat=' + esc(c.lat) + '&mlon=' + esc(c.lng) + '&zoom=15" target="_blank" title="' + esc(c.lat) + ', ' + esc(c.lng) + '" style="color:#1B7D3D;text-decoration:none;"><i class="fas fa-map-marker-alt"></i> ' + esc(c.lat) + ', ' + esc(c.lng) + '</a>'
+        : '<span style="color:#ccc;font-size:0.8rem;">—</span>') + '</td>' +
+      '<td style="white-space:nowrap;">' +
+        (canEdit ? '<button class="btn-delete" onclick="deleteOutCoverage(\'' + esc(c.id) + '\')"><i class="fas fa-trash"></i></button>' : '') +
+      '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function deleteOutCoverage(id) {
+  const item = outCoverageList.find(function(x) { return x.id === id; });
+  if (!item) return;
+  if (!canModifyRecord(item)) { showAlert('You do not have permission to delete this record.', 'error'); return; }
+  showConfirm('Delete this out coverage record?', function() {
+    outCoverageList = outCoverageList.filter(function(x) { return x.id !== id; });
+    syncSheet('OutCoverage', outCoverageList);
+    saveAllData();
+    renderOutCoverageTable();
+    showToast('Out coverage record deleted.', 'success');
+  });
 }
 
 // ------------------------------------------------------------
