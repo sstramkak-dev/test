@@ -58,37 +58,59 @@ const BRANCHES = ['Phnom Penh', 'Siem Reap', 'Battambang', 'Sihanoukville', 'Kam
 const SUPPORT_CONTACT = { email: 'support@smart5g.com', phone: '+855 23 123 456' };
 
 // ── Google Sheets Sync ──────────────────────────────────────
-const GS_URL = 'https://script.google.com/macros/s/AKfycbzg57wCoKKUgeoZKXCftikpJPVusz4U-1mIymDSUa1q_Op-RNzO7ZJnlB9SDfz7J6XL/exec';
+const GS_URL = 'https://script.google.com/macros/s/AKfycbwonszKGWvkth03iYXzi6CdOLssRJsbbJ11YgQVk8zGqT8zNWUWF2RMNqIvXIZykgQIJQ/exec';
 
-function syncSheet(sheetName, dataArray) {
+function _gsPost(payload, retries) {
   if (!GS_URL) return;
-  const ind = document.getElementById('gs-sync-indicator');
-  const lbl = document.getElementById('gs-sync-status');
-  if (ind) ind.className = 'syncing';
-  if (lbl) lbl.textContent = 'Syncing\u2026';
-  fetch(GS_URL, {
+  retries = retries === undefined ? 2 : retries;
+  return fetch(GS_URL, {
     method: 'POST',
     mode: 'no-cors',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheet: sheetName, action: 'sync', data: dataArray })
-  }).then(function() {
-    if (ind) ind.className = '';
-    if (lbl) lbl.textContent = 'Synced';
+    body: JSON.stringify(payload)
   }).catch(function(err) {
-    console.warn('GS sync error:', err);
-    if (ind) ind.className = 'error';
-    if (lbl) lbl.textContent = 'Sync failed';
+    if (retries > 0) {
+      return new Promise(function(resolve) { setTimeout(resolve, 1500); })
+        .then(function() { return _gsPost(payload, retries - 1); });
+    }
+    console.warn('GS post failed after retries:', err);
   });
+}
+
+function syncSheet(sheetName, dataArray) {
+  if (!GS_URL) return;
+  var ind = document.getElementById('gs-sync-indicator');
+  var lbl = document.getElementById('gs-sync-status');
+  if (ind) ind.className = 'syncing';
+  if (lbl) lbl.textContent = 'Syncing\u2026';
+
+  // Serialize items/dollarItems objects in saleRecords to JSON strings for sheet storage
+  var normalized = Array.isArray(dataArray) ? dataArray.map(function(row) {
+    var out = {};
+    Object.keys(row).forEach(function(k) {
+      var v = row[k];
+      out[k] = (v !== null && v !== undefined && typeof v === 'object') ? JSON.stringify(v) : (v !== undefined ? v : '');
+    });
+    return out;
+  }) : [];
+
+  _gsPost({ sheet: sheetName, action: 'sync', data: normalized })
+    .then(function() {
+      if (ind) ind.className = '';
+      if (lbl) lbl.textContent = 'Synced \u2713';
+      setTimeout(function() { if (lbl) lbl.textContent = ''; }, 3000);
+    })
+    .catch(function(err) {
+      console.warn('GS sync error:', err);
+      if (ind) ind.className = 'error';
+      if (lbl) lbl.textContent = 'Sync failed';
+    });
 }
 
 function deleteFromSheet(sheetName, id) {
   if (!GS_URL) return;
-  fetch(GS_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheet: sheetName, action: 'delete', data: { id: id } })
-  }).catch(function(err) { console.warn('GS delete error:', err); });
+  _gsPost({ sheet: sheetName, action: 'delete', data: { id: id } })
+    .catch(function(err) { console.warn('GS delete error:', err); });
 }
 
 // ------------------------------------------------------------
