@@ -142,6 +142,88 @@ function deleteFromSheet(sheetName, id) {
     .catch(function(err) { console.warn('GS delete error:', err); });
 }
 
+function refreshAllData() {
+  if (!GS_URL) {
+    showToast('No sync URL configured.', 'error');
+    return;
+  }
+  var ind = document.getElementById('gs-sync-indicator');
+  var lbl = document.getElementById('gs-sync-status');
+  var btn = document.getElementById('refresh-sync-btn');
+  if (ind) ind.className = 'syncing';
+  if (lbl) lbl.textContent = 'Refreshing\u2026';
+  if (btn) btn.disabled = true;
+
+  var sheets = [
+    { name: 'Sales',        lsKey: LS_KEYS.sales,        assign: function(d) { saleRecords = d; } },
+    { name: 'Customers',    lsKey: LS_KEYS.customers,    assign: function(d) { newCustomers = d; } },
+    { name: 'TopUp',        lsKey: LS_KEYS.topup,        assign: function(d) { topUpList = d; } },
+    { name: 'Terminations', lsKey: LS_KEYS.terminations, assign: function(d) { terminationList = d; } },
+    { name: 'Promotions',   lsKey: LS_KEYS.promotions,   assign: function(d) { promotionList = d; } },
+    { name: 'Deposits',     lsKey: LS_KEYS.deposits,     assign: function(d) { depositList = d; } },
+    { name: 'KPI',          lsKey: LS_KEYS.kpis,         assign: function(d) { kpiList = d; } },
+    { name: 'Staff',        lsKey: LS_KEYS.staff,        assign: function(d) {
+      var hasAdmin = d.some(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
+      if (!hasAdmin) {
+        var localAdmin = staffList.find(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
+        if (localAdmin) d.unshift(localAdmin);
+      }
+      staffList = d;
+    }}
+  ];
+
+  var promises = sheets.map(function(s) {
+    return fetch(GS_URL + '?sheet=' + s.name + '&action=get')
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        if (!Array.isArray(data) || data.length === 0) return;
+        // Parse JSON-serialized object fields back to objects (e.g. items, dollarItems, cashDetail)
+        var parsed = data.map(function(row) {
+          var out = {};
+          Object.keys(row).forEach(function(k) {
+            var v = row[k];
+            if (typeof v === 'string' && v.length > 0 && (v[0] === '{' || v[0] === '[')) {
+              try { out[k] = JSON.parse(v); } catch(e) { out[k] = v; }
+            } else {
+              out[k] = v;
+            }
+          });
+          return out;
+        });
+        s.assign(parsed);
+        lsSave(s.lsKey, parsed);
+      })
+      .catch(function(e) {
+        console.warn('Could not fetch ' + s.name + ' from Google Sheets:', e);
+      });
+  });
+
+  Promise.all(promises).then(function() {
+    if (ind) ind.className = '';
+    if (lbl) lbl.textContent = 'Synced \u2713';
+    if (btn) btn.disabled = false;
+    setTimeout(function() { if (lbl) lbl.textContent = ''; }, 3000);
+    // Re-render current page with fresh data
+    if (currentPage === 'dashboard') renderDashboard();
+    else if (currentPage === 'promotionPage') renderPromotionCards();
+    else if (currentPage === 'kpi') renderKpiTable();
+    else if (currentPage === 'sale') applyReportFilters();
+    else if (currentPage === 'customer') { renderNewCustomerTable(); renderTopUpTable(); renderTerminationTable(); }
+    else if (currentPage === 'deposit') { renderDepositTable(); updateDepositKpis(); }
+    else if (currentPage === 'settings') { renderStaffTable(); renderAccessContent(currentSettingsTab); }
+    showToast('Data refreshed from Google Sheets.', 'success');
+  }).catch(function(err) {
+    console.warn('Refresh error:', err);
+    if (ind) ind.className = 'error';
+    if (lbl) lbl.textContent = 'Refresh failed';
+    if (btn) btn.disabled = false;
+    showToast('Refresh failed. Please try again.', 'error');
+  });
+}
+
 // ------------------------------------------------------------
 // Sample Data
 // ------------------------------------------------------------
