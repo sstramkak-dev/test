@@ -560,6 +560,8 @@ function switchRole(role) {
   if (currentPage === 'kpi') renderKpiTable();
   if (currentPage === 'sale') applyReportFilters();
   if (currentPage === 'coverage') initCoveragePage();
+  if (currentPage === 'customer') { renderNewCustomerTable(); renderTopUpTable(); renderTerminationTable(); }
+  if (currentPage === 'deposit') { renderDepositTable(); updateDepositKpis(); }
 }
 
 function toggleRoleWidget() {
@@ -922,9 +924,9 @@ function deleteSale(id) {
 // ------------------------------------------------------------
 
 // Returns the base sale records filtered by the current user's role.
-// Supervisors only see records within their branch; all other roles see all records.
+// Supervisors and agents only see records within their branch/shop; admin/cluster see all.
 function getSaleBaseRecords() {
-  if (currentRole === 'supervisor' && currentUser) {
+  if ((currentRole === 'supervisor' || currentRole === 'agent') && currentUser) {
     return saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
   }
   return saleRecords.slice();
@@ -938,6 +940,26 @@ function canModifySaleRecord(sale) {
   if (!currentUser) return false;
   if (currentRole === 'supervisor') return sale.branch === currentUser.branch;
   if (currentRole === 'agent') return sale.agent === currentUser.name;
+  return false;
+}
+
+// Returns records filtered by the current user's role.
+// Supervisors and agents only see records within their branch/shop.
+function getBaseRecordsForRole(list) {
+  if ((currentRole === 'supervisor' || currentRole === 'agent') && currentUser) {
+    return list.filter(function(r) { return r.branch === currentUser.branch; });
+  }
+  return list.slice();
+}
+
+// Returns true if the current user can edit or delete the given customer/deposit record.
+function canModifyRecord(record) {
+  if (!record) return false;
+  if (currentRole === 'admin') return true;
+  if (currentRole === 'cluster') return false;
+  if (!currentUser) return false;
+  if (currentRole === 'supervisor') return record.branch === currentUser.branch;
+  if (currentRole === 'agent') return record.agent === currentUser.name;
   return false;
 }
 
@@ -1250,9 +1272,7 @@ function renderDashboard() {
 
   // Role-based data filtering
   let viewSales = saleRecords;
-  if (currentRole === 'agent' && currentUser) {
-    viewSales = saleRecords.filter(function(s) { return s.agent === currentUser.name; });
-  } else if (currentRole === 'supervisor' && currentUser) {
+  if ((currentRole === 'agent' || currentRole === 'supervisor') && currentUser) {
     viewSales = saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
   }
   // Apply branch filter (available for admin/cluster)
@@ -1823,10 +1843,15 @@ function submitNewCustomer(e) {
 
 function editNewCustomer(id) {
   const item = newCustomers.find(function(x) { return x.id === id; });
-  if (item) openCustomerModal('new-customer', item);
+  if (!item) return;
+  if (!canModifyRecord(item)) { showAlert('You do not have permission to edit this record.', 'error'); return; }
+  openCustomerModal('new-customer', item);
 }
 
 function deleteNewCustomer(id) {
+  const item = newCustomers.find(function(x) { return x.id === id; });
+  if (!item) return;
+  if (!canModifyRecord(item)) { showAlert('You do not have permission to delete this record.', 'error'); return; }
   showConfirm('Are you sure you want to delete this customer record? This action cannot be undone.', function() {
     newCustomers = newCustomers.filter(function(x) { return x.id !== id; });
     renderNewCustomerTable();
@@ -1840,12 +1865,13 @@ function renderNewCustomerTable() {
   const tbody = g('new-customer-table');
   if (!tbody) return;
   const searchVal = (rv('nc-search') || '').toLowerCase().trim();
+  const baseList = getBaseRecordsForRole(newCustomers);
   const list = searchVal
-    ? newCustomers.filter(function(c) {
+    ? baseList.filter(function(c) {
         return (c.name || '').toLowerCase().includes(searchVal) ||
                (c.phone || '').toLowerCase().includes(searchVal);
       })
-    : newCustomers;
+    : baseList;
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-users" style="font-size:2rem;display:block;margin-bottom:8px;"></i>' + (searchVal ? 'No results found' : 'No customers yet') + '</td></tr>';
     return;
@@ -1857,6 +1883,7 @@ function renderNewCustomerTable() {
     const st = c.status || 'follow';
     const stPill = statusPillMap[st] || 'pill-gray';
     const stLabel = statusLabelMap[st] || esc(st);
+    const canEdit = canModifyRecord(c);
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
       '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(c.name)) + '</span>' + esc(c.name) + '</div></td>' +
@@ -1871,8 +1898,8 @@ function renderNewCustomerTable() {
         ? '<a href="https://www.openstreetmap.org/?mlat=' + esc(c.lat) + '&mlon=' + esc(c.lng) + '&zoom=15" target="_blank" title="' + esc(c.lat) + ', ' + esc(c.lng) + '" style="color:#1B7D3D;text-decoration:none;"><i class="fas fa-map-marker-alt"></i> ' + esc(c.lat) + ', ' + esc(c.lng) + '</a>'
         : '<span style="color:#ccc;font-size:0.8rem;">—</span>') + '</td>' +
       '<td style="white-space:nowrap;">' +
-        '<button class="btn-edit" onclick="editNewCustomer(\'' + esc(c.id) + '\')"><i class="fas fa-edit"></i></button> ' +
-        '<button class="btn-delete" onclick="deleteNewCustomer(\'' + esc(c.id) + '\')"><i class="fas fa-trash"></i></button>' +
+        (canEdit ? '<button class="btn-edit" onclick="editNewCustomer(\'' + esc(c.id) + '\')"><i class="fas fa-edit"></i></button> ' : '') +
+        (canEdit ? '<button class="btn-delete" onclick="deleteNewCustomer(\'' + esc(c.id) + '\')"><i class="fas fa-trash"></i></button>' : '') +
       '</td>' +
       '</tr>';
   }).join('');
@@ -1950,10 +1977,15 @@ function onTuExistingCustomerChange() {
 
 function editTopUp(id) {
   const item = topUpList.find(function(x) { return x.id === id; });
-  if (item) openCustomerModal('topup', item);
+  if (!item) return;
+  if (!canModifyRecord(item)) { showAlert('You do not have permission to edit this record.', 'error'); return; }
+  openCustomerModal('topup', item);
 }
 
 function deleteTopUp(id) {
+  const item = topUpList.find(function(x) { return x.id === id; });
+  if (!item) return;
+  if (!canModifyRecord(item)) { showAlert('You do not have permission to delete this record.', 'error'); return; }
   showConfirm('Are you sure you want to delete this top-up record? This action cannot be undone.', function() {
     topUpList = topUpList.filter(function(x) { return x.id !== id; });
     renderTopUpTable();
@@ -1971,7 +2003,8 @@ function renderTopUpTable() {
   const MS_PER_DAY = 86400000;
   const today = new Date(new Date().toISOString().split('T')[0]);
   const in7Days = new Date(today); in7Days.setDate(in7Days.getDate() + 7);
-  const nearlyExpired = topUpList.filter(function(c) {
+  const baseTopUpList = getBaseRecordsForRole(topUpList);
+  const nearlyExpired = baseTopUpList.filter(function(c) {
     if (!c.endDate || c.tuStatus === 'terminate') return false;
     const exp = new Date(c.endDate);
     return exp >= today && exp <= in7Days;
@@ -1996,17 +2029,17 @@ function renderTopUpTable() {
     }
   }
 
-  if (!topUpList.length) {
+  if (!baseTopUpList.length) {
     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-coins" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No top up records yet</td></tr>';
     return;
   }
   const tuSearchVal = (rv('tu-search') || '').toLowerCase().trim();
   const tuList = tuSearchVal
-    ? topUpList.filter(function(c) {
+    ? baseTopUpList.filter(function(c) {
         return (c.name || '').toLowerCase().includes(tuSearchVal) ||
                (c.phone || '').toLowerCase().includes(tuSearchVal);
       })
-    : topUpList;
+    : baseTopUpList;
   if (!tuList.length) {
     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-coins" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No results found</td></tr>';
     return;
@@ -2016,6 +2049,7 @@ function renderTopUpTable() {
     const tuSt = c.tuStatus || 'active';
     const stPill = tuSt === 'active' ? 'pill-green' : 'pill-red';
     const stLabel = tuSt === 'active' ? 'Active' : 'Terminate';
+    const canEdit = canModifyRecord(c);
     var expiryCell = '<td>—</td>';
     var rowClass = '';
     if (c.endDate) {
@@ -2042,8 +2076,8 @@ function renderTopUpTable() {
       '<td>' + esc(c.date || '') + '</td>' +
       expiryCell +
       '<td style="white-space:nowrap;">' +
-        '<button class="btn-edit" onclick="editTopUp(\'' + esc(c.id) + '\')"><i class="fas fa-edit"></i></button> ' +
-        '<button class="btn-delete" onclick="deleteTopUp(\'' + esc(c.id) + '\')"><i class="fas fa-trash"></i></button>' +
+        (canEdit ? '<button class="btn-edit" onclick="editTopUp(\'' + esc(c.id) + '\')"><i class="fas fa-edit"></i></button> ' : '') +
+        (canEdit ? '<button class="btn-delete" onclick="deleteTopUp(\'' + esc(c.id) + '\')"><i class="fas fa-trash"></i></button>' : '') +
       '</td>' +
       '</tr>';
   }).join('');
@@ -2078,10 +2112,15 @@ function submitTermination(e) {
 
 function editTermination(id) {
   const item = terminationList.find(function(x) { return x.id === id; });
-  if (item) openCustomerModal('termination', item);
+  if (!item) return;
+  if (!canModifyRecord(item)) { showAlert('You do not have permission to edit this record.', 'error'); return; }
+  openCustomerModal('termination', item);
 }
 
 function deleteTermination(id) {
+  const item = terminationList.find(function(x) { return x.id === id; });
+  if (!item) return;
+  if (!canModifyRecord(item)) { showAlert('You do not have permission to delete this record.', 'error'); return; }
   showConfirm('Are you sure you want to delete this termination record? This action cannot be undone.', function() {
     terminationList = terminationList.filter(function(x) { return x.id !== id; });
     renderTerminationTable();
@@ -2094,23 +2133,25 @@ function deleteTermination(id) {
 function renderTerminationTable() {
   const tbody = g('termination-table');
   if (!tbody) return;
-  if (!terminationList.length) {
+  const baseTermList = getBaseRecordsForRole(terminationList);
+  if (!baseTermList.length) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-times-circle" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No termination records yet</td></tr>';
     return;
   }
   const termSearchVal = (rv('term-search') || '').toLowerCase().trim();
   const termList = termSearchVal
-    ? terminationList.filter(function(c) {
+    ? baseTermList.filter(function(c) {
         return (c.name || '').toLowerCase().includes(termSearchVal) ||
                (c.phone || '').toLowerCase().includes(termSearchVal);
       })
-    : terminationList;
+    : baseTermList;
   if (!termList.length) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-times-circle" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No results found</td></tr>';
     return;
   }
   tbody.innerHTML = termList.map(function(c, i) {
     const avIdx = i % 8;
+    const canEdit = canModifyRecord(c);
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
       '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(c.name)) + '</span>' + esc(c.name) + '</div></td>' +
@@ -2120,8 +2161,8 @@ function renderTerminationTable() {
       '<td>' + esc(c.branch || '') + '</td>' +
       '<td>' + esc(c.date || '') + '</td>' +
       '<td style="white-space:nowrap;">' +
-        '<button class="btn-edit" onclick="editTermination(\'' + esc(c.id) + '\')"><i class="fas fa-edit"></i></button> ' +
-        '<button class="btn-delete" onclick="deleteTermination(\'' + esc(c.id) + '\')"><i class="fas fa-trash"></i></button>' +
+        (canEdit ? '<button class="btn-edit" onclick="editTermination(\'' + esc(c.id) + '\')"><i class="fas fa-edit"></i></button> ' : '') +
+        (canEdit ? '<button class="btn-delete" onclick="deleteTermination(\'' + esc(c.id) + '\')"><i class="fas fa-trash"></i></button>' : '') +
       '</td>' +
       '</tr>';
   }).join('');
@@ -2513,10 +2554,15 @@ function submitDeposit(e) {
 
 function editDeposit(id) {
   const item = depositList.find(function(x) { return x.id === id; });
-  if (item) openDepositModal(item);
+  if (!item) return;
+  if (!canModifyRecord(item)) { showAlert('You do not have permission to edit this record.', 'error'); return; }
+  openDepositModal(item);
 }
 
 function deleteDeposit(id) {
+  const item = depositList.find(function(x) { return x.id === id; });
+  if (!item) return;
+  if (!canModifyRecord(item)) { showAlert('You do not have permission to delete this record.', 'error'); return; }
   showConfirm('Are you sure you want to delete this deposit record? This action cannot be undone.', function() {
     depositList = depositList.filter(function(x) { return x.id !== id; });
     renderDepositTable();
@@ -2547,12 +2593,13 @@ function approveDeposit(id) {
 }
 
 function updateDepositKpis() {
+  const baseDeposits = getBaseRecordsForRole(depositList);
   let totalCash = 0, totalCredit = 0;
   const agents = new Set();
-  depositList.forEach(function(d) { totalCash += (d.cash || 0); totalCredit += (d.credit || 0); agents.add(d.agent); });
+  baseDeposits.forEach(function(d) { totalCash += (d.cash || 0); totalCredit += (d.credit || 0); agents.add(d.agent); });
   const total = totalCash + totalCredit;
   const el1 = g('dep-kpi-total'); if (el1) el1.textContent = fmtMoney(total);
-  const el2 = g('dep-kpi-count'); if (el2) el2.textContent = depositList.length;
+  const el2 = g('dep-kpi-count'); if (el2) el2.textContent = baseDeposits.length;
   const el3 = g('dep-kpi-agents'); if (el3) el3.textContent = agents.size;
   const el4 = g('dep-kpi-cash'); if (el4) el4.textContent = fmtMoney(totalCash);
   const el5 = g('dep-kpi-credit'); if (el5) el5.textContent = fmtMoney(totalCredit);
@@ -2565,6 +2612,7 @@ function renderDepositChart() {
   if (!canvas || typeof Chart === 'undefined') return;
   const periodEl = g('dep-chart-period');
   const period = periodEl ? periodEl.value : 'monthly';
+  const baseDepositList = getBaseRecordsForRole(depositList);
 
   const now = new Date();
   let labels = [], cashData = [], creditData = [];
@@ -2575,7 +2623,7 @@ function renderDepositChart() {
       const key = d.toISOString().split('T')[0];
       labels.push(key.slice(5));
       let c = 0, cr = 0;
-      depositList.forEach(function(dep) { if (dep.date === key) { c += (dep.cash||0); cr += (dep.credit||0); } });
+      baseDepositList.forEach(function(dep) { if (dep.date === key) { c += (dep.cash||0); cr += (dep.credit||0); } });
       cashData.push(c); creditData.push(cr);
     }
   } else if (period === 'monthly') {
@@ -2584,7 +2632,7 @@ function renderDepositChart() {
       const key = d.toISOString().substring(0, 7);
       labels.push(ymLabel(key));
       let c = 0, cr = 0;
-      depositList.forEach(function(dep) { if (dep.date && dep.date.startsWith(key)) { c += (dep.cash||0); cr += (dep.credit||0); } });
+      baseDepositList.forEach(function(dep) { if (dep.date && dep.date.startsWith(key)) { c += (dep.cash||0); cr += (dep.credit||0); } });
       cashData.push(c); creditData.push(cr);
     }
   } else {
@@ -2592,7 +2640,7 @@ function renderDepositChart() {
       const yr = now.getFullYear() - i;
       labels.push(String(yr));
       let c = 0, cr = 0;
-      depositList.forEach(function(dep) { if (dep.date && dep.date.startsWith(String(yr))) { c += (dep.cash||0); cr += (dep.credit||0); } });
+      baseDepositList.forEach(function(dep) { if (dep.date && dep.date.startsWith(String(yr))) { c += (dep.cash||0); cr += (dep.credit||0); } });
       cashData.push(c); creditData.push(cr);
     }
   }
@@ -2625,22 +2673,25 @@ function renderDepositTable() {
   const tbody = table.querySelector('tbody');
   if (!tbody) return;
 
+  const baseDepositList = getBaseRecordsForRole(depositList);
+
   // Update header to include cash, credit, status columns
   if (thead) {
     thead.innerHTML = '<tr><th>#</th><th>Agent</th><th>Branch</th><th>Cash ($)</th><th>Credit ($)</th><th>Total</th><th>Date</th><th>Remark</th><th>Status</th><th>Actions</th></tr>';
   }
 
-  if (!depositList.length) {
+  if (!baseDepositList.length) {
     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-piggy-bank" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No deposit records yet</td></tr>';
     return;
   }
   const canApprove = (currentRole === 'supervisor' || currentRole === 'admin' || currentRole === 'cluster');
-  tbody.innerHTML = depositList.map(function(d, i) {
+  tbody.innerHTML = baseDepositList.map(function(d, i) {
     const avIdx = i % 8;
     const status = d.status || 'pending';
     const statusPill = status === 'approved' ? 'pill-green' : 'pill-orange';
     const statusLabel = status === 'approved' ? 'Approved' : 'Pending';
     const approveBtn = (canApprove && status !== 'approved') ? '<button class="btn-edit" onclick="approveDeposit(\'' + esc(d.id) + '\')" title="Approve"><i class="fas fa-check-circle"></i></button> ' : '';
+    const canEdit = canModifyRecord(d);
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
       '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(d.agent)) + '</span>' + esc(d.agent) + '</div></td>' +
@@ -2653,8 +2704,8 @@ function renderDepositTable() {
       '<td><span class="pill ' + statusPill + '">' + statusLabel + '</span></td>' +
       '<td style="white-space:nowrap;">' +
         approveBtn +
-        '<button class="btn-edit" onclick="editDeposit(\'' + esc(d.id) + '\')"><i class="fas fa-edit"></i></button> ' +
-        '<button class="btn-delete" onclick="deleteDeposit(\'' + esc(d.id) + '\')"><i class="fas fa-trash"></i></button>' +
+        (canEdit ? '<button class="btn-edit" onclick="editDeposit(\'' + esc(d.id) + '\')"><i class="fas fa-edit"></i></button> ' : '') +
+        (canEdit ? '<button class="btn-delete" onclick="deleteDeposit(\'' + esc(d.id) + '\')"><i class="fas fa-trash"></i></button>' : '') +
       '</td>' +
       '</tr>';
   }).join('');
@@ -2683,13 +2734,14 @@ function renderDepositSummaryView() {
   var container = g('deposit-summary-view');
   if (!container) return;
 
-  if (!depositList.length) {
+  const baseDepositList = getBaseRecordsForRole(depositList);
+  if (!baseDepositList.length) {
     container.innerHTML = '<div style="text-align:center;padding:40px;color:#999;"><i class="fas fa-inbox fa-3x" style="display:block;margin-bottom:12px;"></i>No deposit records found</div>';
     return;
   }
 
   var agentMap = {};
-  depositList.forEach(function(d) {
+  baseDepositList.forEach(function(d) {
     if (!agentMap[d.agent]) agentMap[d.agent] = { cash: 0, credit: 0, total: 0, count: 0, branch: d.branch || '' };
     var ag = agentMap[d.agent];
     ag.cash += (d.cash || 0);
