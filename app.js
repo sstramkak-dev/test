@@ -219,6 +219,23 @@ function refreshAllData() {
   });
 
   Promise.all(promises).then(function() {
+    // Re-sync currentUser from the refreshed staffList so role/branch/name reflect the latest sheet data
+    if (currentUser) {
+      var freshUser = staffList.find(function(u) { return u.id === currentUser.id; });
+      if (freshUser) {
+        currentUser = freshUser;
+        var nameEl = g('topbar-name'); if (nameEl) nameEl.textContent = freshUser.name;
+        var avatarEl = g('topbar-avatar'); if (avatarEl) avatarEl.textContent = ini(freshUser.name);
+      } else if (!isAdminUser(currentUser)) {
+        // Account was removed from the sheet — sign the user out for security
+        currentUser = null;
+        var as2 = g('app-shell'); if (as2) as2.style.display = 'none';
+        var ls2 = g('login-screen'); if (ls2) ls2.style.display = 'flex';
+        var lf2 = g('login-form'); if (lf2) lf2.reset();
+        showToast('Your account was not found. You have been signed out.', 'error');
+        return;
+      }
+    }
     if (ind) ind.className = '';
     if (lbl) lbl.textContent = 'Synced \u2713';
     if (btn) btn.disabled = false;
@@ -3364,7 +3381,11 @@ function handleLogin(e) {
       var ls = g('login-screen'); if (ls) ls.style.display = 'none';
       var as = g('app-shell'); if (as) { as.style.display = 'flex'; }
       switchRole(roleMap[user.role] || 'user');
+      // switchRole overwrites currentUser with a representative user for demo switching;
+      // restore it to the authenticated user so all data filtering uses the correct identity.
+      currentUser = user;
       var nameEl = g('topbar-name'); if (nameEl) nameEl.textContent = user.name;
+      var avatarEl = g('topbar-avatar'); if (avatarEl) avatarEl.textContent = ini(user.name);
       navigateTo('dashboard', null);
       // Auto-refresh all data from Google Sheets on login so users always see the latest records
       refreshAllData();
