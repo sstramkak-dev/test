@@ -117,11 +117,29 @@ function fetchStaffFromSheet() {
       console.warn('Could not load staff from Google Sheets, using local data:', e);
       var errEl = g('login-error');
       if (errEl) {
-        errEl.textContent = 'Could not reach the server. Signing in with cached data.';
+        var hasCachedStaff = localStorage.getItem(LS_KEYS.staff) !== null;
+        errEl.textContent = hasCachedStaff
+          ? 'Could not reach the server. Signing in with cached data.'
+          : 'Could not reach the server. Please check your internet connection and try again.';
         errEl.style.display = '';
-        setTimeout(function() { if (errEl) errEl.style.display = 'none'; }, 4000);
+        setTimeout(function() { if (errEl) errEl.style.display = 'none'; }, 5000);
       }
     });
+}
+
+// Serialize all object/array field values to JSON strings so rows can be stored
+// as flat strings in Google Sheets. Used by both syncSheet and syncUpAll.
+function normalizeRowForSheet(row) {
+  var out = {};
+  Object.keys(row).forEach(function(k) {
+    var v = row[k];
+    out[k] = (v !== null && v !== undefined && typeof v === 'object') ? JSON.stringify(v) : (v !== undefined ? v : '');
+  });
+  return out;
+}
+
+function normalizeArrayForSheet(dataArray) {
+  return Array.isArray(dataArray) ? dataArray.map(normalizeRowForSheet) : [];
 }
 
 function syncSheet(sheetName, dataArray) {
@@ -131,17 +149,7 @@ function syncSheet(sheetName, dataArray) {
   if (ind) ind.className = 'syncing';
   if (lbl) lbl.textContent = 'Syncing\u2026';
 
-  // Serialize items/dollarItems objects in saleRecords to JSON strings for sheet storage
-  var normalized = Array.isArray(dataArray) ? dataArray.map(function(row) {
-    var out = {};
-    Object.keys(row).forEach(function(k) {
-      var v = row[k];
-      out[k] = (v !== null && v !== undefined && typeof v === 'object') ? JSON.stringify(v) : (v !== undefined ? v : '');
-    });
-    return out;
-  }) : [];
-
-  _gsPost({ sheet: sheetName, action: 'sync', data: normalized })
+  _gsPost({ sheet: sheetName, action: 'sync', data: normalizeArrayForSheet(dataArray) })
     .then(function() {
       if (ind) ind.className = '';
       if (lbl) lbl.textContent = 'Synced \u2713';
@@ -184,6 +192,53 @@ function readSheet(sheetName) {
     });
 }
 
+// Push all local data to Google Sheets. Exposed globally so admin can call it
+// from the browser console or a "Sync Up" button.
+function syncUpAll() {
+  if (!GS_URL) {
+    showToast('No sync URL configured.', 'error');
+    return;
+  }
+  var ind = document.getElementById('gs-sync-indicator');
+  var lbl = document.getElementById('gs-sync-status');
+  var upBtn = document.getElementById('sync-up-btn');
+  if (ind) ind.className = 'syncing';
+  if (lbl) lbl.textContent = 'Uploading\u2026';
+  if (upBtn) upBtn.disabled = true;
+
+  var sheets = [
+    { name: 'Sales',        data: function() { return saleRecords; } },
+    { name: 'Customers',    data: function() { return newCustomers; } },
+    { name: 'TopUp',        data: function() { return topUpList; } },
+    { name: 'Terminations', data: function() { return terminationList; } },
+    { name: 'OutCoverage',  data: function() { return outCoverageList; } },
+    { name: 'Promotions',   data: function() { return promotionList; } },
+    { name: 'Deposits',     data: function() { return depositList; } },
+    { name: 'KPI',          data: function() { return kpiList; } },
+    { name: 'Items',        data: function() { return itemCatalogue; } },
+    { name: 'Coverage',     data: function() { return coverageLocations; } },
+    { name: 'Staff',        data: function() { return staffList; } },
+  ];
+
+  var promises = sheets.map(function(s) {
+    return _gsPost({ sheet: s.name, action: 'sync', data: normalizeArrayForSheet(s.data()) });
+  });
+
+  Promise.all(promises).then(function() {
+    if (ind) ind.className = '';
+    if (lbl) lbl.textContent = 'Uploaded \u2713';
+    if (upBtn) upBtn.disabled = false;
+    setTimeout(function() { if (lbl) lbl.textContent = ''; }, 3000);
+    showToast('All data uploaded to Google Sheets.', 'success');
+  }).catch(function(err) {
+    console.warn('Sync up error:', err);
+    if (ind) ind.className = 'error';
+    if (lbl) lbl.textContent = 'Upload failed';
+    if (upBtn) upBtn.disabled = false;
+    showToast('Upload failed. Please try again.', 'error');
+  });
+}
+
 // Sync all sheets down from Google Sheets into local memory and localStorage,
 // then re-render the current page. Exposed globally so admin can call it from
 // the browser console or a "Sync Down" button.
@@ -194,7 +249,7 @@ function syncDownAll() {
   }
   var ind = document.getElementById('gs-sync-indicator');
   var lbl = document.getElementById('gs-sync-status');
-  var btn = document.getElementById('refresh-sync-btn');
+  var btn = document.getElementById('sync-down-btn');
   if (ind) ind.className = 'syncing';
   if (lbl) lbl.textContent = 'Syncing\u2026';
   if (btn) btn.disabled = true;
@@ -281,8 +336,9 @@ function syncDownAll() {
   });
 }
 
-// Expose syncDownAll globally so it can be called from a button or console
+// Expose sync functions globally so they can be called from buttons or console
 window.syncDownAll = syncDownAll;
+window.syncUpAll = syncUpAll;
 
 function refreshAllData() {
   return syncDownAll();
