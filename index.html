@@ -573,8 +573,11 @@
           <span class="topbar-name" id="topbar-name">Admin User</span>
         </div>
         <span class="topbar-role-badge" id="topbar-role">Admin</span>
-        <button class="topbar-icon-btn" id="refresh-sync-btn" onclick="refreshAllData()" title="Refresh &amp; Sync data from Google Sheets">
-          <i class="fas fa-arrows-rotate"></i>
+        <button class="topbar-icon-btn" id="sync-down-btn" onclick="syncDownAll()" title="Sync Down — pull latest data from Google Sheets">
+          <i class="fas fa-cloud-arrow-down"></i>
+        </button>
+        <button class="topbar-icon-btn" id="sync-up-btn" onclick="syncUpAll()" title="Sync Up — push local data to Google Sheets">
+          <i class="fas fa-cloud-arrow-up"></i>
         </button>
         <span id="gs-sync-indicator" title="Google Sheets Sync" style="display:flex;align-items:center;gap:5px;font-size:.75rem;color:#888;padding:0 6px;">
           <i class="fas fa-table-cells-large" style="color:#0f9d58;font-size:.85rem;"></i>
@@ -598,9 +601,6 @@
             </select>
           </div>
           <div class="toolbar-right">
-            <button class="btn btn-outline" onclick="loadDashboard()">
-              <i class="fas fa-arrows-rotate"></i> Refresh
-            </button>
           </div>
         </div>
 
