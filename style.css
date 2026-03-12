@@ -1899,6 +1899,8 @@ input, select, textarea, button {
   .chart-row { grid-template-columns: 1fr; }
   .chart-card-full { grid-column: 1; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .chart-card-body { height: 200px; }
+  .kpi-card { padding: 16px; }
 }
 
 /* Tablets */
@@ -1948,14 +1950,24 @@ input, select, textarea, button {
   .submenu { display: none !important; }
 
   #main-wrapper { height: calc(100vh - 56px); min-height: 0; }
-  #main-content { padding: 14px; }
-  #content { padding: 14px; }
+  #main-content { padding: 12px; }
+  #content { padding: 12px; }
+  .page.active { padding: 12px 14px; }
 
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
+  .kpi-card { padding: 14px; gap: 8px; }
+  .kpi-value { font-size: 1.5rem; }
+  .chart-card-body { height: 190px; }
+  .chart-card { padding: 12px 16px; gap: 10px; }
+  .chart-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+  .data-table td { padding: 8px 12px; }
+  .data-table thead tr th { padding: 10px 12px; }
+  .table-card-header { padding: 12px 16px; }
   .page-header { flex-direction: column; align-items: flex-start; }
   .filter-bar { gap: 8px; padding: 12px; }
   .summary-grid { grid-template-columns: 1fr; }
-  .chart-row { grid-template-columns: 1fr; }
+  .page-toolbar { margin-bottom: 12px; }
+  #dash-kpi-view-toggle { flex-wrap: wrap; gap: 4px; }
 }
 
 /* Mobile portrait */
@@ -1981,9 +1993,17 @@ input, select, textarea, button {
   .form-row { flex-direction: column; gap: 0; }
   .form-row .form-group { margin-bottom: 14px; }
 
-  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .kpi-value { font-size: 1.4rem; }
-  .kpi-card { padding: 14px; }
+  .page.active { padding: 10px 12px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .kpi-value { font-size: 1.35rem; }
+  .kpi-card { padding: 12px; gap: 6px; }
+  .kpi-card-icon { width: 36px; height: 36px; font-size: 1rem; }
+  .chart-card-body { height: 175px; }
+  .chart-card { padding: 10px 12px; gap: 8px; }
+  .chart-row { gap: 10px; margin-bottom: 10px; }
+  .data-table td { padding: 7px 10px; font-size: 0.75rem; }
+  .data-table thead tr th { padding: 8px 10px; font-size: 0.7rem; }
+  .table-card-header { padding: 10px 12px; }
 
   .sale-items-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
 
@@ -2001,6 +2021,20 @@ input, select, textarea, button {
   #role-widget { bottom: 12px; right: 12px; }
 
   .toast { bottom: 70px; right: 12px; left: 12px; max-width: 100%; }
+}
+
+/* Small phones */
+@media (max-width: 400px) {
+  .page.active { padding: 8px 10px; }
+  .kpi-grid { grid-template-columns: 1fr; gap: 8px; margin-bottom: 8px; }
+  .kpi-card { padding: 10px 12px; flex-direction: row; align-items: center; gap: 12px; }
+  .kpi-card-body { flex: 1; }
+  .trend-badge { align-self: flex-start; }
+  .kpi-value { font-size: 1.25rem; }
+  .chart-card-body { height: 160px; }
+  .chart-card { padding: 8px 10px; }
+  .chart-row { gap: 8px; margin-bottom: 8px; }
+  .chart-card-title { font-size: 0.8rem; }
 }
 
 /* ── Promotion Cards ── */
