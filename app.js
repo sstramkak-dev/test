@@ -77,6 +77,21 @@ function _gsPost(payload, retries) {
   });
 }
 
+function normalizeStaffRecord(u) {
+  var out = {};
+  Object.keys(u).forEach(function(k) {
+    out[k] = typeof u[k] === 'string' ? u[k].trim() : u[k];
+  });
+  // Lowercase status so login comparison works regardless of how the sheet stores it
+  // (role is kept as-is because roleMap lookups depend on the original casing, e.g. 'Admin')
+  if (out.status) out.status = out.status.toLowerCase();
+  return out;
+}
+
+function isAdminUser(u) {
+  return (u.username || '').toLowerCase() === 'admin' && (u.role || '').toLowerCase() === 'admin';
+}
+
 function fetchStaffFromSheet() {
   if (!GS_URL) return Promise.resolve();
   return fetch(GS_URL + '?sheet=Staff&action=get')
@@ -86,13 +101,14 @@ function fetchStaffFromSheet() {
     })
     .then(function(data) {
       if (!Array.isArray(data) || data.length === 0) return;
+      // Normalize staff records from Google Sheets (trim whitespace, lowercase status)
+      var normalized = data.map(normalizeStaffRecord);
       // Keep local admin as fallback if sheet doesn't contain one
-      var hasAdmin = data.some(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
-      if (!hasAdmin) {
-        var localAdmin = staffList.find(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
-        if (localAdmin) data.unshift(localAdmin);
+      if (!normalized.some(isAdminUser)) {
+        var localAdmin = staffList.find(isAdminUser);
+        if (localAdmin) normalized.unshift(localAdmin);
       }
-      staffList = data;
+      staffList = normalized;
       lsSave(LS_KEYS.staff, staffList);
     })
     .catch(function(e) {
@@ -163,12 +179,13 @@ function refreshAllData() {
     { name: 'Deposits',     lsKey: LS_KEYS.deposits,     assign: function(d) { depositList = d; } },
     { name: 'KPI',          lsKey: LS_KEYS.kpis,         assign: function(d) { kpiList = d; } },
     { name: 'Staff',        lsKey: LS_KEYS.staff,        assign: function(d) {
-      var hasAdmin = d.some(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
-      if (!hasAdmin) {
-        var localAdmin = staffList.find(function(u) { return u.username === 'admin' && u.role === 'Admin'; });
-        if (localAdmin) d.unshift(localAdmin);
+      // Normalize staff records (trim whitespace, lowercase status)
+      var normalizedStaff = d.map(normalizeStaffRecord);
+      if (!normalizedStaff.some(isAdminUser)) {
+        var localAdmin = staffList.find(isAdminUser);
+        if (localAdmin) normalizedStaff.unshift(localAdmin);
       }
-      staffList = d;
+      staffList = normalizedStaff;
     }}
   ];
 
@@ -3338,7 +3355,7 @@ function handleLogin(e) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in\u2026'; }
   function doAuth() {
     var user = staffList.find(function(u) {
-      return u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.status === 'active';
+      return (u.username || '').toLowerCase() === username.toLowerCase() && u.password === password && (u.status || '').toLowerCase() === 'active';
     });
     if (user) {
       var roleMap = { 'Admin': 'admin', 'Cluster': 'cluster', 'Supervisor': 'supervisor', 'Agent': 'agent' };
