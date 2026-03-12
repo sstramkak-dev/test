@@ -58,7 +58,7 @@ const BRANCHES = ['Phnom Penh', 'Siem Reap', 'Battambang', 'Sihanoukville', 'Kam
 const SUPPORT_CONTACT = { email: 'support@smart5g.com', phone: '+855 23 123 456' };
 
 // ── Google Sheets Sync ──────────────────────────────────────
-const GS_URL = 'https://script.google.com/macros/s/AKfycbwonszKGWvkth03iYXzi6CdOLssRJsbbJ11YgQVk8zGqT8zNWUWF2RMNqIvXIZykgQIJQ/exec';
+const GS_URL = 'https://script.google.com/macros/s/AKfycbxokMtXAEvhyUrtfCSFCDmmdv6Cr6rOFVxkBxtH_eUbQc4okwCcVNVVvOv02nmanfPdTA/exec';
 
 function _gsPost(payload, retries) {
   if (!GS_URL) return Promise.resolve();
@@ -94,11 +94,7 @@ function isAdminUser(u) {
 
 function fetchStaffFromSheet() {
   if (!GS_URL) return Promise.resolve();
-  return fetch(GS_URL + '?sheet=Staff&action=get')
-    .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
+  return readSheet('Staff')
     .then(function(data) {
       if (!Array.isArray(data) || data.length === 0) return;
       // Normalize staff records from Google Sheets (trim whitespace, lowercase status)
@@ -158,16 +154,43 @@ function deleteFromSheet(sheetName, id) {
     .catch(function(err) { console.warn('GS delete error:', err); });
 }
 
-function refreshAllData() {
+// Read a single sheet from Google Apps Script (returns a Promise<array>).
+// Sends { sheet, action:'read' } via POST and accepts both a plain array
+// and a { status:'ok', data:[...] } envelope in the response.
+function readSheet(sheetName) {
+  if (!GS_URL) return Promise.resolve([]);
+  return fetch(GS_URL, {
+    method: 'POST',
+    body: JSON.stringify({ sheet: sheetName, action: 'read' })
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(resp) {
+      if (Array.isArray(resp)) return resp;
+      if (resp && Array.isArray(resp.data)) return resp.data;
+      return [];
+    })
+    .catch(function(e) {
+      console.warn('readSheet(' + sheetName + ') failed:', e);
+      return [];
+    });
+}
+
+// Sync all sheets down from Google Sheets into local memory and localStorage,
+// then re-render the current page. Exposed globally so admin can call it from
+// the browser console or a "Sync Down" button.
+function syncDownAll() {
   if (!GS_URL) {
     showToast('No sync URL configured.', 'error');
-    return;
+    return Promise.resolve();
   }
   var ind = document.getElementById('gs-sync-indicator');
   var lbl = document.getElementById('gs-sync-status');
   var btn = document.getElementById('refresh-sync-btn');
   if (ind) ind.className = 'syncing';
-  if (lbl) lbl.textContent = 'Refreshing\u2026';
+  if (lbl) lbl.textContent = 'Syncing\u2026';
   if (btn) btn.disabled = true;
 
   var sheets = [
@@ -178,8 +201,9 @@ function refreshAllData() {
     { name: 'Promotions',   lsKey: LS_KEYS.promotions,   assign: function(d) { promotionList = d; } },
     { name: 'Deposits',     lsKey: LS_KEYS.deposits,     assign: function(d) { depositList = d; } },
     { name: 'KPI',          lsKey: LS_KEYS.kpis,         assign: function(d) { kpiList = d; } },
+    { name: 'Items',        lsKey: LS_KEYS.items,        assign: function(d) { if (d.length) itemCatalogue = d; } },
+    { name: 'Coverage',     lsKey: LS_KEYS.coverage,     assign: function(d) { coverageLocations = d; } },
     { name: 'Staff',        lsKey: LS_KEYS.staff,        assign: function(d) {
-      // Normalize staff records (trim whitespace, lowercase status)
       var normalizedStaff = d.map(normalizeStaffRecord);
       if (!normalizedStaff.some(isAdminUser)) {
         var localAdmin = staffList.find(isAdminUser);
@@ -190,11 +214,7 @@ function refreshAllData() {
   ];
 
   var promises = sheets.map(function(s) {
-    return fetch(GS_URL + '?sheet=' + s.name + '&action=get')
-      .then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
+    return readSheet(s.name)
       .then(function(data) {
         if (!Array.isArray(data) || data.length === 0) return;
         // Parse JSON-serialized object fields back to objects (e.g. items, dollarItems, cashDetail)
@@ -203,7 +223,7 @@ function refreshAllData() {
           Object.keys(row).forEach(function(k) {
             var v = row[k];
             if (typeof v === 'string' && v.length > 0 && (v[0] === '{' || v[0] === '[')) {
-              try { out[k] = JSON.parse(v); } catch(e) { out[k] = v; }
+              try { out[k] = JSON.parse(v); } catch(parseErr) { out[k] = v; }
             } else {
               out[k] = v;
             }
@@ -212,14 +232,11 @@ function refreshAllData() {
         });
         s.assign(parsed);
         lsSave(s.lsKey, parsed);
-      })
-      .catch(function(e) {
-        console.warn('Could not fetch ' + s.name + ' from Google Sheets:', e);
       });
   });
 
-  Promise.all(promises).then(function() {
-    // Re-sync currentUser from the refreshed staffList so role/branch/name reflect the latest sheet data
+  return Promise.all(promises).then(function() {
+    // Re-sync currentUser from the refreshed staffList
     if (currentUser) {
       var freshUser = staffList.find(function(u) { return u.id === currentUser.id; });
       if (freshUser) {
@@ -227,7 +244,6 @@ function refreshAllData() {
         var nameEl = g('topbar-name'); if (nameEl) nameEl.textContent = freshUser.name;
         var avatarEl = g('topbar-avatar'); if (avatarEl) avatarEl.textContent = ini(freshUser.name);
       } else if (!isAdminUser(currentUser)) {
-        // Account was removed from the sheet — sign the user out for security
         currentUser = null;
         var as2 = g('app-shell'); if (as2) as2.style.display = 'none';
         var ls2 = g('login-screen'); if (ls2) ls2.style.display = 'flex';
@@ -248,14 +264,21 @@ function refreshAllData() {
     else if (currentPage === 'customer') { renderNewCustomerTable(); renderTopUpTable(); renderTerminationTable(); }
     else if (currentPage === 'deposit') { renderDepositTable(); updateDepositKpis(); }
     else if (currentPage === 'settings') { renderStaffTable(); renderAccessContent(currentSettingsTab); }
-    showToast('Data refreshed from Google Sheets.', 'success');
+    showToast('Data synced from Google Sheets.', 'success');
   }).catch(function(err) {
-    console.warn('Refresh error:', err);
+    console.warn('Sync down error:', err);
     if (ind) ind.className = 'error';
-    if (lbl) lbl.textContent = 'Refresh failed';
+    if (lbl) lbl.textContent = 'Sync failed';
     if (btn) btn.disabled = false;
-    showToast('Refresh failed. Please try again.', 'error');
+    showToast('Sync failed. App will use cached data.', 'error');
   });
+}
+
+// Expose syncDownAll globally so it can be called from a button or console
+window.syncDownAll = syncDownAll;
+
+function refreshAllData() {
+  return syncDownAll();
 }
 
 // ------------------------------------------------------------
