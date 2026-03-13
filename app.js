@@ -80,11 +80,21 @@ function _gsPost(payload, retries) {
 function normalizeStaffRecord(u) {
   var out = {};
   Object.keys(u).forEach(function(k) {
-    out[k] = typeof u[k] === 'string' ? u[k].trim() : u[k];
+    var val = u[k];
+    // Trim all string values and handle null/undefined
+    if (typeof val === 'string') {
+      out[k] = val.trim();
+    } else {
+      out[k] = val;
+    }
   });
   // Lowercase status so login comparison works regardless of how the sheet stores it
   // (role is kept as-is because roleMap lookups depend on the original casing, e.g. 'Admin')
   if (out.status) out.status = out.status.toLowerCase();
+  // Ensure username exists and is not empty
+  if (!out.username || out.username === '') {
+    console.warn('Staff record missing username:', out);
+  }
   return out;
 }
 
@@ -93,28 +103,49 @@ function isAdminUser(u) {
 }
 
 function fetchStaffFromSheet() {
-  if (!GS_URL) return Promise.resolve();
+  if (!GS_URL) {
+    console.warn('[SYNC] No Google Sheets URL configured');
+    return Promise.resolve();
+  }
+
+  console.log('[SYNC] Fetching staff from Google Sheets...');
+
   return readSheet('Staff')
     .then(function(data) {
-      if (!Array.isArray(data) || data.length === 0) return;
+      console.log('[SYNC] Raw staff data received:', data.length, 'records');
+
+      if (!Array.isArray(data) || data.length === 0) {
+        console.warn('[SYNC] No staff data returned from sheet');
+        return;
+      }
+
+      console.log('[SYNC] Processing', data.length, 'staff records');
+
       // Normalize staff records from Google Sheets (trim whitespace, lowercase status)
       var normalized = data.map(normalizeStaffRecord);
+      console.log('[SYNC] Normalized staff records:', normalized.map(function(u) { return { username: u.username, status: u.status, role: u.role, hasPassword: !!u.password }; }));
+
       // Keep local admin as fallback if sheet doesn't contain one
       if (!normalized.some(isAdminUser)) {
         var localAdmin = staffList.find(isAdminUser);
-        if (localAdmin) normalized.unshift(localAdmin);
+        if (localAdmin) {
+          console.log('[SYNC] Adding local admin as fallback');
+          normalized.unshift(localAdmin);
+        }
       }
       // Keep default agent users as fallback if sheet doesn't contain them
       DEFAULT_AGENT_USERS.forEach(function(du) {
         if (!normalized.some(function(u) { return u.username === du.username; })) {
+          console.log('[SYNC] Adding default user:', du.username);
           normalized.push(du);
         }
       });
       staffList = normalized;
       lsSave(LS_KEYS.staff, staffList);
+      console.log('[SYNC] ✓ Staff list updated:', staffList.length, 'total users');
     })
     .catch(function(e) {
-      console.warn('Could not load staff from Google Sheets, using local data:', e);
+      console.error('[SYNC] ✗ Staff fetch error:', e);
       var errEl = g('login-error');
       if (errEl) {
         var hasCachedStaff = localStorage.getItem(LS_KEYS.staff) !== null;
@@ -173,21 +204,36 @@ function deleteFromSheet(sheetName, id) {
 // and a { status:'ok', data:[...] } envelope in the response.
 function readSheet(sheetName) {
   if (!GS_URL) return Promise.resolve([]);
+
+  console.log('[SYNC] Reading sheet:', sheetName);
+
   return fetch(GS_URL, {
     method: 'POST',
     body: JSON.stringify({ sheet: sheetName, action: 'read' })
   })
     .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.ok) {
+        console.error('[SYNC] HTTP error:', r.status);
+        throw new Error('HTTP ' + r.status);
+      }
       return r.json();
     })
     .then(function(resp) {
-      if (Array.isArray(resp)) return resp;
-      if (resp && Array.isArray(resp.data)) return resp.data;
+      console.log('[SYNC] Sheet response for', sheetName + ':', resp);
+
+      if (Array.isArray(resp)) {
+        console.log('[SYNC] Received array with', resp.length, 'items');
+        return resp;
+      }
+      if (resp && Array.isArray(resp.data)) {
+        console.log('[SYNC] Received data envelope with', resp.data.length, 'items');
+        return resp.data;
+      }
+      console.warn('[SYNC] Unexpected response format');
       return [];
     })
     .catch(function(e) {
-      console.warn('readSheet(' + sheetName + ') failed:', e);
+      console.error('[SYNC] readSheet(' + sheetName + ') failed:', e);
       return [];
     });
 }
@@ -3547,16 +3593,36 @@ function handleLogin(e) {
   var password = rv('login-password');
   var errEl = g('login-error');
   var btn = g('login-submit-btn');
+
+  console.log('[AUTH] Login attempt started');
+  console.log('[AUTH] Username entered:', username);
+
   if (!username || !password) {
+    console.warn('[AUTH] Missing credentials');
     if (errEl) { errEl.textContent = 'Please enter username and password.'; errEl.style.display = ''; }
     return;
   }
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in\u2026'; }
   function doAuth() {
+    console.log('[AUTH] Starting authentication check');
+    console.log('[AUTH] Total staff records loaded:', staffList.length);
+    console.log('[AUTH] Staff usernames available:', staffList.map(function(u) { return u.username; }));
+
     var user = staffList.find(function(u) {
-      return (u.username || '').toLowerCase() === username.toLowerCase() && u.password === password && (u.status || '').toLowerCase() === 'active';
+      var usernameMatch = (u.username || '').toLowerCase() === username.toLowerCase();
+      var passwordMatch = u.password === password;
+      var statusMatch = (u.status || '').toLowerCase() === 'active';
+
+      if (usernameMatch) {
+        console.log('[AUTH] Username match found:', u.username);
+        console.log('[AUTH] Password match:', passwordMatch);
+        console.log('[AUTH] Status:', u.status, '| Status active:', statusMatch);
+      }
+
+      return usernameMatch && passwordMatch && statusMatch;
     });
     if (user) {
+      console.log('[AUTH] \u2713 Authentication successful for user:', user.username);
       var roleMap = { 'Admin': 'admin', 'Cluster': 'cluster', 'Supervisor': 'supervisor', 'Agent': 'agent' };
       currentUser = user;
       if (errEl) errEl.style.display = 'none';
@@ -3573,11 +3639,25 @@ function handleLogin(e) {
       // Auto-refresh all data from Google Sheets on login so users always see the latest records
       refreshAllData();
     } else {
+      console.error('[AUTH] \u2717 Authentication failed');
+      console.error('[AUTH] No matching user found for username:', username);
+      console.error('[AUTH] Available users:', staffList.map(function(u) {
+        return { username: u.username, status: u.status, hasPassword: !!u.password };
+      }));
       if (errEl) { errEl.textContent = 'Invalid username or password, or account is inactive.'; errEl.style.display = ''; }
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-right-to-bracket"></i> Sign In'; }
     }
   }
-  fetchStaffFromSheet().then(doAuth);
+  console.log('[AUTH] Fetching staff data from Google Sheets...');
+  fetchStaffFromSheet()
+    .then(function() {
+      console.log('[AUTH] Staff data fetch completed');
+      doAuth();
+    })
+    .catch(function(err) {
+      console.error('[AUTH] Staff data fetch error:', err);
+      doAuth(); // Still attempt auth with cached data
+    });
 }
 
 function toggleLoginPwd() {
