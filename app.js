@@ -1607,7 +1607,7 @@ function downloadSaleCSV() {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const suffix = (dateFrom || 'all') + '_to_' + (dateTo || 'all');
+  const suffix = (dateFrom || 'earliest') + '_to_' + (dateTo || 'latest');
   a.href = url;
   a.download = 'daily_sale_' + suffix + '.csv';
   document.body.appendChild(a);
