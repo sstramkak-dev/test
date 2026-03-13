@@ -2916,8 +2916,10 @@ function openDepositModal(item) {
   // Always reset field lock states so they don't persist between modal opens
   const agEl = g('dep-agent');
   const brEl = g('dep-branch');
+  const brTextEl = g('dep-branch-text');
   if (agEl) agEl.readOnly = false;
-  if (brEl) brEl.disabled = false;
+  if (brEl) { brEl.disabled = false; brEl.style.display = ''; brEl.required = true; }
+  if (brTextEl) brTextEl.style.display = 'none';
 
   const title = g('modal-addDeposit-title');
   const btn = g('dep-submit-btn');
@@ -2935,6 +2937,15 @@ function openDepositModal(item) {
     const dtEl = g('dep-date'); if (dtEl) dtEl.value = item.date || '';
     const ntEl = g('dep-remark'); if (ntEl) ntEl.value = item.remark || item.note || '';
     if (item.cashDetail) _loadDenomSection(item.cashDetail);
+    if (currentUser && (currentRole === 'agent' || currentRole === 'supervisor')) {
+      if (agEl) agEl.readOnly = true;
+      if (brEl && brTextEl) {
+        brTextEl.textContent = item.branch || '';
+        brEl.style.display = 'none';
+        brEl.required = false;
+        brTextEl.style.display = '';
+      }
+    }
   } else {
     if (title) title.textContent = 'Add Deposit';
     if (btn) btn.textContent = 'Add Deposit';
@@ -2946,7 +2957,14 @@ function openDepositModal(item) {
       }
       if (brEl) {
         if (currentUser.branch) brEl.value = currentUser.branch;
-        if (currentRole === 'agent' || currentRole === 'supervisor') brEl.disabled = true;
+        if (currentRole === 'agent' || currentRole === 'supervisor') {
+          if (brTextEl) {
+            brTextEl.textContent = currentUser.branch || '';
+            brTextEl.style.display = '';
+          }
+          brEl.style.display = 'none';
+          brEl.required = false;
+        }
       }
     }
   }
