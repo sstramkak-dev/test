@@ -2913,6 +2913,12 @@ function openDepositModal(item) {
   if (editEl) editEl.value = '';
   _resetDenomSection();
 
+  // Always reset field lock states so they don't persist between modal opens
+  const agEl = g('dep-agent');
+  const brEl = g('dep-branch');
+  if (agEl) agEl.readOnly = false;
+  if (brEl) brEl.disabled = false;
+
   const title = g('modal-addDeposit-title');
   const btn = g('dep-submit-btn');
   populateBranchSelects();
@@ -2921,8 +2927,8 @@ function openDepositModal(item) {
     if (title) title.textContent = 'Edit Deposit';
     if (btn) btn.textContent = 'Update Deposit';
     if (editEl) editEl.value = item.id;
-    const agEl = g('dep-agent'); if (agEl) agEl.value = item.agent || '';
-    const brEl = g('dep-branch'); if (brEl) brEl.value = item.branch || '';
+    if (agEl) agEl.value = item.agent || '';
+    if (brEl) brEl.value = item.branch || '';
     const cashEl = g('dep-cash'); if (cashEl) cashEl.value = item.cash || '';
     const creditEl = g('dep-credit'); if (creditEl) creditEl.value = item.credit || '';
     const rielEl = g('dep-riel'); if (rielEl) rielEl.value = item.riel || '';
@@ -2934,8 +2940,14 @@ function openDepositModal(item) {
     if (btn) btn.textContent = 'Add Deposit';
     const dtEl = g('dep-date'); if (dtEl) dtEl.value = new Date().toISOString().split('T')[0];
     if (currentUser) {
-      const agEl = g('dep-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent' || currentRole === 'supervisor') agEl.readOnly = true; }
-      const brEl = g('dep-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent' || currentRole === 'supervisor') brEl.disabled = true; }
+      if (agEl) {
+        agEl.value = currentUser.name || '';
+        if (currentRole === 'agent' || currentRole === 'supervisor') agEl.readOnly = true;
+      }
+      if (brEl) {
+        if (currentUser.branch) brEl.value = currentUser.branch;
+        if (currentRole === 'agent' || currentRole === 'supervisor') brEl.disabled = true;
+      }
     }
   }
   openModal('modal-addDeposit');

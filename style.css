@@ -1557,7 +1557,9 @@ input, select, textarea, button {
 
 .form-input:disabled,
 .form-select:disabled,
-.form-textarea:disabled {
+.form-textarea:disabled,
+.form-input[readonly],
+.form-textarea[readonly] {
   background: #F5F5F5;
   color: #9E9E9E;
   cursor: not-allowed;
