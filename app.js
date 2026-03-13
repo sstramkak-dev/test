@@ -1387,7 +1387,7 @@ function applyReportFilters() {
   if (currentReportView === 'summary') {
     var unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
     var dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active'; });
-    renderSummaryView(filteredSales.length ? filteredSales : saleRecords, unitItems, dollarItems);
+    renderSummaryView(filteredSales, unitItems, dollarItems);
     // Defer chart render by one tick so the DOM update from renderSummaryView completes first
     setTimeout(renderSaleCharts, 50);
   }
@@ -1433,13 +1433,13 @@ function setReportView(view) {
     if (summaryView) summaryView.style.display = '';
     const unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
     const dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active'; });
-    renderSummaryView(filteredSales.length ? filteredSales : saleRecords, unitItems, dollarItems);
+    renderSummaryView(filteredSales, unitItems, dollarItems);
     renderSaleCharts();
   }
 }
 
 function updateSaleKpis() {
-  const data = filteredSales.length ? filteredSales : saleRecords;
+  const data = filteredSales;
   let totalRevenue = 0, totalRecharge = 0, totalGrossAds = 0, totalHomeInternet = 0;
 
   data.forEach(function(s) {
@@ -1503,11 +1503,9 @@ function renderSaleTable() {
     return;
   }
 
-  // Only show item columns that have at least one non-zero value in the current data
-  const allUnitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
-  const allDollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active' && x.id !== ITEM_ID_REVENUE; });
-  const unitItems = allUnitItems.filter(function(item) { return data.some(function(s) { return s.items && s.items[item.id] > 0; }); });
-  const dollarItems = allDollarItems.filter(function(item) { return data.some(function(s) { return s.dollarItems && s.dollarItems[item.id] > 0; }); });
+  // Always show all active item columns regardless of whether they have data
+  const unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
+  const dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active' && x.id !== ITEM_ID_REVENUE; });
 
   let headerRow1 = '<tr><th rowspan="2">Agent</th><th rowspan="2">Branch</th><th rowspan="2">Submit Date</th>';
   if (unitItems.length) headerRow1 += '<th colspan="' + unitItems.length + '" class="th-group-unit">Unit Group</th>';
@@ -1519,7 +1517,7 @@ function renderSaleTable() {
   dollarItems.forEach(function(item) { headerRow2 += '<th class="th-dollar">' + esc(item.shortcut || item.name) + '</th>'; });
   headerRow2 += '</tr>';
 
-  let totalUnits = 0, totalRev = 0;
+  let totalUnits = 0, totalDollar = 0;
 
   const bodyRows = data.map(function(s) {
     const unitCells = unitItems.map(function(item) {
@@ -1529,10 +1527,10 @@ function renderSaleTable() {
     }).join('');
     const dollarCells = dollarItems.map(function(item) {
       const amt = s.dollarItems && s.dollarItems[item.id] ? s.dollarItems[item.id] : 0;
+      totalDollar += amt;
       return '<td class="td-dollar">' + (amt > 0 ? fmtMoney(amt, esc(item.currency) + ' ') : '') + '</td>';
     }).join('');
     const saleRev = s.dollarItems && s.dollarItems[ITEM_ID_REVENUE] ? s.dollarItems[ITEM_ID_REVENUE] : 0;
-    totalRev += saleRev;
 
     const submitDate = s.submittedAt ? s.submittedAt.split('T')[0] : s.date;
 
@@ -1563,15 +1561,15 @@ function renderSaleTable() {
   // Ensure thead is always the first child in the DOM for correct sticky-header and display ordering
   if (table.firstChild !== thead) table.insertBefore(thead, table.firstChild);
 
-  updateTotalBar(totalUnits, totalRev);
+  updateTotalBar(totalUnits, totalDollar);
 }
 
-function updateTotalBar(units, rev) {
+function updateTotalBar(units, dollar) {
   const bar = g('sale-total-bar');
   if (!bar) return;
   bar.innerHTML =
     '<span class="total-label"><strong>Total Units:</strong> ' + units + '</span>' +
-    '<span class="total-label"><strong>Total Revenue:</strong> ' + fmtMoney(rev) + '</span>';
+    '<span class="total-label"><strong>Total $:</strong> ' + fmtMoney(dollar) + '</span>';
 }
 
 // ------------------------------------------------------------
