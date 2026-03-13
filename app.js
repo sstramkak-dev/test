@@ -1129,12 +1129,26 @@ function openNewSaleModal(sale) {
         return '<div class="sic-card sic-card-dollar">' +
           '<div class="sic-label">' + esc(item.name) + '</div>' +
           '<input type="number" class="sic-input" id="sic-' + esc(item.id) + '" min="0" step="0.01" value="" placeholder="0.00">' +
-          '<div class="sic-sub-label">Buy #</div>' +
-          '<input type="number" class="sic-input" id="sic-buy-' + esc(item.id) + '" min="0" value="" placeholder="0">' +
           '</div>';
       }).join('') + '</div>';
     } else {
       dollarContainer.innerHTML = '<p style="color:#999;font-size:0.85rem;">No dollar items in catalogue.</p>';
+    }
+  }
+
+  const buySection = g('sale-buy-section');
+  const buyContainer = g('sale-buy-items');
+  if (buySection) buySection.style.display = dollarItems.length ? '' : 'none';
+  if (buyContainer) {
+    if (dollarItems.length) {
+      buyContainer.innerHTML = '<div class="sale-items-grid">' + dollarItems.map(function(item) {
+        return '<div class="sic-card sic-card-dollar">' +
+          '<div class="sic-label">' + esc(item.name) + '</div>' +
+          '<input type="number" class="sic-input" id="sic-buy-' + esc(item.id) + '" min="0" value="" placeholder="0">' +
+          '</div>';
+      }).join('') + '</div>';
+    } else {
+      buyContainer.innerHTML = '';
     }
   }
 
@@ -1647,6 +1661,10 @@ function renderDashboard() {
   // Hide branch filter for agent role
   var branchFilterWrap = g('dash-branch-filter-wrap');
   if (branchFilterWrap) branchFilterWrap.style.display = (currentRole === 'agent') ? 'none' : '';
+
+  // Show branch summary table only for admin and cluster roles
+  var branchSection = g('dash-branch-section');
+  if (branchSection) branchSection.style.display = (currentRole === 'admin' || currentRole === 'cluster') ? '' : 'none';
 
   const currSales = viewSales.filter(function(s) { return ymOf(s.date) === ym; });
   const prevSales = viewSales.filter(function(s) { return ymOf(s.date) === ymP; });
