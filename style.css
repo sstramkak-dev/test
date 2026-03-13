@@ -1693,6 +1693,40 @@ input, select, textarea, button {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding-bottom: 8px;
+}
+
+.sale-section-title--unit {
+  border-bottom: 2px solid #81C784;
+}
+
+.sale-section-title--dollar {
+  border-bottom: 2px solid #FFCC80;
+}
+
+.sale-section-subtitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #E65100;
+  margin: 12px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sale-revenue-total-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding: 8px 14px;
+  background: #FFF8E1;
+  border: 1.5px solid #FFCC80;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: #E65100;
+  gap: 8px;
 }
 
 .sale-items-grid {
