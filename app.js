@@ -1123,12 +1123,14 @@ function openNewSaleModal(sale) {
     }
   }
 
+  const manualDollarItems = dollarItems.filter(function(x) { return !x.noAutoSum; });
+
   if (dollarContainer) {
-    if (dollarItems.length) {
-      dollarContainer.innerHTML = '<div class="sale-items-grid">' + dollarItems.map(function(item) {
+    if (manualDollarItems.length) {
+      dollarContainer.innerHTML = '<div class="sale-items-grid">' + manualDollarItems.map(function(item) {
         return '<div class="sic-card sic-card-dollar">' +
           '<div class="sic-label">' + esc(item.name) + '</div>' +
-          '<input type="number" class="sic-input" id="sic-' + esc(item.id) + '" min="0" step="0.01" value="" placeholder="0.00">' +
+          '<input type="number" class="sic-input sic-dollar-input" id="sic-' + esc(item.id) + '" min="0" step="0.01" value="" placeholder="0.00">' +
           '</div>';
       }).join('') + '</div>';
     } else {
@@ -1138,10 +1140,10 @@ function openNewSaleModal(sale) {
 
   const buySection = g('sale-buy-section');
   const buyContainer = g('sale-buy-items');
-  if (buySection) buySection.style.display = dollarItems.length ? '' : 'none';
+  if (buySection) buySection.style.display = manualDollarItems.length ? '' : 'none';
   if (buyContainer) {
-    if (dollarItems.length) {
-      buyContainer.innerHTML = '<div class="sale-items-grid">' + dollarItems.map(function(item) {
+    if (manualDollarItems.length) {
+      buyContainer.innerHTML = '<div class="sale-items-grid">' + manualDollarItems.map(function(item) {
         return '<div class="sic-card sic-card-dollar">' +
           '<div class="sic-label">' + esc(item.name) + '</div>' +
           '<input type="number" class="sic-input" id="sic-buy-' + esc(item.id) + '" min="0" value="" placeholder="0">' +
@@ -1150,6 +1152,32 @@ function openNewSaleModal(sale) {
     } else {
       buyContainer.innerHTML = '';
     }
+  }
+
+  const revTotalEl = g('sale-revenue-total');
+  if (revTotalEl) {
+    if (manualDollarItems.length) {
+      revTotalEl.style.display = '';
+      revTotalEl.innerHTML = '<div class="sale-revenue-total-bar"><i class="fas fa-calculator"></i> Total Revenue (Auto Sum): <span id="sale-revenue-total-value">$0.00</span></div>';
+    } else {
+      revTotalEl.style.display = 'none';
+    }
+  }
+
+  function updateSaleRevenueTotal(items) {
+    var sum = 0;
+    items.forEach(function(item) {
+      var inp = g('sic-' + item.id);
+      if (inp) sum += parseFloat(inp.value) || 0;
+    });
+    var el = g('sale-revenue-total-value');
+    if (el) el.textContent = '$' + sum.toFixed(2);
+  }
+
+  if (dollarContainer) {
+    dollarContainer.querySelectorAll('.sic-dollar-input').forEach(function(inp) {
+      inp.addEventListener('input', function() { updateSaleRevenueTotal(manualDollarItems); });
+    });
   }
 
   populateBranchSelects();
@@ -1182,6 +1210,7 @@ function openNewSaleModal(sale) {
         if (inp) inp.value = sale.dollarBuyNums[iid];
       });
     }
+    updateSaleRevenueTotal(manualDollarItems);
   } else {
     if (title) title.textContent = 'New Sale';
     if (btn) btn.textContent = 'Save Sale';
@@ -1209,15 +1238,18 @@ function submitSale(e) {
   if (!date) { showAlert('Please select date'); return; }
 
   const items = {}, dollarItems = {}, dollarBuyNums = {};
+  let autoRevenue = 0;
   itemCatalogue.forEach(function(item) {
     const inp = g('sic-' + item.id);
-    if (!inp) return;
-    const val = parseFloat(inp.value) || 0;
-    if (val > 0) {
-      if (item.group === 'unit') items[item.id] = val;
-      else dollarItems[item.id] = val;
-    }
-    if (item.group === 'dollar') {
+    if (item.group === 'unit') {
+      if (!inp) return;
+      const val = parseFloat(inp.value) || 0;
+      if (val > 0) items[item.id] = val;
+    } else if (item.group === 'dollar' && !item.noAutoSum) {
+      if (!inp) return;
+      const val = parseFloat(inp.value) || 0;
+      if (val > 0) dollarItems[item.id] = val;
+      autoRevenue += val;
       const buyInp = g('sic-buy-' + item.id);
       if (buyInp) {
         const buyVal = parseInt(buyInp.value, 10) || 0;
@@ -1225,6 +1257,7 @@ function submitSale(e) {
       }
     }
   });
+  if (autoRevenue > 0) dollarItems[ITEM_ID_REVENUE] = autoRevenue;
 
   const obj = { id: editId || uid(), agent: agent, branch: branch, date: date, note: note, items: items, dollarItems: dollarItems, dollarBuyNums: dollarBuyNums };
 
