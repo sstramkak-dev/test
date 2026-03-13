@@ -1128,7 +1128,9 @@ function openNewSaleModal(sale) {
       dollarContainer.innerHTML = '<div class="sale-items-grid">' + dollarItems.map(function(item) {
         return '<div class="sic-card sic-card-dollar">' +
           '<div class="sic-label">' + esc(item.name) + '</div>' +
-          '<input type="number" class="sic-input" id="sic-' + esc(item.id) + '" min="0" step="0.01" value="" placeholder="0">' +
+          '<input type="number" class="sic-input" id="sic-' + esc(item.id) + '" min="0" step="0.01" value="" placeholder="0.00">' +
+          '<div class="sic-sub-label">Buy #</div>' +
+          '<input type="number" class="sic-input" id="sic-buy-' + esc(item.id) + '" min="0" value="" placeholder="0">' +
           '</div>';
       }).join('') + '</div>';
     } else {
@@ -1160,6 +1162,12 @@ function openNewSaleModal(sale) {
         if (inp) inp.value = sale.dollarItems[iid];
       });
     }
+    if (sale.dollarBuyNums) {
+      Object.keys(sale.dollarBuyNums).forEach(function(iid) {
+        const inp = g('sic-buy-' + iid);
+        if (inp) inp.value = sale.dollarBuyNums[iid];
+      });
+    }
   } else {
     if (title) title.textContent = 'New Sale';
     if (btn) btn.textContent = 'Save Sale';
@@ -1186,7 +1194,7 @@ function submitSale(e) {
   if (!agent) { showAlert('Please enter agent name'); return; }
   if (!date) { showAlert('Please select date'); return; }
 
-  const items = {}, dollarItems = {};
+  const items = {}, dollarItems = {}, dollarBuyNums = {};
   itemCatalogue.forEach(function(item) {
     const inp = g('sic-' + item.id);
     if (!inp) return;
@@ -1195,9 +1203,16 @@ function submitSale(e) {
       if (item.group === 'unit') items[item.id] = val;
       else dollarItems[item.id] = val;
     }
+    if (item.group === 'dollar') {
+      const buyInp = g('sic-buy-' + item.id);
+      if (buyInp) {
+        const buyVal = parseInt(buyInp.value, 10) || 0;
+        if (buyVal > 0) dollarBuyNums[item.id] = buyVal;
+      }
+    }
   });
 
-  const obj = { id: editId || uid(), agent: agent, branch: branch, date: date, note: note, items: items, dollarItems: dollarItems };
+  const obj = { id: editId || uid(), agent: agent, branch: branch, date: date, note: note, items: items, dollarItems: dollarItems, dollarBuyNums: dollarBuyNums };
 
   if (editId) {
     const existingSale = saleRecords.find(function(x) { return x.id === editId; });

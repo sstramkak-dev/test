@@ -1697,17 +1697,17 @@ input, select, textarea, button {
 
 .sale-items-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
   margin-top: 6px;
 }
 
 .sic-card {
-  border-radius: 10px;
-  padding: 12px 14px;
+  border-radius: 8px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   border: 1.5px solid;
   background: #ffffff;
   transition: box-shadow 0.15s;
@@ -1718,9 +1718,9 @@ input, select, textarea, button {
 .sic-card-dollar { border-color: #FFCC80; background: #FFFDF8; }
 
 .sic-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1731,10 +1731,10 @@ input, select, textarea, button {
 
 .sic-input {
   width: 100%;
-  padding: 7px 10px;
+  padding: 4px 6px;
   border: 1.5px solid #D0D0D0;
-  border-radius: 7px;
-  font-size: 0.875rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
   font-weight: 600;
   text-align: center;
   background: #ffffff;
@@ -1748,6 +1748,15 @@ input, select, textarea, button {
 
 .sic-input::-webkit-outer-spin-button,
 .sic-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+.sic-sub-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #FB8C00;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
 
 .no-items { font-size: 0.8125rem; color: #999; padding: 8px 0; }
 
