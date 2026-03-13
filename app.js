@@ -1681,16 +1681,16 @@ function renderSummaryView(data, unitItems, dollarItems) {
 
   const agentMap = {};
   data.forEach(function(s) {
-    if (!agentMap[s.agent]) agentMap[s.agent] = { units: {}, dollars: {}, totalUnits: 0, totalRev: 0 };
+    if (!agentMap[s.agent]) agentMap[s.agent] = { units: {}, dollars: {}, totalUnits: 0, buyCount: 0, totalRev: 0 };
     const ag = agentMap[s.agent];
+    ag.buyCount += 1;
     Object.keys(s.items || {}).forEach(function(iid) {
       ag.units[iid] = (ag.units[iid] || 0) + s.items[iid];
       ag.totalUnits += s.items[iid];
     });
     Object.keys(s.dollarItems || {}).forEach(function(iid) {
       ag.dollars[iid] = (ag.dollars[iid] || 0) + s.dollarItems[iid];
-      const item = itemCatalogue.find(function(x) { return x.id === iid; });
-      if (item && !item.noAutoSum) ag.totalRev += s.dollarItems[iid] * (item.price || 1);
+      if (iid === ITEM_ID_REVENUE) ag.totalRev += s.dollarItems[iid];
     });
   });
 
@@ -1707,7 +1707,7 @@ function renderSummaryView(data, unitItems, dollarItems) {
     return '<div class="summary-card">' +
       '<div class="summary-card-header">' +
         '<span class="sc-avatar av-' + (idx % 8) + '">' + esc(ini(agent)) + '</span>' +
-        '<div><div class="sc-name">' + esc(agent) + '</div><div style="font-size:0.72rem;opacity:0.8;">Units: ' + ag.totalUnits + ' | Rev: ' + fmtMoney(ag.totalRev) + '</div></div>' +
+        '<div><div class="sc-name">' + esc(agent) + '</div><div style="font-size:0.72rem;opacity:0.8;">Buy #: ' + ag.buyCount + ' | Rev: ' + fmtMoney(ag.totalRev) + '</div></div>' +
       '</div>' +
       '<div class="summary-card-body">' + (unitRows + dollarRows || '<div style="color:#999;font-size:0.8rem;">No sales</div>') + '</div>' +
       '</div>';
