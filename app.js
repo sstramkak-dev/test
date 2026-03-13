@@ -81,15 +81,18 @@ function normalizeStaffRecord(u) {
   var out = {};
   Object.keys(u).forEach(function(k) {
     var val = u[k];
+    // Normalize key to lowercase so that column headers from Google Sheets
+    // (e.g. 'Username', 'Password') are accessible via the expected lowercase keys.
+    var key = k.toLowerCase();
     // Trim all string values and handle null/undefined
     if (typeof val === 'string') {
-      out[k] = val.trim();
+      out[key] = val.trim();
     } else {
-      out[k] = val;
+      out[key] = val;
     }
   });
   // Lowercase status so login comparison works regardless of how the sheet stores it
-  // (role is kept as-is because roleMap lookups depend on the original casing, e.g. 'Admin')
+  // (role VALUE is kept as-is because roleMap lookups depend on the original casing, e.g. 'Admin')
   if (out.status) out.status = out.status.toLowerCase();
   // Ensure username exists and is not empty
   if (!out.username || out.username === '') {
@@ -3209,7 +3212,11 @@ function submitUser(e) {
   if (dupUser) { showAlert('Username already exists. Please choose a different username.'); return; }
   if (editId) {
     const idx = staffList.findIndex(function(x) { return x.id === editId; });
-    if (idx >= 0) staffList[idx] = obj;
+    if (idx >= 0) {
+      // If password field was left blank on edit, preserve the existing password
+      if (!obj.password) { obj.password = staffList[idx].password || ''; }
+      staffList[idx] = obj;
+    }
   } else {
     staffList.push(obj);
   }
