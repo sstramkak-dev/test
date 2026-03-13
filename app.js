@@ -1618,8 +1618,16 @@ function renderSaleCharts() {
   if (mixCtx && typeof Chart !== 'undefined' && mixData.some(function(v) { return v > 0; })) {
     _cSaleMix = new Chart(mixCtx, {
       type: 'doughnut',
-      data: { labels: mixLabels, datasets: [{ data: mixData, backgroundColor: CHART_PAL }] },
-      options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      data: { labels: mixLabels, datasets: [{ data: mixData, backgroundColor: CHART_PAL, borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11 } } },
+          tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 } }
+        }
+      }
     });
   }
 
@@ -1634,9 +1642,35 @@ function renderSaleCharts() {
   const agCtx = g('cSaleAgent');
   if (agCtx && typeof Chart !== 'undefined' && agentLabels.length) {
     _cSaleAgent = new Chart(agCtx, {
-      type: 'bar',
-      data: { labels: agentLabels, datasets: [{ label: 'Units', data: agentVals, backgroundColor: CHART_PAL }] },
-      options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } } }
+      type: 'line',
+      data: {
+        labels: agentLabels,
+        datasets: [{
+          label: 'Units',
+          data: agentVals,
+          borderColor: CHART_PAL[0],
+          backgroundColor: 'rgba(27,125,61,0.08)',
+          pointBackgroundColor: CHART_PAL[0],
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          tension: 0.35,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 } }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, precision: 0 } }
+        }
+      }
     });
   }
 }
