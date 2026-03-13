@@ -883,6 +883,9 @@ function switchRole(role) {
   if (currentPage === 'coverage') initCoveragePage();
   if (currentPage === 'customer') { renderNewCustomerTable(); renderTopUpTable(); renderTerminationTable(); renderOutCoverageTable(); }
   if (currentPage === 'deposit') { renderDepositTable(); updateDepositKpis(); }
+
+  // Always refresh item chips so add-button and chip interactivity reflect new role
+  renderItemChips();
 }
 
 function toggleRoleWidget() {
@@ -938,6 +941,7 @@ function togglePwd(inputId, eyeId) {
 // Item Catalogue
 // ------------------------------------------------------------
 function openItemModal(item) {
+  if (currentRole !== 'admin') { showAlert('Only admin can manage items.', 'error'); return; }
   const form = g('form-addItem');
   if (form) form.reset();
 
@@ -1065,11 +1069,13 @@ function submitItem(e) {
 }
 
 function editItem(id) {
+  if (currentRole !== 'admin') { showAlert('Only admin can edit items.', 'error'); return; }
   const item = itemCatalogue.find(function(x) { return x.id === id; });
   if (item) openItemModal(item);
 }
 
 function deleteItem(id) {
+  if (currentRole !== 'admin') { showAlert('Only admin can delete items.', 'error'); return; }
   showConfirm('Are you sure you want to delete this item? This action cannot be undone.', function() {
     itemCatalogue = itemCatalogue.filter(function(x) { return x.id !== id; });
     renderItemChips();
@@ -1082,14 +1088,23 @@ function deleteItem(id) {
 function renderItemChips() {
   const strip = g('items-strip');
   if (!strip) return;
+  const isAdmin = currentRole === 'admin';
+  const addBtn = g('item-add-btn');
+  if (addBtn) addBtn.style.display = isAdmin ? '' : 'none';
   const active = itemCatalogue.filter(function(x) { return x.status === 'active'; });
   if (!active.length) {
-    strip.innerHTML = '<span style="color:#999;font-size:0.85rem;">No items in catalogue. <a href="#" onclick="openAddModal(\'item\');return false;">Add Item</a></span>';
+    strip.innerHTML = isAdmin
+      ? '<span style="color:#999;font-size:0.85rem;">No items in catalogue. <a href="#" onclick="openAddModal(\'item\');return false;">Add Item</a></span>'
+      : '<span style="color:#999;font-size:0.85rem;">No items in catalogue.</span>';
     return;
   }
   strip.innerHTML = active.map(function(item) {
     const chipClass = item.group === 'unit' ? 'item-chip-unit' : 'item-chip-dollar';
-    return '<span class="item-chip ' + chipClass + '" onclick="editItem(\'' + esc(item.id) + '\')" title="' + esc(item.name) + '">' +
+    if (isAdmin) {
+      return '<span class="item-chip ' + chipClass + '" onclick="editItem(\'' + esc(item.id) + '\')" title="Click to edit: ' + esc(item.name) + '">' +
+        esc(item.shortcut || item.name) + '</span>';
+    }
+    return '<span class="item-chip ' + chipClass + '" style="cursor:default;" title="' + esc(item.name) + '">' +
       esc(item.shortcut || item.name) + '</span>';
   }).join('');
 }
