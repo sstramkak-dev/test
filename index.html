@@ -1582,6 +1582,26 @@
         <button class="modal-close-btn" onclick="closeModal('modal-saleDownload')"><i class="fas fa-xmark"></i></button>
       </div>
       <div class="modal-body">
+        <!-- Cluster role: filter by customer shop (branch) -->
+        <div id="dl-shop-section" style="display:none;">
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-store" style="color:#6A1B9A;margin-right:4px;"></i> Customer Shop</label>
+            <select class="form-select" id="dl-shop-filter">
+              <option value="">All Shops</option>
+            </select>
+          </div>
+          <div style="border-top:1px solid #eee;margin:12px 0;"></div>
+        </div>
+        <!-- Supervisor role: filter by agent performance -->
+        <div id="dl-agent-section" style="display:none;">
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-user-tie" style="color:#1565C0;margin-right:4px;"></i> Agent Performance</label>
+            <select class="form-select" id="dl-agent-filter">
+              <option value="">All Agents</option>
+            </select>
+          </div>
+          <div style="border-top:1px solid #eee;margin:12px 0;"></div>
+        </div>
         <div class="form-group">
           <label class="form-label">From Date</label>
           <input type="date" class="form-input" id="dl-date-from" />
