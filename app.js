@@ -1500,7 +1500,7 @@ function renderSaleTable() {
   const dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active' && x.id !== ITEM_ID_REVENUE; });
 
   if (!data.length) {
-    table.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No records found</td></tr>';
+    table.innerHTML = '<thead></thead><tbody><tr><td colspan="20" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No records found</td></tr></tbody>';
     updateTotalBar(0, 0);
     return;
   }
@@ -1556,8 +1556,9 @@ function renderSaleTable() {
   const tbody = table.querySelector('tbody') || document.createElement('tbody');
   thead.innerHTML = headerRow1 + headerRow2;
   tbody.innerHTML = bodyRows;
-  if (!table.querySelector('thead')) table.appendChild(thead);
-  if (!table.querySelector('tbody')) table.appendChild(tbody);
+  if (!table.contains(tbody)) table.appendChild(tbody);
+  // Ensure thead is always the first child in the DOM for correct sticky-header and display ordering
+  if (table.firstChild !== thead) table.insertBefore(thead, table.firstChild);
 
   updateTotalBar(totalUnits, totalRev);
 }
