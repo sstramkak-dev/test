@@ -1283,6 +1283,19 @@ function canModifyRecord(record) {
   return false;
 }
 
+// Returns true if the current user can create, edit, or delete KPIs.
+// Admin and cluster have full access; supervisors can manage KPIs for their shop/agents; agents cannot.
+function canManageKpis() {
+  return currentRole === 'admin' || currentRole === 'cluster' || currentRole === 'supervisor';
+}
+
+// Returns true if a supervisor can modify the given KPI (must be their shop KPI or an agent KPI in their branch).
+function canSupervisorModifyKpi(kpi) {
+  if (!kpi || !currentUser) return false;
+  return (kpi.kpiFor === 'shop' && kpi.assigneeId === currentUser.id) ||
+         (kpi.kpiFor === 'agent' && kpi.assigneeBranch === currentUser.branch);
+}
+
 // Shows a role-appropriate permission error for sale report modification attempts.
 function showSalePermissionError(action) {
   if (currentRole === 'cluster') {
@@ -1312,15 +1325,13 @@ function applyReportFilters() {
 
   renderSaleTable();
   updateSaleKpis();
-  // If the summary/chart view is currently active, refresh it too
+  // If the summary/chart view is currently active, refresh it too so charts stay up to date
   if (currentReportView === 'summary') {
-    var summaryView = g('sale-summary-view');
-    if (summaryView && summaryView.style.display !== 'none') {
-      var unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
-      var dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active'; });
-      renderSummaryView(filteredSales.length ? filteredSales : saleRecords, unitItems, dollarItems);
-      setTimeout(renderSaleCharts, 50);
-    }
+    var unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
+    var dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active'; });
+    renderSummaryView(filteredSales.length ? filteredSales : saleRecords, unitItems, dollarItems);
+    // Defer chart render by one tick so the DOM update from renderSummaryView completes first
+    setTimeout(renderSaleCharts, 50);
   }
 }
 
@@ -3481,8 +3492,8 @@ function submitKpi(e) {
   e.preventDefault();
   const editId = rv('kpi-edit-id');
 
-  // Permission check: agents cannot create/edit KPIs
-  if (currentRole === 'agent') { showAlert('You do not have permission to manage KPIs.', 'error'); return; }
+  // Permission check: only admin, cluster, and supervisor can create/edit KPIs
+  if (!canManageKpis()) { showAlert('You do not have permission to manage KPIs.', 'error'); return; }
 
   // Resolve supervisor id from text input (for admin role)
   if (kpiForSelected === 'shop') {
@@ -3531,11 +3542,9 @@ function editKpi(id) {
   const item = kpiList.find(function(x) { return x.id === id; });
   if (!item) return;
   // Permission check: only admin, cluster, or supervisor (for their own KPIs) can edit
-  if (currentRole === 'agent') { showAlert('You do not have permission to edit KPIs.', 'error'); return; }
-  if (currentRole === 'supervisor' && currentUser) {
-    var canEdit = (item.kpiFor === 'shop' && item.assigneeId === currentUser.id) ||
-                  (item.kpiFor === 'agent' && item.assigneeBranch === currentUser.branch);
-    if (!canEdit) { showAlert('You can only edit KPIs assigned to your shop or agents.', 'error'); return; }
+  if (!canManageKpis()) { showAlert('You do not have permission to edit KPIs.', 'error'); return; }
+  if (currentRole === 'supervisor' && !canSupervisorModifyKpi(item)) {
+    showAlert('You can only edit KPIs assigned to your shop or agents.', 'error'); return;
   }
   openKpiModal(item);
 }
@@ -3544,11 +3553,9 @@ function deleteKpi(id) {
   const item = kpiList.find(function(x) { return x.id === id; });
   if (!item) return;
   // Permission check
-  if (currentRole === 'agent') { showAlert('You do not have permission to delete KPIs.', 'error'); return; }
-  if (currentRole === 'supervisor' && currentUser) {
-    var canDel = (item.kpiFor === 'shop' && item.assigneeId === currentUser.id) ||
-                 (item.kpiFor === 'agent' && item.assigneeBranch === currentUser.branch);
-    if (!canDel) { showAlert('You can only delete KPIs assigned to your shop or agents.', 'error'); return; }
+  if (!canManageKpis()) { showAlert('You do not have permission to delete KPIs.', 'error'); return; }
+  if (currentRole === 'supervisor' && !canSupervisorModifyKpi(item)) {
+    showAlert('You can only delete KPIs assigned to your shop or agents.', 'error'); return;
   }
   showConfirm('Are you sure you want to delete this KPI? This action cannot be undone.', function() {
     kpiList = kpiList.filter(function(x) { return x.id !== id; });
@@ -3619,12 +3626,9 @@ function renderKpiTable() {
       : actual + ' ' + esc(k.unit || '');
     const progressBar = '<div style="background:#eee;border-radius:4px;height:6px;width:80px;display:inline-block;vertical-align:middle;margin-right:4px;">' +
       '<div style="background:' + (pct >= 100 ? '#1B7D3D' : pct >= 70 ? '#FF9800' : '#E53935') + ';width:' + Math.min(pct, 100) + '%;height:100%;border-radius:4px;"></div></div>';
-    // Determine if the current user can modify this KPI
-    var canModifyKpi = currentRole === 'admin' || currentRole === 'cluster';
-    if (currentRole === 'supervisor' && currentUser) {
-      canModifyKpi = (k.kpiFor === 'shop' && k.assigneeId === currentUser.id) ||
-                     (k.kpiFor === 'agent' && k.assigneeBranch === currentUser.branch);
-    }
+    // Determine if the current user can modify this KPI using centralised helpers
+    var canModifyKpi = canManageKpis() &&
+      (currentRole !== 'supervisor' || canSupervisorModifyKpi(k));
     var actionBtns = canModifyKpi
       ? '<button class="btn-edit" onclick="editKpi(\'' + esc(k.id) + '\')"><i class="fas fa-edit"></i></button> ' +
         '<button class="btn-delete" onclick="deleteKpi(\'' + esc(k.id) + '\')"><i class="fas fa-trash"></i></button>'
