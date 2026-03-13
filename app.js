@@ -1166,9 +1166,9 @@ function openNewSaleModal(sale) {
     g('sale-date').value = new Date().toISOString().split('T')[0];
     if (currentUser) {
       const agentEl = g('sale-agent-name');
-      if (agentEl) { agentEl.value = currentUser.name || ''; if (currentRole === 'agent') agentEl.readOnly = true; }
+      if (agentEl) { agentEl.value = currentUser.name || ''; if (currentRole === 'agent' || currentRole === 'supervisor') agentEl.readOnly = true; }
       const brEl = g('sale-branch');
-      if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent') brEl.disabled = true; }
+      if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent' || currentRole === 'supervisor') brEl.disabled = true; }
     }
   }
 
@@ -1244,9 +1244,12 @@ function deleteSale(id) {
 // ------------------------------------------------------------
 
 // Returns the base sale records filtered by the current user's role.
-// Supervisors and agents only see records within their branch/shop; admin/cluster see all.
+// Agents only see their own records; supervisors see all records in their branch/shop; admin/cluster see all.
 function getSaleBaseRecords() {
-  if ((currentRole === 'supervisor' || currentRole === 'agent') && currentUser) {
+  if (currentRole === 'agent' && currentUser) {
+    return saleRecords.filter(function(s) { return s.agent === currentUser.name; });
+  }
+  if (currentRole === 'supervisor' && currentUser) {
     return saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
   }
   return saleRecords.slice();
@@ -1264,9 +1267,12 @@ function canModifySaleRecord(sale) {
 }
 
 // Returns records filtered by the current user's role.
-// Supervisors and agents only see records within their branch/shop.
+// Agents only see their own records; supervisors see all records in their branch/shop.
 function getBaseRecordsForRole(list) {
-  if ((currentRole === 'supervisor' || currentRole === 'agent') && currentUser) {
+  if (currentRole === 'agent' && currentUser) {
+    return list.filter(function(r) { return r.agent === currentUser.name; });
+  }
+  if (currentRole === 'supervisor' && currentUser) {
     return list.filter(function(r) { return r.branch === currentUser.branch; });
   }
   return list.slice();
@@ -1613,7 +1619,9 @@ function renderDashboard() {
 
   // Role-based data filtering
   let viewSales = saleRecords;
-  if ((currentRole === 'agent' || currentRole === 'supervisor') && currentUser) {
+  if (currentRole === 'agent' && currentUser) {
+    viewSales = saleRecords.filter(function(s) { return s.agent === currentUser.name; });
+  } else if (currentRole === 'supervisor' && currentUser) {
     viewSales = saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
   }
   // Apply branch filter (available for admin/cluster)
@@ -2048,8 +2056,8 @@ function openCustomerModal(type, item) {
       if (title) title.textContent = 'Add New Customer';
       g('nc-date').value = new Date().toISOString().split('T')[0];
       if (currentUser) {
-        const agEl = g('nc-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent') agEl.readOnly = true; }
-        const brEl = g('nc-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent') brEl.disabled = true; }
+        const agEl = g('nc-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent' || currentRole === 'supervisor') agEl.readOnly = true; }
+        const brEl = g('nc-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent' || currentRole === 'supervisor') brEl.disabled = true; }
       }
     }
     openModal('modal-newCustomer');
@@ -2101,8 +2109,8 @@ function openCustomerModal(type, item) {
       if (title) title.textContent = 'Add Top Up';
       g('tu-date').value = new Date().toISOString().split('T')[0];
       if (currentUser) {
-        const agEl = g('tu-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent') agEl.readOnly = true; }
-        const brEl = g('tu-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent') brEl.disabled = true; }
+        const agEl = g('tu-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent' || currentRole === 'supervisor') agEl.readOnly = true; }
+        const brEl = g('tu-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent' || currentRole === 'supervisor') brEl.disabled = true; }
       }
     }
     openModal('modal-topUp');
@@ -2125,6 +2133,10 @@ function openCustomerModal(type, item) {
     } else {
       if (title) title.textContent = 'Add Termination';
       g('term-date').value = new Date().toISOString().split('T')[0];
+      if (currentUser) {
+        const agEl = g('term-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent' || currentRole === 'supervisor') agEl.readOnly = true; }
+        const brEl = g('term-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent' || currentRole === 'supervisor') brEl.disabled = true; }
+      }
     }
     openModal('modal-termination');
   }
@@ -2922,8 +2934,8 @@ function openDepositModal(item) {
     if (btn) btn.textContent = 'Add Deposit';
     const dtEl = g('dep-date'); if (dtEl) dtEl.value = new Date().toISOString().split('T')[0];
     if (currentUser) {
-      const agEl = g('dep-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent') agEl.readOnly = true; }
-      const brEl = g('dep-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent') brEl.disabled = true; }
+      const agEl = g('dep-agent'); if (agEl) { agEl.value = currentUser.name || ''; if (currentRole === 'agent' || currentRole === 'supervisor') agEl.readOnly = true; }
+      const brEl = g('dep-branch'); if (brEl && currentUser.branch) { brEl.value = currentUser.branch; if (currentRole === 'agent' || currentRole === 'supervisor') brEl.disabled = true; }
     }
   }
   openModal('modal-addDeposit');
@@ -3047,7 +3059,7 @@ function renderDepositChart() {
   if (period === 'weekly') {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now); d.setDate(d.getDate() - i);
-      const key = d.toISOString().split('T')[0];
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       labels.push(key.slice(5));
       let c = 0, cr = 0;
       baseDepositList.forEach(function(dep) { if (dep.date === key) { c += (dep.cash||0); cr += (dep.credit||0); } });
@@ -3056,7 +3068,7 @@ function renderDepositChart() {
   } else if (period === 'monthly') {
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = d.toISOString().substring(0, 7);
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
       labels.push(ymLabel(key));
       let c = 0, cr = 0;
       baseDepositList.forEach(function(dep) { if (dep.date && dep.date.startsWith(key)) { c += (dep.cash||0); cr += (dep.credit||0); } });
@@ -3125,7 +3137,7 @@ function renderDepositTable() {
       '<td>' + esc(d.branch || '') + '</td>' +
       '<td style="color:#1B7D3D;font-weight:600;">' + (d.cash ? '$' + Number(d.cash).toFixed(2) : '—') + '</td>' +
       '<td style="color:#1565C0;font-weight:600;">' + (d.credit ? '$' + Number(d.credit).toFixed(2) : '—') + '</td>' +
-      '<td style="font-weight:700;color:#1B7D3D;">$' + Number(d.amount || 0).toFixed(2) + '</td>' +
+      '<td style="font-weight:700;color:#1B7D3D;">$' + Number((d.cash || 0) + (d.credit || 0)).toFixed(2) + '</td>' +
       '<td>' + esc(d.date || '') + '</td>' +
       '<td style="color:#888;font-size:0.8rem;">' + esc(d.remark || d.note || '') + '</td>' +
       '<td><span class="pill ' + statusPill + '">' + statusLabel + '</span></td>' +
@@ -3173,7 +3185,7 @@ function renderDepositSummaryView() {
     var ag = agentMap[d.agent];
     ag.cash += (d.cash || 0);
     ag.credit += (d.credit || 0);
-    ag.total += (d.amount || 0);
+    ag.total += (d.cash || 0) + (d.credit || 0);
     ag.count++;
   });
 
