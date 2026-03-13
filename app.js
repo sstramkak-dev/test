@@ -2902,8 +2902,8 @@ function _loadDenomSection(cashDetail) {
 
 function openAddDeposit(el) {
   navigateTo('deposit', null);
-  openModal('modal-addDeposit');
   setActiveSubItem(el);
+  openDepositModal(null);
 }
 
 function openDepositModal(item) {
