@@ -1142,7 +1142,7 @@ function openNewSaleModal(sale) {
   if (revTotalEl) {
     if (manualDollarItems.length) {
       revTotalEl.style.display = '';
-      revTotalEl.innerHTML = '<div class="sale-revenue-total-bar"><i class="fas fa-calculator"></i> Total Revenue (Auto Sum): <span id="sale-revenue-total-value">$0.00</span></div>';
+      revTotalEl.innerHTML = '<div class="sale-revenue-total-bar"><i class="fas fa-calculator"></i> Total Buy Number (Auto Sum): <span id="sale-revenue-total-value">$0.00</span></div>';
     } else {
       revTotalEl.style.display = 'none';
     }
@@ -1282,7 +1282,7 @@ function deleteSale(id) {
 // Agents only see their own records; supervisors see all records in their branch/shop; admin/cluster see all.
 function getSaleBaseRecords() {
   if (currentRole === 'agent' && currentUser) {
-    return saleRecords.filter(function(s) { return s.agent === currentUser.name; });
+    return saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
   }
   if (currentRole === 'supervisor' && currentUser) {
     return saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
@@ -1551,7 +1551,7 @@ function updateTotalBar(units, rev) {
   if (!bar) return;
   bar.innerHTML =
     '<span class="total-label"><strong>Total Units:</strong> ' + units + '</span>' +
-    '<span class="total-label"><strong>Total Revenue:</strong> ' + fmtMoney(rev) + '</span>';
+    '<span class="total-label"><strong>Total Buy Number:</strong> ' + fmtMoney(rev) + '</span>';
 }
 
 function renderSummaryView(data, unitItems, dollarItems) {
@@ -1655,7 +1655,7 @@ function renderDashboard() {
   // Role-based data filtering
   let viewSales = saleRecords;
   if (currentRole === 'agent' && currentUser) {
-    viewSales = saleRecords.filter(function(s) { return s.agent === currentUser.name; });
+    viewSales = saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
   } else if (currentRole === 'supervisor' && currentUser) {
     viewSales = saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
   }
