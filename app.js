@@ -1142,7 +1142,7 @@ function openNewSaleModal(sale) {
   if (revTotalEl) {
     if (manualDollarItems.length) {
       revTotalEl.style.display = '';
-      revTotalEl.innerHTML = '<div class="sale-revenue-total-bar"><i class="fas fa-calculator"></i> Total Buy Number (Auto Sum): <span id="sale-revenue-total-value">$0.00</span></div>';
+      revTotalEl.innerHTML = '<div class="sale-revenue-total-bar"><i class="fas fa-calculator"></i> Total Revenue (Auto Sum): <span id="sale-revenue-total-value">$0.00</span></div>';
     } else {
       revTotalEl.style.display = 'none';
     }
@@ -1491,7 +1491,7 @@ function renderSaleTable() {
   let headerRow1 = '<tr><th rowspan="2">Agent</th><th rowspan="2">Branch</th><th rowspan="2">Date</th>';
   if (unitItems.length) headerRow1 += '<th colspan="' + unitItems.length + '" class="th-group-unit">Unit Group</th>';
   if (dollarItems.length) headerRow1 += '<th colspan="' + dollarItems.length + '" class="th-group-dollar">Dollar Group</th>';
-  headerRow1 += '<th rowspan="2" class="td-buy-number">Buy Number</th><th rowspan="2">Remark</th><th rowspan="2">Actions</th></tr>';
+  headerRow1 += '<th rowspan="2" class="td-buy-number">Total Revenue</th><th rowspan="2">Remark</th><th rowspan="2">Actions</th></tr>';
 
   let headerRow2 = '<tr>';
   unitItems.forEach(function(item) { headerRow2 += '<th class="th-unit">' + esc(item.shortcut || item.name) + '</th>'; });
@@ -1501,7 +1501,6 @@ function renderSaleTable() {
   let totalUnits = 0, totalRev = 0;
 
   const bodyRows = data.map(function(s) {
-    let saleRev = 0;
     const unitCells = unitItems.map(function(item) {
       const qty = s.items && s.items[item.id] ? s.items[item.id] : 0;
       totalUnits += qty;
@@ -1509,13 +1508,10 @@ function renderSaleTable() {
     }).join('');
     const dollarCells = dollarItems.map(function(item) {
       const amt = s.dollarItems && s.dollarItems[item.id] ? s.dollarItems[item.id] : 0;
-      const rev = amt * (item.price || 1);
-      if (!item.noAutoSum) {
-        saleRev += rev;
-        totalRev += rev;
-      }
       return '<td class="td-dollar">' + (amt > 0 ? fmtMoney(amt, esc(item.currency) + ' ') : '') + '</td>';
     }).join('');
+    const saleRev = s.dollarItems && s.dollarItems[ITEM_ID_REVENUE] ? s.dollarItems[ITEM_ID_REVENUE] : 0;
+    totalRev += saleRev;
 
     // Determine if the current user can edit/delete this record
     const canEdit = canModifySaleRecord(s);
@@ -1551,7 +1547,7 @@ function updateTotalBar(units, rev) {
   if (!bar) return;
   bar.innerHTML =
     '<span class="total-label"><strong>Total Units:</strong> ' + units + '</span>' +
-    '<span class="total-label"><strong>Total Buy Number:</strong> ' + fmtMoney(rev) + '</span>';
+    '<span class="total-label"><strong>Total Revenue:</strong> ' + fmtMoney(rev) + '</span>';
 }
 
 function renderSummaryView(data, unitItems, dollarItems) {
