@@ -404,6 +404,7 @@ let itemCatalogue = [
   { id: 'i5', name: 'Monthly Upselling', shortcut: 'MU', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Monthly Upselling' },
   { id: 'i6', name: 'ChangeSIM', shortcut: 'CS', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Change SIM ($)' },
   { id: 'i7', name: 'Recharge', shortcut: 'RC', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Recharge ($)' },
+  { id: 'i10', name: 'Buy Number', shortcut: 'BN', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Buy Number ($)' },
   { id: 'i8', name: 'Revenue', shortcut: 'RV', group: 'dollar', currency: '$', price: 1, noAutoSum: true, category: 'Sales', status: 'active', desc: 'Revenue ($)' },
   { id: 'i9', name: 'SC Dealer', shortcut: 'SD', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'SC Dealer ($)' },
 ];
@@ -1232,11 +1233,12 @@ function submitSale(e) {
   });
   if (autoRevenue > 0) dollarItems[ITEM_ID_REVENUE] = autoRevenue;
 
-  const obj = { id: editId || uid(), agent: agent, branch: branch, date: date, note: note, items: items, dollarItems: dollarItems };
+  const now = new Date().toISOString();
+  const existingRecord = editId ? saleRecords.find(function(x) { return x.id === editId; }) : null;
+  const obj = { id: editId || uid(), agent: agent, branch: branch, date: date, submittedAt: (existingRecord && existingRecord.submittedAt) || now, note: note, items: items, dollarItems: dollarItems };
 
   if (editId) {
-    const existingSale = saleRecords.find(function(x) { return x.id === editId; });
-    if (existingSale && !canModifySaleRecord(existingSale)) { showSalePermissionError('edit'); return; }
+    if (existingRecord && !canModifySaleRecord(existingRecord)) { showSalePermissionError('edit'); return; }
     const idx = saleRecords.findIndex(function(x) { return x.id === editId; });
     if (idx >= 0) saleRecords[idx] = obj;
     addNotification((currentUser ? currentUser.name : 'User') + ' updated a sale record.');
@@ -1480,7 +1482,7 @@ function renderSaleTable() {
 
   const data = filteredSales;
   const unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
-  const dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active'; });
+  const dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active' && x.id !== ITEM_ID_REVENUE; });
 
   if (!data.length) {
     table.innerHTML = '<tr><td colspan="20" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No records found</td></tr>';
@@ -1488,7 +1490,7 @@ function renderSaleTable() {
     return;
   }
 
-  let headerRow1 = '<tr><th rowspan="2">Agent</th><th rowspan="2">Branch</th><th rowspan="2">Date</th>';
+  let headerRow1 = '<tr><th rowspan="2">Agent</th><th rowspan="2">Branch</th><th rowspan="2">Date</th><th rowspan="2">Submit Date</th>';
   if (unitItems.length) headerRow1 += '<th colspan="' + unitItems.length + '" class="th-group-unit">Unit Group</th>';
   if (dollarItems.length) headerRow1 += '<th colspan="' + dollarItems.length + '" class="th-group-dollar">Dollar Group</th>';
   headerRow1 += '<th rowspan="2" class="td-buy-number">Total Revenue</th><th rowspan="2">Remark</th><th rowspan="2">Actions</th></tr>';
@@ -1513,6 +1515,8 @@ function renderSaleTable() {
     const saleRev = s.dollarItems && s.dollarItems[ITEM_ID_REVENUE] ? s.dollarItems[ITEM_ID_REVENUE] : 0;
     totalRev += saleRev;
 
+    const submitDate = s.submittedAt ? s.submittedAt.split('T')[0] : s.date;
+
     // Determine if the current user can edit/delete this record
     const canEdit = canModifySaleRecord(s);
 
@@ -1521,6 +1525,7 @@ function renderSaleTable() {
       '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(s.agent)) + '</span>' + esc(s.agent) + '</div></td>' +
       '<td>' + esc(s.branch) + '</td>' +
       '<td>' + esc(s.date) + '</td>' +
+      '<td>' + esc(submitDate) + '</td>' +
       unitCells +
       dollarCells +
       '<td class="td-buy-number">' + fmtMoney(saleRev) + '</td>' +
@@ -1548,6 +1553,69 @@ function updateTotalBar(units, rev) {
   bar.innerHTML =
     '<span class="total-label"><strong>Total Units:</strong> ' + units + '</span>' +
     '<span class="total-label"><strong>Total Revenue:</strong> ' + fmtMoney(rev) + '</span>';
+}
+
+// ------------------------------------------------------------
+// Sale CSV Download
+// ------------------------------------------------------------
+function openDownloadModal() {
+  const today = new Date().toISOString().split('T')[0];
+  const fromEl = g('dl-date-from');
+  const toEl = g('dl-date-to');
+  if (fromEl && !fromEl.value) fromEl.value = today.slice(0, 7) + '-01';
+  if (toEl && !toEl.value) toEl.value = today;
+  openModal('modal-saleDownload');
+}
+
+function downloadSaleCSV() {
+  const dateFrom = rv('dl-date-from');
+  const dateTo = rv('dl-date-to');
+
+  const unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
+  const dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active' && x.id !== ITEM_ID_REVENUE; });
+
+  const base = getSaleBaseRecords();
+  const rows = base.filter(function(s) {
+    if (dateFrom && s.date < dateFrom) return false;
+    if (dateTo && s.date > dateTo) return false;
+    return true;
+  });
+
+  if (!rows.length) { showAlert('No records found for the selected date range.'); return; }
+
+  const escape = function(v) {
+    const s = String(v === null || v === undefined ? '' : v);
+    return '"' + s.replace(/"/g, '""') + '"';
+  };
+
+  const unitHeaders = unitItems.map(function(x) { return escape(x.shortcut || x.name); });
+  const dollarHeaders = dollarItems.map(function(x) { return escape(x.shortcut || x.name); });
+  const header = ['Agent', 'Branch', 'Date', 'Submit Date'].concat(unitHeaders).concat(dollarHeaders).concat(['Total Revenue', 'Remark']).map(escape).join(',');
+
+  const lines = rows.map(function(s) {
+    const submitDate = s.submittedAt ? s.submittedAt.split('T')[0] : s.date;
+    const unitCols = unitItems.map(function(item) { return escape(s.items && s.items[item.id] ? s.items[item.id] : ''); });
+    const dollarCols = dollarItems.map(function(item) { return escape(s.dollarItems && s.dollarItems[item.id] ? s.dollarItems[item.id] : ''); });
+    const rev = s.dollarItems && s.dollarItems[ITEM_ID_REVENUE] ? s.dollarItems[ITEM_ID_REVENUE] : '';
+    return [escape(s.agent), escape(s.branch), escape(s.date), escape(submitDate)]
+      .concat(unitCols).concat(dollarCols)
+      .concat([escape(rev), escape(s.note || s.remark || '')])
+      .join(',');
+  });
+
+  const csv = header + '\n' + lines.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const suffix = (dateFrom || 'earliest') + '_to_' + (dateTo || 'latest');
+  a.href = url;
+  a.download = 'daily_sale_' + suffix + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  closeModal('modal-saleDownload');
+  showToast('Download complete.', 'success');
 }
 
 function renderSummaryView(data, unitItems, dollarItems) {
@@ -1633,30 +1701,42 @@ function renderSaleCharts() {
 
   const agentMap = {};
   data.forEach(function(s) {
-    if (!agentMap[s.agent]) agentMap[s.agent] = 0;
-    Object.values(s.items || {}).forEach(function(v) { agentMap[s.agent] += v; });
+    if (!agentMap[s.agent]) agentMap[s.agent] = { rev: 0, branch: s.branch || '' };
+    if (s.dollarItems && s.dollarItems[ITEM_ID_REVENUE]) {
+      agentMap[s.agent].rev += s.dollarItems[ITEM_ID_REVENUE];
+    }
   });
+
+  // Group agents by branch for color coding
+  const branchList = [];
+  Object.keys(agentMap).forEach(function(a) {
+    const br = agentMap[a].branch;
+    if (br && branchList.indexOf(br) === -1) branchList.push(br);
+  });
+
   const agentLabels = Object.keys(agentMap);
-  const agentVals = agentLabels.map(function(a) { return agentMap[a]; });
+  const agentVals = agentLabels.map(function(a) { return agentMap[a].rev; });
+  const agentColors = agentLabels.map(function(a) {
+    const bIdx = branchList.indexOf(agentMap[a].branch);
+    return CHART_PAL[bIdx >= 0 ? bIdx % CHART_PAL.length : 0];
+  });
+  const agentBranchLabels = agentLabels.map(function(a) {
+    return agentMap[a].branch ? a + ' (' + agentMap[a].branch + ')' : a;
+  });
 
   const agCtx = g('cSaleAgent');
   if (agCtx && typeof Chart !== 'undefined' && agentLabels.length) {
     _cSaleAgent = new Chart(agCtx, {
-      type: 'line',
+      type: 'bar',
       data: {
-        labels: agentLabels,
+        labels: agentBranchLabels,
         datasets: [{
-          label: 'Units',
+          label: 'Revenue ($)',
           data: agentVals,
-          borderColor: CHART_PAL[0],
-          backgroundColor: 'rgba(27,125,61,0.08)',
-          pointBackgroundColor: CHART_PAL[0],
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          pointRadius: 6,
-          pointHoverRadius: 8,
-          tension: 0.35,
-          fill: true
+          backgroundColor: agentColors,
+          borderColor: agentColors,
+          borderWidth: 1,
+          borderRadius: 4
         }]
       },
       options: {
@@ -1664,11 +1744,16 @@ function renderSaleCharts() {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 } }
+          tooltip: {
+            backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 },
+            callbacks: {
+              label: function(ctx) { return 'Revenue: $' + Number(ctx.parsed.y).toFixed(2); }
+            }
+          }
         },
         scales: {
           x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
-          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, precision: 0 } }
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, callback: function(v) { return '$' + v; } } }
         }
       }
     });

@@ -953,6 +953,9 @@
             <i class="fas fa-chart-pie"></i> Summary View
           </button>
           <div class="view-toggle-spacer"></div>
+          <button class="btn btn-outline" onclick="openDownloadModal()" style="margin-right:8px;">
+            <i class="fas fa-download"></i> Download
+          </button>
           <button class="btn btn-primary" id="sale-new-btn" onclick="openNewSaleModal()">
             <i class="fas fa-circle-plus"></i> New Sale
           </button>
@@ -1572,6 +1575,30 @@
           <button type="submit" class="btn btn-primary" id="modal-newSale-submit">Save Sale</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Sale Download -->
+  <div class="modal-overlay" id="modal-saleDownload" onclick="handleOverlay(event,'modal-saleDownload')">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-download"></i> Download Sale Report</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-saleDownload')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">From Date</label>
+          <input type="date" class="form-input" id="dl-date-from" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">To Date</label>
+          <input type="date" class="form-input" id="dl-date-to" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-saleDownload')">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="downloadSaleCSV()"><i class="fas fa-file-csv"></i> Download CSV</button>
+      </div>
     </div>
   </div>
 
