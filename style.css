@@ -985,7 +985,7 @@ input, select, textarea, button {
 
 .td-unit    { background: #F1F8E9 !important; color: #2E7D32; }
 .td-dollar  { background: #FFF8E1 !important; color: #E65100; }
-.td-revenue { font-weight: 700; color: #1B7D3D; }
+.td-buy-number { font-weight: 700; color: #1B7D3D; }
 
 .data-table tbody tr:hover { background: #F5F5F5 !important; }
 .data-table tbody tr:hover td { background: transparent !important; }

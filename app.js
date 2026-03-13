@@ -1138,22 +1138,6 @@ function openNewSaleModal(sale) {
     }
   }
 
-  const buySection = g('sale-buy-section');
-  const buyContainer = g('sale-buy-items');
-  if (buySection) buySection.style.display = manualDollarItems.length ? '' : 'none';
-  if (buyContainer) {
-    if (manualDollarItems.length) {
-      buyContainer.innerHTML = '<div class="sale-items-grid">' + manualDollarItems.map(function(item) {
-        return '<div class="sic-card sic-card-dollar">' +
-          '<div class="sic-label">' + esc(item.name) + '</div>' +
-          '<input type="number" class="sic-input" id="sic-buy-' + esc(item.id) + '" min="0" value="" placeholder="0">' +
-          '</div>';
-      }).join('') + '</div>';
-    } else {
-      buyContainer.innerHTML = '';
-    }
-  }
-
   const revTotalEl = g('sale-revenue-total');
   if (revTotalEl) {
     if (manualDollarItems.length) {
@@ -1204,12 +1188,6 @@ function openNewSaleModal(sale) {
         if (inp) inp.value = sale.dollarItems[iid];
       });
     }
-    if (sale.dollarBuyNums) {
-      Object.keys(sale.dollarBuyNums).forEach(function(iid) {
-        const inp = g('sic-buy-' + iid);
-        if (inp) inp.value = sale.dollarBuyNums[iid];
-      });
-    }
     updateSaleRevenueTotal(manualDollarItems);
   } else {
     if (title) title.textContent = 'New Sale';
@@ -1237,7 +1215,7 @@ function submitSale(e) {
   if (!agent) { showAlert('Please enter agent name'); return; }
   if (!date) { showAlert('Please select date'); return; }
 
-  const items = {}, dollarItems = {}, dollarBuyNums = {};
+  const items = {}, dollarItems = {};
   let autoRevenue = 0;
   itemCatalogue.forEach(function(item) {
     const inp = g('sic-' + item.id);
@@ -1250,16 +1228,11 @@ function submitSale(e) {
       const val = parseFloat(inp.value) || 0;
       if (val > 0) dollarItems[item.id] = val;
       autoRevenue += val;
-      const buyInp = g('sic-buy-' + item.id);
-      if (buyInp) {
-        const buyVal = parseInt(buyInp.value, 10) || 0;
-        if (buyVal > 0) dollarBuyNums[item.id] = buyVal;
-      }
     }
   });
   if (autoRevenue > 0) dollarItems[ITEM_ID_REVENUE] = autoRevenue;
 
-  const obj = { id: editId || uid(), agent: agent, branch: branch, date: date, note: note, items: items, dollarItems: dollarItems, dollarBuyNums: dollarBuyNums };
+  const obj = { id: editId || uid(), agent: agent, branch: branch, date: date, note: note, items: items, dollarItems: dollarItems };
 
   if (editId) {
     const existingSale = saleRecords.find(function(x) { return x.id === editId; });
@@ -1518,7 +1491,7 @@ function renderSaleTable() {
   let headerRow1 = '<tr><th rowspan="2">Agent</th><th rowspan="2">Branch</th><th rowspan="2">Date</th>';
   if (unitItems.length) headerRow1 += '<th colspan="' + unitItems.length + '" class="th-group-unit">Unit Group</th>';
   if (dollarItems.length) headerRow1 += '<th colspan="' + dollarItems.length + '" class="th-group-dollar">Dollar Group</th>';
-  headerRow1 += '<th rowspan="2" class="td-revenue">Revenue</th><th rowspan="2">Remark</th><th rowspan="2">Actions</th></tr>';
+  headerRow1 += '<th rowspan="2" class="td-buy-number">Buy Number</th><th rowspan="2">Remark</th><th rowspan="2">Actions</th></tr>';
 
   let headerRow2 = '<tr>';
   unitItems.forEach(function(item) { headerRow2 += '<th class="th-unit">' + esc(item.shortcut || item.name) + '</th>'; });
@@ -1554,7 +1527,7 @@ function renderSaleTable() {
       '<td>' + esc(s.date) + '</td>' +
       unitCells +
       dollarCells +
-      '<td class="td-revenue">' + fmtMoney(saleRev) + '</td>' +
+      '<td class="td-buy-number">' + fmtMoney(saleRev) + '</td>' +
       '<td style="color:#888;font-size:0.8rem;">' + esc(s.note || s.remark || '') + '</td>' +
       '<td style="white-space:nowrap;">' +
         (canEdit ? '<button class="btn-edit" onclick="editSale(\'' + esc(s.id) + '\')"><i class="fas fa-edit"></i></button> ' : '') +
