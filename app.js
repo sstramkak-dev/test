@@ -1496,8 +1496,6 @@ function renderSaleTable() {
   }
 
   const data = filteredSales;
-  const unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
-  const dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active' && x.id !== ITEM_ID_REVENUE; });
 
   if (!data.length) {
     table.innerHTML = '<thead></thead><tbody><tr><td colspan="20" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No records found</td></tr></tbody>';
@@ -1505,7 +1503,13 @@ function renderSaleTable() {
     return;
   }
 
-  let headerRow1 = '<tr><th rowspan="2">Agent</th><th rowspan="2">Branch</th><th rowspan="2">Date</th><th rowspan="2">Submit Date</th>';
+  // Only show item columns that have at least one non-zero value in the current data
+  const allUnitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
+  const allDollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active' && x.id !== ITEM_ID_REVENUE; });
+  const unitItems = allUnitItems.filter(function(item) { return data.some(function(s) { return s.items && s.items[item.id] > 0; }); });
+  const dollarItems = allDollarItems.filter(function(item) { return data.some(function(s) { return s.dollarItems && s.dollarItems[item.id] > 0; }); });
+
+  let headerRow1 = '<tr><th rowspan="2">Agent</th><th rowspan="2">Branch</th><th rowspan="2">Submit Date</th>';
   if (unitItems.length) headerRow1 += '<th colspan="' + unitItems.length + '" class="th-group-unit">Unit Group</th>';
   if (dollarItems.length) headerRow1 += '<th colspan="' + dollarItems.length + '" class="th-group-dollar">Dollar Group</th>';
   headerRow1 += '<th rowspan="2" class="td-buy-number">Total Revenue</th><th rowspan="2">Remark</th><th rowspan="2">Actions</th></tr>';
@@ -1539,7 +1543,6 @@ function renderSaleTable() {
     return '<tr>' +
       '<td><div class="name-cell"><span class="avatar-circle av-' + avIdx + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;margin-right:8px;">' + esc(ini(s.agent)) + '</span>' + esc(s.agent) + '</div></td>' +
       '<td>' + esc(s.branch) + '</td>' +
-      '<td>' + esc(s.date) + '</td>' +
       '<td>' + esc(submitDate) + '</td>' +
       unitCells +
       dollarCells +
@@ -1580,24 +1583,59 @@ function openDownloadModal() {
   const toEl = g('dl-date-to');
   if (fromEl && !fromEl.value) fromEl.value = today.slice(0, 7) + '-01';
   if (toEl && !toEl.value) toEl.value = today;
+
+  // Show/hide role-based filter sections
+  const shopSection = g('dl-shop-section');
+  const agentSection = g('dl-agent-section');
+  if (shopSection) shopSection.style.display = (currentRole === 'cluster') ? '' : 'none';
+  if (agentSection) agentSection.style.display = (currentRole === 'supervisor') ? '' : 'none';
+
+  // Populate cluster shop (branch) filter
+  if (currentRole === 'cluster') {
+    const shopFilter = g('dl-shop-filter');
+    if (shopFilter) {
+      const branches = [...new Set(saleRecords.map(function(s) { return s.branch; }).filter(Boolean))].sort();
+      shopFilter.innerHTML = '<option value="">All Shops</option>' +
+        branches.map(function(b) { return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('');
+    }
+  }
+
+  // Populate supervisor agent filter (scoped to their branch)
+  if (currentRole === 'supervisor' && currentUser) {
+    const agentFilter = g('dl-agent-filter');
+    if (agentFilter) {
+      const branchRecords = saleRecords.filter(function(s) { return s.branch === currentUser.branch; });
+      const agents = [...new Set(branchRecords.map(function(s) { return s.agent; }).filter(Boolean))].sort();
+      agentFilter.innerHTML = '<option value="">All Agents</option>' +
+        agents.map(function(a) { return '<option value="' + esc(a) + '">' + esc(a) + '</option>'; }).join('');
+    }
+  }
+
   openModal('modal-saleDownload');
 }
 
 function downloadSaleCSV() {
   const dateFrom = rv('dl-date-from');
   const dateTo = rv('dl-date-to');
-
-  const unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
-  const dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active' && x.id !== ITEM_ID_REVENUE; });
+  const shopFilter = (currentRole === 'cluster') ? rv('dl-shop-filter') : '';
+  const agentFilter = (currentRole === 'supervisor') ? rv('dl-agent-filter') : '';
 
   const base = getSaleBaseRecords();
   const rows = base.filter(function(s) {
     if (dateFrom && s.date < dateFrom) return false;
     if (dateTo && s.date > dateTo) return false;
+    if (shopFilter && s.branch !== shopFilter) return false;
+    if (agentFilter && s.agent !== agentFilter) return false;
     return true;
   });
 
-  if (!rows.length) { showAlert('No records found for the selected date range.'); return; }
+  if (!rows.length) { showAlert('No records found for the selected filters.'); return; }
+
+  // Only include item columns that have at least one non-zero value in the filtered rows
+  const allUnitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
+  const allDollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active' && x.id !== ITEM_ID_REVENUE; });
+  const unitItems = allUnitItems.filter(function(item) { return rows.some(function(s) { return s.items && s.items[item.id] > 0; }); });
+  const dollarItems = allDollarItems.filter(function(item) { return rows.some(function(s) { return s.dollarItems && s.dollarItems[item.id] > 0; }); });
 
   const escape = function(v) {
     const s = String(v === null || v === undefined ? '' : v);
@@ -1606,14 +1644,14 @@ function downloadSaleCSV() {
 
   const unitHeaders = unitItems.map(function(x) { return escape(x.shortcut || x.name); });
   const dollarHeaders = dollarItems.map(function(x) { return escape(x.shortcut || x.name); });
-  const header = ['Agent', 'Branch', 'Date', 'Submit Date'].concat(unitHeaders).concat(dollarHeaders).concat(['Total Revenue', 'Remark']).map(escape).join(',');
+  const header = ['Agent', 'Branch', 'Submit Date'].concat(unitHeaders).concat(dollarHeaders).concat(['Total Revenue', 'Remark']).map(escape).join(',');
 
   const lines = rows.map(function(s) {
     const submitDate = s.submittedAt ? s.submittedAt.split('T')[0] : s.date;
     const unitCols = unitItems.map(function(item) { return escape(s.items && s.items[item.id] ? s.items[item.id] : ''); });
     const dollarCols = dollarItems.map(function(item) { return escape(s.dollarItems && s.dollarItems[item.id] ? s.dollarItems[item.id] : ''); });
     const rev = s.dollarItems && s.dollarItems[ITEM_ID_REVENUE] ? s.dollarItems[ITEM_ID_REVENUE] : '';
-    return [escape(s.agent), escape(s.branch), escape(s.date), escape(submitDate)]
+    return [escape(s.agent), escape(s.branch), escape(submitDate)]
       .concat(unitCols).concat(dollarCols)
       .concat([escape(rev), escape(s.note || s.remark || '')])
       .join(',');
