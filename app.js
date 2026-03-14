@@ -54,6 +54,22 @@ const ITEM_ID_SMART_HOME = 'i2';
 const ITEM_ID_SMART_FIBER = 'i3';
 const ITEM_ID_BUY_NUMBER = 'i9';
 
+// Fixed sale form items (Dollar Group and Unit Group)
+const DOLLAR_SALE_ITEMS = [
+  { id: 'i9',  name: 'Buy Number' },
+  { id: 'i6',  name: 'ChangeSIM' },
+  { id: 'i7',  name: 'Recharge' },
+  { id: 'i10', name: 'SC Dealer' },
+  { id: 'i11', name: 'Device + Accessories' },
+];
+const UNIT_SALE_ITEMS = [
+  { id: 'i1', name: 'Gross Ads' },
+  { id: 'i2', name: 'Smart@Home' },
+  { id: 'i3', name: 'Smart Fiber+' },
+  { id: 'i4', name: 'SmartNas' },
+  { id: 'i5', name: 'Monthly Upsell' },
+];
+
 const BRANCHES = ['Phnom Penh', 'Siem Reap', 'Battambang', 'Sihanoukville', 'Kampong Cham', 'Express_Tramkak'];
 
 const SUPPORT_CONTACT = { email: 'support@smart5g.com', phone: '+855 23 123 456' };
@@ -398,15 +414,17 @@ function refreshAllData() {
 // Sample Data
 // ------------------------------------------------------------
 let itemCatalogue = [
-  { id: 'i1', name: 'Gross Ads', shortcut: 'GA', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Gross Ads' },
-  { id: 'i2', name: 'Smart@Home', shortcut: 'SH', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Smart@Home package' },
-  { id: 'i3', name: 'Smart Fiber+', shortcut: 'SF', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Smart Fiber+' },
-  { id: 'i4', name: 'SmartNas', shortcut: 'SN', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'SmartNas' },
-  { id: 'i5', name: 'Monthly Upsell', shortcut: 'MU', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Monthly Upsell' },
-  { id: 'i6', name: 'ChangeSIM', shortcut: 'CS', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Change SIM ($)' },
-  { id: 'i7', name: 'Recharge', shortcut: 'RC', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Recharge ($)' },
-  { id: 'i9', name: 'Buy Number', shortcut: 'BN', group: 'dollar', currency: '$', price: 1, noAutoSum: true, category: 'Sales', status: 'active', desc: 'Buy Number ($)' },
-  { id: 'i8', name: 'Total Revenue', shortcut: 'RV', group: 'dollar', currency: '$', price: 1, noAutoSum: true, category: 'Sales', status: 'active', desc: 'Total Revenue ($)' },
+  { id: 'i1',  name: 'Gross Ads',            shortcut: 'GA', group: 'unit',   unit: 'Unit', category: 'Sales', status: 'active', desc: 'Gross Ads' },
+  { id: 'i2',  name: 'Smart@Home',            shortcut: 'SH', group: 'unit',   unit: 'Unit', category: 'Sales', status: 'active', desc: 'Smart@Home package' },
+  { id: 'i3',  name: 'Smart Fiber+',          shortcut: 'SF', group: 'unit',   unit: 'Unit', category: 'Sales', status: 'active', desc: 'Smart Fiber+' },
+  { id: 'i4',  name: 'SmartNas',              shortcut: 'SN', group: 'unit',   unit: 'Unit', category: 'Sales', status: 'active', desc: 'SmartNas' },
+  { id: 'i5',  name: 'Monthly Upsell',        shortcut: 'MU', group: 'unit',   unit: 'Unit', category: 'Sales', status: 'active', desc: 'Monthly Upsell' },
+  { id: 'i6',  name: 'ChangeSIM',             shortcut: 'CS', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Change SIM ($)' },
+  { id: 'i7',  name: 'Recharge',              shortcut: 'RC', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Recharge ($)' },
+  { id: 'i9',  name: 'Buy Number',            shortcut: 'BN', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Buy Number ($)' },
+  { id: 'i10', name: 'SC Dealer',             shortcut: 'SD', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'SC Dealer ($)' },
+  { id: 'i11', name: 'Device + Accessories',  shortcut: 'DA', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Device + Accessories ($)' },
+  { id: 'i8',  name: 'Total Revenue',         shortcut: 'RV', group: 'dollar', currency: '$', price: 1, noAutoSum: true, category: 'Sales', status: 'active', desc: 'Total Revenue ($)' },
 ];
 
 let saleRecords = [];
@@ -1120,53 +1138,36 @@ function openNewSaleModal(sale) {
   const title = g('modal-newSale-title');
   const btn = g('sale-submit-btn');
 
-  const unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
-  const dollarItems = itemCatalogue.filter(function(x) { return x.group === 'dollar' && x.status === 'active'; });
-
   const unitContainer = g('sale-unit-items');
   const dollarContainer = g('sale-dollar-items');
 
   if (unitContainer) {
-    if (unitItems.length) {
-      unitContainer.innerHTML = '<div class="sale-items-grid">' + unitItems.map(function(item) {
-        return '<div class="sic-card sic-card-unit">' +
-          '<div class="sic-label">' + esc(item.name) + '</div>' +
-          '<input type="number" class="sic-input" id="sic-' + esc(item.id) + '" min="0" value="" placeholder="0">' +
-          '</div>';
-      }).join('') + '</div>';
-    } else {
-      unitContainer.innerHTML = '<p style="color:#999;font-size:0.85rem;">No unit items in catalogue.</p>';
-    }
+    unitContainer.innerHTML = '<div class="sale-items-grid">' + UNIT_SALE_ITEMS.map(function(item) {
+      return '<div class="sic-card sic-card-unit">' +
+        '<div class="sic-label">' + esc(item.name) + '</div>' +
+        '<input type="number" class="sic-input" id="sic-' + esc(item.id) + '" min="0" value="" placeholder="0">' +
+        '</div>';
+    }).join('') + '</div>';
   }
 
-  const manualDollarItems = dollarItems.filter(function(x) { return !x.noAutoSum; });
-
   if (dollarContainer) {
-    if (manualDollarItems.length) {
-      dollarContainer.innerHTML = '<div class="sale-items-grid">' + manualDollarItems.map(function(item) {
-        return '<div class="sic-card sic-card-dollar">' +
-          '<div class="sic-label">' + esc(item.name) + '</div>' +
-          '<input type="number" class="sic-input sic-dollar-input" id="sic-' + esc(item.id) + '" min="0" step="0.01" value="" placeholder="0.00">' +
-          '</div>';
-      }).join('') + '</div>';
-    } else {
-      dollarContainer.innerHTML = '<p style="color:#999;font-size:0.85rem;">No dollar items in catalogue.</p>';
-    }
+    dollarContainer.innerHTML = '<div class="sale-items-grid">' + DOLLAR_SALE_ITEMS.map(function(item) {
+      return '<div class="sic-card sic-card-dollar">' +
+        '<div class="sic-label">' + esc(item.name) + '</div>' +
+        '<input type="number" class="sic-input sic-dollar-input" id="sic-' + esc(item.id) + '" min="0" step="0.01" value="" placeholder="0.00">' +
+        '</div>';
+    }).join('') + '</div>';
   }
 
   const revTotalEl = g('sale-revenue-total');
   if (revTotalEl) {
-    if (manualDollarItems.length) {
-      revTotalEl.style.display = '';
-      revTotalEl.innerHTML = '<div class="sale-revenue-total-bar"><i class="fas fa-calculator"></i> Total Revenue (Auto Sum): <span id="sale-revenue-total-value">$0.00</span></div>';
-    } else {
-      revTotalEl.style.display = 'none';
-    }
+    revTotalEl.style.display = '';
+    revTotalEl.innerHTML = '<div class="sale-revenue-total-bar"><i class="fas fa-calculator"></i> Total Revenue (Auto Sum): <span id="sale-revenue-total-value">$0.00</span></div>';
   }
 
-  function updateSaleRevenueTotal(items) {
+  function updateSaleRevenueTotal() {
     var sum = 0;
-    items.forEach(function(item) {
+    DOLLAR_SALE_ITEMS.forEach(function(item) {
       var inp = g('sic-' + item.id);
       if (inp) sum += parseFloat(inp.value) || 0;
     });
@@ -1176,7 +1177,7 @@ function openNewSaleModal(sale) {
 
   if (dollarContainer) {
     dollarContainer.querySelectorAll('.sic-dollar-input').forEach(function(inp) {
-      inp.addEventListener('input', function() { updateSaleRevenueTotal(manualDollarItems); });
+      inp.addEventListener('input', function() { updateSaleRevenueTotal(); });
     });
   }
 
@@ -1204,7 +1205,7 @@ function openNewSaleModal(sale) {
         if (inp) inp.value = sale.dollarItems[iid];
       });
     }
-    updateSaleRevenueTotal(manualDollarItems);
+    updateSaleRevenueTotal();
   } else {
     if (title) title.textContent = 'New Sale';
     if (btn) btn.textContent = 'Save Sale';
@@ -1233,18 +1234,18 @@ function submitSale(e) {
 
   const items = {}, dollarItems = {};
   let autoRevenue = 0;
-  itemCatalogue.forEach(function(item) {
+  UNIT_SALE_ITEMS.forEach(function(item) {
     const inp = g('sic-' + item.id);
-    if (item.group === 'unit') {
-      if (!inp) return;
-      const val = parseFloat(inp.value) || 0;
-      if (val > 0) items[item.id] = val;
-    } else if (item.group === 'dollar' && !item.noAutoSum) {
-      if (!inp) return;
-      const val = parseFloat(inp.value) || 0;
-      if (val > 0) dollarItems[item.id] = val;
-      autoRevenue += val;
-    }
+    if (!inp) return;
+    const val = parseFloat(inp.value) || 0;
+    if (val > 0) items[item.id] = val;
+  });
+  DOLLAR_SALE_ITEMS.forEach(function(item) {
+    const inp = g('sic-' + item.id);
+    if (!inp) return;
+    const val = parseFloat(inp.value) || 0;
+    if (val > 0) dollarItems[item.id] = val;
+    autoRevenue += val;
   });
   if (autoRevenue > 0) dollarItems[ITEM_ID_REVENUE] = autoRevenue;
 
