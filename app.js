@@ -2275,11 +2275,20 @@ function openCustomerModal(type, item) {
       // Default center: Phnom Penh, Cambodia
       var defaultCenter = (latVal && lngVal) ? [latVal, lngVal] : [11.5564, 104.9282];
       if (window._ncMap) { window._ncMap.remove(); window._ncMap = null; }
-      var map = L.map('nc-map').setView(defaultCenter, latVal && lngVal ? 15 : 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      var map = L.map('nc-map', {
+        fullscreenControl: true,
+        fullscreenControlOptions: { position: 'topleft' }
+      }).setView(defaultCenter, latVal && lngVal ? 15 : 12);
+      var streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
+      });
+      var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri'
+      });
+      satelliteLayer.addTo(map);
+      L.control.layers({ 'Satellite': satelliteLayer, 'Street Map': streetLayer }, null, { position: 'topright' }).addTo(map);
       var marker = null;
       if (latVal && lngVal) {
         marker = L.marker([latVal, lngVal]).addTo(map);
