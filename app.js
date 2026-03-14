@@ -403,7 +403,7 @@ let itemCatalogue = [
   { id: 'i3', name: 'Smart Fiber+', shortcut: 'SF', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Smart Fiber+' },
   { id: 'i4', name: 'SmartNas', shortcut: 'SN', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'SmartNas' },
   { id: 'i5', name: 'Monthly Upsell', shortcut: 'MU', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Monthly Upsell' },
-  { id: 'i10', name: 'Buy Number', shortcut: 'BN', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Buy Number ($)', noAutoRevenue: true },
+  { id: 'i10', name: 'Buy Number', shortcut: 'BN', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Buy Number ($)' },
   { id: 'i6', name: 'ChangeSIM', shortcut: 'CS', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Change SIM ($)' },
   { id: 'i7', name: 'Recharge', shortcut: 'RC', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Recharge ($)' },
   { id: 'i9', name: 'SC Dealer', shortcut: 'SD', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'SC Dealer ($)' },
@@ -1168,7 +1168,6 @@ function openNewSaleModal(sale) {
   function updateSaleRevenueTotal(items) {
     var sum = 0;
     items.forEach(function(item) {
-      if (item.noAutoRevenue) return;
       var inp = g('sic-' + item.id);
       if (inp) sum += parseFloat(inp.value) || 0;
     });
@@ -1245,7 +1244,7 @@ function submitSale(e) {
       if (!inp) return;
       const val = parseFloat(inp.value) || 0;
       if (val > 0) dollarItems[item.id] = val;
-      if (!item.noAutoRevenue) autoRevenue += val;
+      autoRevenue += val;
     }
   });
   if (autoRevenue > 0) dollarItems[ITEM_ID_REVENUE] = autoRevenue;
