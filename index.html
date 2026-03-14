@@ -670,8 +670,12 @@
             <div class="chart-card-header">
               <span class="chart-card-title"><i class="fas fa-chart-line" style="color:#1B7D3D;margin-right:6px"></i>Monthly Trend</span>
             </div>
-            <div class="chart-card-body">
+            <div class="chart-card-body" style="position:relative;">
               <canvas id="cTrend"></canvas>
+              <div id="trend-gauge-overlay" style="display:none;position:absolute;bottom:10px;left:0;right:0;text-align:center;pointer-events:none;">
+                <div id="trend-gauge-pct-text" style="font-size:1.6rem;font-weight:700;line-height:1.1;"></div>
+                <div id="trend-gauge-detail" style="font-size:0.76rem;color:#888;margin-top:3px;"></div>
+              </div>
             </div>
           </div>
           <div class="chart-card">
