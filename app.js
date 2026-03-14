@@ -52,7 +52,7 @@ const ITEM_ID_RECHARGE = 'i7';
 const ITEM_ID_GROSS_ADS = 'i1';
 const ITEM_ID_SMART_HOME = 'i2';
 const ITEM_ID_SMART_FIBER = 'i3';
-const ITEM_ID_BUY_NUMBER = 'i10';
+const ITEM_ID_BUY_NUMBER = 'i9';
 
 const BRANCHES = ['Phnom Penh', 'Siem Reap', 'Battambang', 'Sihanoukville', 'Kampong Cham', 'Express_Tramkak'];
 
@@ -403,10 +403,9 @@ let itemCatalogue = [
   { id: 'i3', name: 'Smart Fiber+', shortcut: 'SF', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Smart Fiber+' },
   { id: 'i4', name: 'SmartNas', shortcut: 'SN', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'SmartNas' },
   { id: 'i5', name: 'Monthly Upsell', shortcut: 'MU', group: 'unit', unit: 'Unit', category: 'Sales', status: 'active', desc: 'Monthly Upsell' },
-  { id: 'i10', name: 'Buy Number', shortcut: 'BN', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Buy Number ($)' },
   { id: 'i6', name: 'ChangeSIM', shortcut: 'CS', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Change SIM ($)' },
   { id: 'i7', name: 'Recharge', shortcut: 'RC', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Recharge ($)' },
-  { id: 'i9', name: 'SC Dealer', shortcut: 'SD', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'SC Dealer ($)' },
+  { id: 'i9', name: 'Buy Number', shortcut: 'BN', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Buy Number ($)' },
   { id: 'i8', name: 'Total Revenue', shortcut: 'RV', group: 'dollar', currency: '$', price: 1, noAutoSum: true, category: 'Sales', status: 'active', desc: 'Total Revenue ($)' },
 ];
 
