@@ -422,7 +422,7 @@ let itemCatalogue = [
   { id: 'i6',  name: 'ChangeSIM',             shortcut: 'CS', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Change SIM ($)' },
   { id: 'i7',  name: 'Recharge',              shortcut: 'RC', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Recharge ($)' },
   { id: 'i9',  name: 'Buy Number',            shortcut: 'BN', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Buy Number ($)' },
-  { id: 'i10', name: 'SC Dealer',             shortcut: 'SD', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'SC Dealer ($)' },
+  { id: 'i10', name: 'SC Dealer',             shortcut: 'BN', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'SC Dealer ($)' },
   { id: 'i11', name: 'Device + Accessories',  shortcut: 'DA', group: 'dollar', currency: '$', price: 1, category: 'Sales', status: 'active', desc: 'Device + Accessories ($)' },
   { id: 'i8',  name: 'Total Revenue',         shortcut: 'RV', group: 'dollar', currency: '$', price: 1, noAutoSum: true, category: 'Sales', status: 'active', desc: 'Total Revenue ($)' },
 ];
