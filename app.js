@@ -1355,6 +1355,23 @@ function canSupervisorModifyKpi(kpi) {
          (kpi.kpiFor === 'agent' && kpi.assigneeBranch === currentUser.branch);
 }
 
+// Returns the subset of kpiList visible to the current user.
+// Admin/cluster see all KPIs; supervisor/agent see only their own branch's KPIs.
+function getVisibleKpis() {
+  if (currentRole === 'admin' || currentRole === 'cluster') return kpiList.slice();
+  if (!currentUser || !currentUser.branch) return [];
+  var userBranch = currentUser.branch;
+  return kpiList.filter(function(k) {
+    if (k.kpiFor === 'shop') {
+      var sup = staffList.find(function(u) { return u.id === k.assigneeId; });
+      return sup && sup.branch === userBranch;
+    } else if (k.kpiFor === 'agent') {
+      return k.assigneeBranch === userBranch;
+    }
+    return false;
+  });
+}
+
 // Shows a role-appropriate permission error for sale report modification attempts.
 function showSalePermissionError(action) {
   if (currentRole === 'cluster') {
@@ -1831,13 +1848,13 @@ function renderDashboard() {
   if (branchFilterVal) {
     viewSales = viewSales.filter(function(s) { return s.branch === branchFilterVal; });
   }
-  // Hide branch filter for agent role
+  // Hide branch filter for agent and supervisor (they auto-display their own branch)
   var branchFilterWrap = g('dash-branch-filter-wrap');
-  if (branchFilterWrap) branchFilterWrap.style.display = (currentRole === 'agent') ? 'none' : '';
+  if (branchFilterWrap) branchFilterWrap.style.display = (currentRole === 'agent' || currentRole === 'supervisor') ? 'none' : '';
 
-  // Show branch summary table only for admin and cluster roles
+  // Show branch summary table for admin, cluster, and supervisor (supervisor sees only their own branch via filtered viewSales)
   var branchSection = g('dash-branch-section');
-  if (branchSection) branchSection.style.display = (currentRole === 'admin' || currentRole === 'cluster') ? '' : 'none';
+  if (branchSection) branchSection.style.display = (currentRole === 'admin' || currentRole === 'cluster' || currentRole === 'supervisor') ? '' : 'none';
 
   const currSales = viewSales.filter(function(s) { return ymOf(s.date) === ym; });
   const prevSales = viewSales.filter(function(s) { return ymOf(s.date) === ymP; });
@@ -1873,54 +1890,105 @@ function renderDashboard() {
   setTrend('tr-gross-ads', currGrossAds, prevGrossAds);
   setTrend('tr-home-internet', currHomeInternet, prevHomeInternet);
 
-  // Chart 1: Monthly Trend
+  // Chart 1: Monthly Trend / Shop KPI Achievement Gauge
   _cTrend = destroyChart(_cTrend);
   clearCanvas('cTrend');
-  const months = last7Months();
-  const monthLabels = months.map(ymLabel);
-  const unitsPerMonth = months.map(function(m) {
-    let u = 0;
-    viewSales.filter(function(s) { return ymOf(s.date) === m; }).forEach(function(s) {
-      Object.values(s.items || {}).forEach(function(v) { u += v; });
-    });
-    return u;
-  });
-  const revPerMonth = months.map(function(m) {
-    let r = 0;
-    viewSales.filter(function(s) { return ymOf(s.date) === m; }).forEach(function(s) {
-      Object.keys(s.dollarItems || {}).forEach(function(iid) {
-        const item = itemCatalogue.find(function(x) { return x.id === iid; });
-        if (item && !item.noAutoSum && !item.noAutoRevenue) r += s.dollarItems[iid] * (item.price || 1);
-      });
-    });
-    return r;
-  });
+  var trendGaugeOverlay = g('trend-gauge-overlay');
+
+  // For supervisor/agent: show KPI achievement gauge for their own shop
+  var shopKpiForGauge = null;
+  if ((currentRole === 'supervisor' || currentRole === 'agent') && currentUser) {
+    var shopSup = (currentRole === 'supervisor') ? currentUser :
+      staffList.find(function(u) { return u.role === 'Supervisor' && u.branch === currentUser.branch; });
+    if (shopSup) {
+      shopKpiForGauge = kpiList.find(function(k) { return k.kpiFor === 'shop' && k.assigneeId === shopSup.id; });
+    }
+  }
+
   const tCtx = g('cTrend');
-  if (tCtx && typeof Chart !== 'undefined') {
+  if (tCtx && shopKpiForGauge && typeof Chart !== 'undefined') {
+    var kpiActualVal = calcKpiActual(shopKpiForGauge);
+    var kpiPct = shopKpiForGauge.target > 0 ? Math.round(kpiActualVal / shopKpiForGauge.target * 100) : 0;
+    var fillPct = Math.min(kpiPct, 100);
+    var gColor = kpiPct >= 100 ? '#1B7D3D' : kpiPct >= 70 ? '#FF9800' : '#E53935';
     _cTrend = new Chart(tCtx, {
-      type: 'line',
+      type: 'doughnut',
       data: {
-        labels: monthLabels,
-        datasets: [
-          { label: 'Units', data: unitsPerMonth, borderColor: '#1B7D3D', backgroundColor: 'rgba(27,125,61,0.08)', yAxisID: 'y', tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#1B7D3D', borderWidth: 2 },
-          { label: 'Revenue ($)', data: revPerMonth, borderColor: '#FF9800', backgroundColor: 'rgba(255,152,0,0.08)', yAxisID: 'y1', tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#FF9800', borderWidth: 2 }
-        ]
+        datasets: [{
+          data: [fillPct, 100 - fillPct],
+          backgroundColor: [gColor, '#EEEEEE'],
+          borderWidth: 0,
+          circumference: 180,
+          rotation: -90
+        }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11 } } },
-          tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, titleFont: { size: 12 }, bodyFont: { size: 11 } }
-        },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-          y: { position: 'left', title: { display: true, text: 'Units', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
-          y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Revenue ($)', font: { size: 11 } }, ticks: { font: { size: 11 } } }
-        }
+        cutout: '70%',
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        animation: { animateRotate: true, duration: 700 }
       }
     });
+    if (trendGaugeOverlay) {
+      trendGaugeOverlay.style.display = '';
+      var pctEl = g('trend-gauge-pct-text');
+      var detailEl = g('trend-gauge-detail');
+      if (pctEl) { pctEl.style.color = gColor; pctEl.textContent = kpiPct + '%'; }
+      if (detailEl) {
+        var tgValueDisplay = shopKpiForGauge.valueMode === 'currency'
+          ? fmtMoney(kpiActualVal, shopKpiForGauge.currency + ' ') + ' / ' + fmtMoney(shopKpiForGauge.target, shopKpiForGauge.currency + ' ')
+          : Math.round(kpiActualVal * 100) / 100 + ' / ' + shopKpiForGauge.target + (shopKpiForGauge.unit ? ' ' + esc(shopKpiForGauge.unit) : '');
+        detailEl.textContent = esc(shopKpiForGauge.name) + ': ' + tgValueDisplay;
+      }
+    }
+  } else {
+    if (trendGaugeOverlay) trendGaugeOverlay.style.display = 'none';
+    if (tCtx && typeof Chart !== 'undefined') {
+      const months = last7Months();
+      const monthLabels = months.map(ymLabel);
+      const unitsPerMonth = months.map(function(m) {
+        let u = 0;
+        viewSales.filter(function(s) { return ymOf(s.date) === m; }).forEach(function(s) {
+          Object.values(s.items || {}).forEach(function(v) { u += v; });
+        });
+        return u;
+      });
+      const revPerMonth = months.map(function(m) {
+        let r = 0;
+        viewSales.filter(function(s) { return ymOf(s.date) === m; }).forEach(function(s) {
+          Object.keys(s.dollarItems || {}).forEach(function(iid) {
+            const item = itemCatalogue.find(function(x) { return x.id === iid; });
+            if (item && !item.noAutoSum && !item.noAutoRevenue) r += s.dollarItems[iid] * (item.price || 1);
+          });
+        });
+        return r;
+      });
+      _cTrend = new Chart(tCtx, {
+        type: 'line',
+        data: {
+          labels: monthLabels,
+          datasets: [
+            { label: 'Units', data: unitsPerMonth, borderColor: '#1B7D3D', backgroundColor: 'rgba(27,125,61,0.08)', yAxisID: 'y', tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#1B7D3D', borderWidth: 2 },
+            { label: 'Revenue ($)', data: revPerMonth, borderColor: '#FF9800', backgroundColor: 'rgba(255,152,0,0.08)', yAxisID: 'y1', tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#FF9800', borderWidth: 2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 11 } } },
+            tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, titleFont: { size: 12 }, bodyFont: { size: 11 } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: { position: 'left', title: { display: true, text: 'Units', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+            y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Revenue ($)', font: { size: 11 } }, ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
   }
 
   // Chart 2: Item Mix (doughnut)
@@ -1952,23 +2020,23 @@ function renderDashboard() {
     });
   }
 
-  // Chart 3: Agent Performance
+  // Chart 3: Agent Performance (Revenue)
   _cAgent = destroyChart(_cAgent);
   clearCanvas('cAgent');
-  const agentUnits = {};
+  const agentRevenue = {};
   currSales.forEach(function(s) {
-    if (!(s.agent in agentUnits)) agentUnits[s.agent] = 0;
-    Object.values(s.items || {}).forEach(function(v) { agentUnits[s.agent] += v; });
+    if (!(s.agent in agentRevenue)) agentRevenue[s.agent] = 0;
+    if (s.dollarItems && s.dollarItems[ITEM_ID_REVENUE]) agentRevenue[s.agent] += s.dollarItems[ITEM_ID_REVENUE];
   });
-  const agentNames = Object.keys(agentUnits);
-  const agentVals = agentNames.map(function(a) { return agentUnits[a]; });
+  const agentNames = Object.keys(agentRevenue);
+  const agentVals = agentNames.map(function(a) { return agentRevenue[a]; });
   const aCtx = g('cAgent');
   if (aCtx && agentNames.length && typeof Chart !== 'undefined') {
     _cAgent = new Chart(aCtx, {
       type: 'bar',
       data: {
         labels: agentNames,
-        datasets: [{ label: 'Units This Month', data: agentVals, backgroundColor: CHART_PAL, borderRadius: 4, borderSkipped: false }]
+        datasets: [{ label: 'Revenue This Month ($)', data: agentVals, backgroundColor: CHART_PAL, borderRadius: 4, borderSkipped: false }]
       },
       options: {
         responsive: true,
@@ -1976,10 +2044,13 @@ function renderDashboard() {
         indexAxis: 'y',
         plugins: {
           legend: { display: false },
-          tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 } }
+          tooltip: {
+            backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 },
+            callbacks: { label: function(ctx) { return ' ' + fmtMoney(ctx.parsed.x || 0); } }
+          }
         },
         scales: {
-          x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+          x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, callback: function(v) { return fmtMoney(v); } } },
           y: { grid: { display: false }, ticks: { font: { size: 11 } } }
         }
       }
@@ -1999,17 +2070,18 @@ function renderDashboard() {
   const gCtx = g('cGrowth');
   if (gCtx && unitItemsDash.length && typeof Chart !== 'undefined') {
     _cGrowth = new Chart(gCtx, {
-      type: 'bar',
+      type: 'line',
       data: {
         labels: growthLabels,
         datasets: [
-          { label: 'This Month', data: currItemUnits, backgroundColor: '#1B7D3D', borderRadius: 4, borderSkipped: false },
-          { label: 'Last Month', data: prevItemUnits, backgroundColor: '#A5D6A7', borderRadius: 4, borderSkipped: false }
+          { label: 'This Month', data: currItemUnits, borderColor: '#1B7D3D', backgroundColor: 'rgba(27,125,61,0.08)', tension: 0.3, fill: false, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: '#1B7D3D', pointBorderColor: '#fff', pointBorderWidth: 2, borderWidth: 2 },
+          { label: 'Last Month', data: prevItemUnits, borderColor: '#A5D6A7', backgroundColor: 'rgba(165,214,167,0.08)', tension: 0.3, fill: false, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: '#A5D6A7', pointBorderColor: '#fff', pointBorderWidth: 2, borderWidth: 2 }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
           legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11 } } },
           tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 } }
@@ -3861,11 +3933,14 @@ function renderKpiTable() {
     kpiAddBtn.style.display = (currentRole === 'admin' || currentRole === 'cluster' || currentRole === 'supervisor') ? '' : 'none';
   }
 
-  if (!kpiList.length) {
+  // Only show KPIs visible to the current user's branch
+  var visibleKpis = getVisibleKpis();
+
+  if (!visibleKpis.length) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-chart-line" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No KPIs defined yet</td></tr>';
     return;
   }
-  tbody.innerHTML = kpiList.map(function(k, i) {
+  tbody.innerHTML = visibleKpis.map(function(k, i) {
     const typePill = k.type === 'Sales' ? 'pill-green' : k.type === 'Revenue' ? 'pill-orange' : k.type === 'Units' ? 'pill-blue' : 'pill-purple';
     const valueDisplay = k.valueMode === 'currency'
       ? fmtMoney(k.target, esc(k.currency) + ' ')
