@@ -52,6 +52,7 @@ const ITEM_ID_RECHARGE = 'i7';
 const ITEM_ID_GROSS_ADS = 'i1';
 const ITEM_ID_SMART_HOME = 'i2';
 const ITEM_ID_SMART_FIBER = 'i3';
+const ITEM_ID_BUY_NUMBER = 'i10';
 
 const BRANCHES = ['Phnom Penh', 'Siem Reap', 'Battambang', 'Sihanoukville', 'Kampong Cham', 'Express_Tramkak'];
 
@@ -1681,9 +1682,8 @@ function renderSummaryView(data, unitItems, dollarItems) {
 
   const agentMap = {};
   data.forEach(function(s) {
-    if (!agentMap[s.agent]) agentMap[s.agent] = { units: {}, dollars: {}, totalUnits: 0, buyCount: 0, totalRev: 0 };
+    if (!agentMap[s.agent]) agentMap[s.agent] = { units: {}, dollars: {}, totalUnits: 0, totalRev: 0, buyNumberAmount: 0 };
     const ag = agentMap[s.agent];
-    ag.buyCount += 1;
     Object.keys(s.items || {}).forEach(function(iid) {
       ag.units[iid] = (ag.units[iid] || 0) + s.items[iid];
       ag.totalUnits += s.items[iid];
@@ -1691,6 +1691,7 @@ function renderSummaryView(data, unitItems, dollarItems) {
     Object.keys(s.dollarItems || {}).forEach(function(iid) {
       ag.dollars[iid] = (ag.dollars[iid] || 0) + s.dollarItems[iid];
       if (iid === ITEM_ID_REVENUE) ag.totalRev += s.dollarItems[iid];
+      if (iid === ITEM_ID_BUY_NUMBER) ag.buyNumberAmount += s.dollarItems[iid];
     });
   });
 
@@ -1707,7 +1708,7 @@ function renderSummaryView(data, unitItems, dollarItems) {
     return '<div class="summary-card">' +
       '<div class="summary-card-header">' +
         '<span class="sc-avatar av-' + (idx % 8) + '">' + esc(ini(agent)) + '</span>' +
-        '<div><div class="sc-name">' + esc(agent) + '</div><div style="font-size:0.72rem;opacity:0.8;">Buy #: ' + ag.buyCount + ' | Rev: ' + fmtMoney(ag.totalRev) + '</div></div>' +
+        '<div><div class="sc-name">' + esc(agent) + '</div><div style="font-size:0.72rem;opacity:0.8;">Buy #: ' + fmtMoney(ag.buyNumberAmount) + ' | Rev: ' + fmtMoney(ag.totalRev) + '</div></div>' +
       '</div>' +
       '<div class="summary-card-body">' + (unitRows + dollarRows || '<div style="color:#999;font-size:0.8rem;">No sales</div>') + '</div>' +
       '</div>';
