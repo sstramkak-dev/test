@@ -701,6 +701,10 @@
           <div class="chart-card">
             <div class="chart-card-header">
               <span class="chart-card-title"><i class="fas fa-arrow-trend-up" style="color:#1565C0;margin-right:6px"></i>Growth vs Last Month</span>
+              <select id="growth-chart-view" class="form-select toolbar-select" style="font-size:.82rem;padding:4px 10px;height:auto;" onchange="setGrowthChartView(this.value)">
+                <option value="compare">This Month vs Last Month</option>
+                <option value="pct">% Growth</option>
+              </select>
             </div>
             <div class="chart-card-body">
               <canvas id="cGrowth"></canvas>
@@ -733,10 +737,18 @@
           <div class="chart-card">
             <div class="chart-card-header">
               <span class="chart-card-title"><i class="fas fa-bullseye" style="color:#E53935;margin-right:6px"></i>Monthly KPI vs Actual Achievement</span>
-              <div id="dash-kpi-view-toggle" style="display:flex;gap:6px;">
-                <button class="btn btn-sm btn-outline dash-kpi-view-btn active" data-view="all" onclick="setDashKpiView('all')">All</button>
-                <button class="btn btn-sm btn-outline dash-kpi-view-btn" data-view="shop" onclick="setDashKpiView('shop')">By Shop</button>
-                <button class="btn btn-sm btn-outline dash-kpi-view-btn" data-view="agent" onclick="setDashKpiView('agent')">By Agent</button>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div id="dash-kpi-view-toggle" style="display:flex;gap:6px;">
+                  <button class="btn btn-sm btn-outline dash-kpi-view-btn active" data-view="all" onclick="setDashKpiView('all')">All</button>
+                  <button class="btn btn-sm btn-outline dash-kpi-view-btn" data-view="shop" onclick="setDashKpiView('shop')">By Shop</button>
+                  <button class="btn btn-sm btn-outline dash-kpi-view-btn" data-view="agent" onclick="setDashKpiView('agent')">By Agent</button>
+                  <button class="btn btn-sm btn-outline dash-kpi-view-btn" id="dash-kpi-branch-btn" data-view="branch" onclick="setDashKpiView('branch')" style="display:none;">By Branch</button>
+                </div>
+                <div id="dash-kpi-branch-filter-wrap" style="display:none;">
+                  <select id="dash-kpi-branch-filter" class="form-select toolbar-select" style="font-size:.82rem;padding:4px 10px;height:auto;" onchange="renderDashboardKpiSection()">
+                    <option value="">All Branches</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div class="chart-card-body" style="height:auto;min-height:0;">
