@@ -1895,8 +1895,12 @@
             </div>
           </div>
           <div class="form-group" id="kpi-unit-field">
-            <label class="form-label" for="kpi-unit-val">Unit Label</label>
-            <input type="text" class="form-input" id="kpi-unit-val" placeholder="e.g. SIM, Card, Package" />
+            <label class="form-label" for="kpi-item-sel">Item <span class="required">*</span></label>
+            <select class="form-select" id="kpi-item-sel">
+              <option value="">All Unit Items</option>
+            </select>
+            <!-- kpi-unit-val: retained for backward compatibility with existing KPI records that store a legacy text unit label -->
+            <input type="hidden" id="kpi-unit-val" />
           </div>
           <div class="form-group" id="kpi-currency-field" style="display:none;">
             <label class="form-label">Currency</label>
