@@ -2135,6 +2135,14 @@ function renderDashboard() {
 // ------------------------------------------------------------
 // KPI vs Actual Achievement Dashboard
 // ------------------------------------------------------------
+function getKpiUnitLabel(kpi) {
+  if (kpi.itemId) {
+    var item = itemCatalogue.find(function(x) { return x.id === kpi.itemId; });
+    if (item) return item.name;
+  }
+  return kpi.unit || '';
+}
+
 function calcKpiActual(kpi, ym) {
   if (!ym) ym = ymNow();
   const currSales = saleRecords.filter(function(s) { return ymOf(s.date) === ym; });
@@ -2148,7 +2156,11 @@ function calcKpiActual(kpi, ym) {
   }
   let actual = 0;
   if (kpi.valueMode === 'unit') {
-    filtered.forEach(function(s) { Object.values(s.items || {}).forEach(function(v) { actual += v; }); });
+    if (kpi.itemId) {
+      filtered.forEach(function(s) { actual += (s.items && s.items[kpi.itemId]) || 0; });
+    } else {
+      filtered.forEach(function(s) { Object.values(s.items || {}).forEach(function(v) { actual += v; }); });
+    }
   } else {
     filtered.forEach(function(s) {
       Object.keys(s.dollarItems || {}).forEach(function(iid) {
@@ -2242,7 +2254,7 @@ function renderDashboardKpiSection() {
       var assigneeName = d.assignee ? esc(d.assignee.name) : (d.k.assigneeBranch ? esc(d.k.assigneeBranch) : '—');
       var valueDisplay = d.k.valueMode === 'currency'
         ? fmtMoney(d.k.target, esc(d.k.currency) + ' ') + ' / ' + fmtMoney(d.actual, esc(d.k.currency) + ' ')
-        : d.k.target + ' / ' + d.actual + (d.k.unit ? ' ' + esc(d.k.unit) : '');
+        : (function() { var ul = getKpiUnitLabel(d.k); return d.k.target + ' / ' + d.actual + (ul ? ' ' + esc(ul) : ''); })();
       return '<div class="kpi-gauge-card">' +
         '<div class="kpi-gauge-canvas-wrap">' +
         '<canvas id="kpiGauge_' + i + '" height="130"></canvas>' +
@@ -2298,7 +2310,7 @@ function renderDashboardKpiSection() {
       var assigneeName = d.assignee ? esc(d.assignee.name) : (d.k.assigneeBranch ? esc(d.k.assigneeBranch) : '—');
       var valueDisplay = d.k.valueMode === 'currency'
         ? fmtMoney(d.k.target, esc(d.k.currency) + ' ') + ' / ' + fmtMoney(d.actual, esc(d.k.currency) + ' ')
-        : d.k.target + ' / ' + d.actual + (d.k.unit ? ' ' + esc(d.k.unit) : '');
+        : (function() { var ul = getKpiUnitLabel(d.k); return d.k.target + ' / ' + d.actual + (ul ? ' ' + esc(ul) : ''); })();
       return '<tr>' +
         '<td>' + esc(d.k.name) + '</td>' +
         '<td>' + forLabel + ' <small style="color:#888;">' + assigneeName + '</small></td>' +
@@ -3767,7 +3779,7 @@ function openKpiModal(item) {
 
     setValueMode(item.valueMode || 'unit');
     if (item.valueMode === 'unit') {
-      const uvEl = g('kpi-unit-val'); if (uvEl) uvEl.value = item.unit || '';
+      const itemSel = g('kpi-item-sel'); if (itemSel && item.itemId) itemSel.value = item.itemId;
     } else {
       const csEl = g('kpi-currency-sel'); if (csEl) csEl.value = item.currency || 'USD';
     }
@@ -3809,12 +3821,23 @@ function setValueMode(mode) {
     if (curField) curField.style.display = 'none';
     if (unitToggle) unitToggle.classList.add('active');
     if (curToggle) curToggle.classList.remove('active');
+    populateKpiItemSel();
   } else {
     if (unitField) unitField.style.display = 'none';
     if (curField) curField.style.display = '';
     if (unitToggle) unitToggle.classList.remove('active');
     if (curToggle) curToggle.classList.add('active');
   }
+}
+
+function populateKpiItemSel() {
+  const sel = g('kpi-item-sel');
+  if (!sel) return;
+  const unitItems = itemCatalogue.filter(function(x) { return x.group === 'unit' && x.status === 'active'; });
+  sel.innerHTML = '<option value="">All Unit Items</option>' +
+    unitItems.map(function(item) {
+      return '<option value="' + esc(item.id) + '">' + esc(item.name) + '</option>';
+    }).join('');
 }
 
 function submitKpi(e) {
@@ -3845,6 +3868,7 @@ function submitKpi(e) {
     assigneeBranch: kpiForSelected === 'agent' ? rv('kpi-agent-branch') : '',
     target: parseFloat(rv('kpi-target')) || 0,
     valueMode: kpiValueMode,
+    itemId: kpiValueMode === 'unit' ? rv('kpi-item-sel') : '',
     unit: kpiValueMode === 'unit' ? rv('kpi-unit-val') : '',
     currency: kpiValueMode === 'currency' ? rv('kpi-currency-sel') : '',
     period: rv('kpi-period')
@@ -3942,9 +3966,10 @@ function renderKpiTable() {
   }
   tbody.innerHTML = visibleKpis.map(function(k, i) {
     const typePill = k.type === 'Sales' ? 'pill-green' : k.type === 'Revenue' ? 'pill-orange' : k.type === 'Units' ? 'pill-blue' : 'pill-purple';
+    const unitLabel = getKpiUnitLabel(k);
     const valueDisplay = k.valueMode === 'currency'
       ? fmtMoney(k.target, esc(k.currency) + ' ')
-      : k.target + ' ' + esc(k.unit || '');
+      : k.target + (unitLabel ? ' ' + esc(unitLabel) : '');
     const assignee = staffList.find(function(u) { return u.id === k.assigneeId; });
     const forLabel = k.kpiFor === 'shop' ? '<span class="pill pill-blue"><i class="fas fa-store"></i> Shop</span>' : '<span class="pill pill-orange"><i class="fas fa-user"></i> Agent</span>';
     const assigneeName = assignee ? esc(assignee.name) : (k.assigneeBranch ? esc(k.assigneeBranch) : '—');
@@ -3955,7 +3980,7 @@ function renderKpiTable() {
     const pctClass = pct >= 100 ? 'pill-green' : pct >= 70 ? 'pill-orange' : 'pill-red';
     const actualDisplay = k.valueMode === 'currency'
       ? fmtMoney(actual, esc(k.currency) + ' ')
-      : actual + ' ' + esc(k.unit || '');
+      : actual + (unitLabel ? ' ' + esc(unitLabel) : '');
     const progressBar = '<div style="background:#eee;border-radius:4px;height:6px;width:80px;display:inline-block;vertical-align:middle;margin-right:4px;">' +
       '<div style="background:' + (pct >= 100 ? '#1B7D3D' : pct >= 70 ? '#FF9800' : '#E53935') + ';width:' + Math.min(pct, 100) + '%;height:100%;border-radius:4px;"></div></div>';
     // Determine if the current user can modify this KPI using centralised helpers
