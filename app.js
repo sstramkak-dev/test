@@ -4036,6 +4036,17 @@ function initKpiMonthPicker() {
   if (picker) picker.value = kpiSelectedMonth;
 }
 
+// Returns the branch associated with a KPI entry.
+// For agent KPIs the branch is stored directly; for shop KPIs it comes from the assignee supervisor.
+function getKpiBranch(k) {
+  if (k.kpiFor === 'agent') return k.assigneeBranch || '';
+  if (k.kpiFor === 'shop') {
+    var sup = staffList.find(function(u) { return u.id === k.assigneeId; });
+    return sup ? (sup.branch || '') : '';
+  }
+  return '';
+}
+
 function renderKpiTable() {
   const tbody = g('kpi-table');
   if (!tbody) return;
@@ -4053,44 +4064,69 @@ function renderKpiTable() {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999;"><i class="fas fa-chart-line" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No KPIs defined yet</td></tr>';
     return;
   }
-  tbody.innerHTML = visibleKpis.map(function(k, i) {
-    const typePill = k.type === 'Sales' ? 'pill-green' : k.type === 'Revenue' ? 'pill-orange' : k.type === 'Units' ? 'pill-blue' : 'pill-purple';
-    const unitLabel = getKpiUnitLabel(k);
-    const valueDisplay = k.valueMode === 'currency'
-      ? fmtMoney(k.target, esc(k.currency) + ' ')
-      : k.target + (unitLabel ? ' ' + esc(unitLabel) : '');
-    const assignee = staffList.find(function(u) { return u.id === k.assigneeId; });
-    const forLabel = k.kpiFor === 'shop' ? '<span class="pill pill-blue"><i class="fas fa-store"></i> Shop</span>' : '<span class="pill pill-orange"><i class="fas fa-user"></i> Agent</span>';
-    const assigneeName = assignee ? esc(assignee.name) : (k.assigneeBranch ? esc(k.assigneeBranch) : '—');
-    // Compute actual & achievement for selected month
-    const ym = kpiSelectedMonth || ymNow();
-    const actual = Math.round(calcKpiActual(k, ym) * 100) / 100;
-    const pct = k.target > 0 ? Math.round(actual / k.target * 100) : 0;
-    const pctClass = pct >= 100 ? 'pill-green' : pct >= 70 ? 'pill-orange' : 'pill-red';
-    const actualDisplay = k.valueMode === 'currency'
-      ? fmtMoney(actual, esc(k.currency) + ' ')
-      : actual + (unitLabel ? ' ' + esc(unitLabel) : '');
-    const progressBar = '<div style="background:#eee;border-radius:4px;height:6px;width:80px;display:inline-block;vertical-align:middle;margin-right:4px;">' +
-      '<div style="background:' + (pct >= 100 ? '#1B7D3D' : pct >= 70 ? '#FF9800' : '#E53935') + ';width:' + Math.min(pct, 100) + '%;height:100%;border-radius:4px;"></div></div>';
-    // Determine if the current user can modify this KPI using centralised helpers
-    var canModifyKpi = canManageKpis() &&
-      (currentRole !== 'supervisor' || canSupervisorModifyKpi(k));
-    var actionBtns = canModifyKpi
-      ? '<button class="btn-edit" onclick="editKpi(\'' + esc(k.id) + '\')"><i class="fas fa-edit"></i></button> ' +
-        '<button class="btn-delete" onclick="deleteKpi(\'' + esc(k.id) + '\')"><i class="fas fa-trash"></i></button>'
-      : '<span style="color:#bbb;font-size:.75rem;">View only</span>';
-    return '<tr>' +
-      '<td>' + (i + 1) + '</td>' +
-      '<td>' + esc(k.name) + '</td>' +
-      '<td><span class="pill ' + typePill + '">' + esc(k.type) + '</span></td>' +
-      '<td>' + forLabel + '<br><small style="color:#888;">' + assigneeName + '</small></td>' +
-      '<td>' + valueDisplay + '</td>' +
-      '<td>' + actualDisplay + '</td>' +
-      '<td>' + progressBar + '<span class="pill ' + pctClass + '" style="font-size:.72rem;">' + pct + '%</span></td>' +
-      '<td>' + esc(k.period || '') + '</td>' +
-      '<td style="white-space:nowrap;">' + actionBtns + '</td>' +
-      '</tr>';
-  }).join('');
+
+  // Group KPIs by branch
+  var branchMap = {};
+  var branchOrder = [];
+  visibleKpis.forEach(function(k) {
+    var branch = getKpiBranch(k) || 'Unassigned';
+    if (!branchMap[branch]) {
+      branchMap[branch] = [];
+      branchOrder.push(branch);
+    }
+    branchMap[branch].push(k);
+  });
+  branchOrder.sort();
+
+  var html = '';
+  branchOrder.forEach(function(branch) {
+    var kpis = branchMap[branch];
+    var rowNum = 0;
+    html += '<tr><td colspan="9" class="kpi-branch-header">' +
+      '<i class="fas fa-building" style="margin-right:6px;"></i>' + esc(branch) +
+      ' <span class="kpi-branch-count">(' + kpis.length + ' KPI' + (kpis.length !== 1 ? 's' : '') + ')</span>' +
+      '</td></tr>';
+    kpis.forEach(function(k) {
+      rowNum++;
+      const typePill = k.type === 'Sales' ? 'pill-green' : k.type === 'Revenue' ? 'pill-orange' : k.type === 'Units' ? 'pill-blue' : 'pill-purple';
+      const unitLabel = getKpiUnitLabel(k);
+      const valueDisplay = k.valueMode === 'currency'
+        ? fmtMoney(k.target, esc(k.currency) + ' ')
+        : k.target + (unitLabel ? ' ' + esc(unitLabel) : '');
+      const assignee = staffList.find(function(u) { return u.id === k.assigneeId; });
+      const forLabel = k.kpiFor === 'shop' ? '<span class="pill pill-blue"><i class="fas fa-store"></i> Shop</span>' : '<span class="pill pill-orange"><i class="fas fa-user"></i> Agent</span>';
+      const assigneeName = assignee ? esc(assignee.name) : (k.assigneeBranch ? esc(k.assigneeBranch) : '—');
+      // Compute actual & achievement for selected month
+      const ym = kpiSelectedMonth || ymNow();
+      const actual = Math.round(calcKpiActual(k, ym) * 100) / 100;
+      const pct = k.target > 0 ? Math.round(actual / k.target * 100) : 0;
+      const pctClass = pct >= 100 ? 'pill-green' : pct >= 70 ? 'pill-orange' : 'pill-red';
+      const actualDisplay = k.valueMode === 'currency'
+        ? fmtMoney(actual, esc(k.currency) + ' ')
+        : actual + (unitLabel ? ' ' + esc(unitLabel) : '');
+      const progressBar = '<div style="background:#eee;border-radius:4px;height:6px;width:80px;display:inline-block;vertical-align:middle;margin-right:4px;">' +
+        '<div style="background:' + (pct >= 100 ? '#1B7D3D' : pct >= 70 ? '#FF9800' : '#E53935') + ';width:' + Math.min(pct, 100) + '%;height:100%;border-radius:4px;"></div></div>';
+      // Determine if the current user can modify this KPI using centralised helpers
+      var canModifyKpi = canManageKpis() &&
+        (currentRole !== 'supervisor' || canSupervisorModifyKpi(k));
+      var actionBtns = canModifyKpi
+        ? '<button class="btn-edit" onclick="editKpi(\'' + esc(k.id) + '\')"><i class="fas fa-edit"></i></button> ' +
+          '<button class="btn-delete" onclick="deleteKpi(\'' + esc(k.id) + '\')"><i class="fas fa-trash"></i></button>'
+        : '<span style="color:#bbb;font-size:.75rem;">View only</span>';
+      html += '<tr>' +
+        '<td>' + rowNum + '</td>' +
+        '<td>' + esc(k.name) + '</td>' +
+        '<td><span class="pill ' + typePill + '">' + esc(k.type) + '</span></td>' +
+        '<td>' + forLabel + '<br><small style="color:#888;">' + assigneeName + '</small></td>' +
+        '<td>' + valueDisplay + '</td>' +
+        '<td>' + actualDisplay + '</td>' +
+        '<td>' + progressBar + '<span class="pill ' + pctClass + '" style="font-size:.72rem;">' + pct + '%</span></td>' +
+        '<td>' + esc(k.period || '') + '</td>' +
+        '<td style="white-space:nowrap;">' + actionBtns + '</td>' +
+        '</tr>';
+    });
+  });
+  tbody.innerHTML = html;
 }
 
 // ------------------------------------------------------------
