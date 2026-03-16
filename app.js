@@ -2060,6 +2060,9 @@ function renderDashboard() {
   // Chart 4: Growth vs Last Month
   _cGrowth = destroyChart(_cGrowth);
   clearCanvas('cGrowth');
+  // Sync dropdown state
+  var growthViewSel = g('growth-chart-view');
+  if (growthViewSel && growthViewSel.value !== _growthChartView) growthViewSel.value = _growthChartView;
   const growthLabels = unitItemsDash.map(function(x) { return x.shortcut || x.name; });
   const currItemUnits = unitItemsDash.map(function(item) {
     let t = 0; currSales.forEach(function(s) { t += (s.items && s.items[item.id]) || 0; }); return t;
@@ -2069,29 +2072,83 @@ function renderDashboard() {
   });
   const gCtx = g('cGrowth');
   if (gCtx && unitItemsDash.length && typeof Chart !== 'undefined') {
-    _cGrowth = new Chart(gCtx, {
-      type: 'line',
-      data: {
-        labels: growthLabels,
-        datasets: [
-          { label: 'This Month', data: currItemUnits, borderColor: '#1B7D3D', backgroundColor: 'rgba(27,125,61,0.08)', tension: 0.3, fill: false, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: '#1B7D3D', pointBorderColor: '#fff', pointBorderWidth: 2, borderWidth: 2 },
-          { label: 'Last Month', data: prevItemUnits, borderColor: '#A5D6A7', backgroundColor: 'rgba(165,214,167,0.08)', tension: 0.3, fill: false, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: '#A5D6A7', pointBorderColor: '#fff', pointBorderWidth: 2, borderWidth: 2 }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11 } } },
-          tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 } }
+    if (_growthChartView === 'pct') {
+      // Show percentage growth per item
+      const pctData = currItemUnits.map(function(curr, i) {
+        var prev = prevItemUnits[i];
+        if (!prev) return null;
+        return Math.round((curr - prev) / prev * 100);
+      });
+      const barColors = pctData.map(function(v) {
+        if (v === null) return '#BDBDBD';
+        return v >= 0 ? '#1B7D3D' : '#E53935';
+      });
+      _cGrowth = new Chart(gCtx, {
+        type: 'bar',
+        data: {
+          labels: growthLabels,
+          datasets: [{
+            label: '% Growth vs Last Month',
+            data: pctData,
+            backgroundColor: barColors,
+            borderRadius: 5,
+            borderWidth: 0
+          }]
         },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-          y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } }, beginAtZero: true }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11 } } },
+            tooltip: {
+              backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 },
+              callbacks: {
+                label: function(ctx) {
+                  var v = ctx.parsed.y;
+                  if (v === null) return 'N/A';
+                  return (v >= 0 ? '+' : '') + v + '%';
+                }
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: {
+              grid: { color: 'rgba(0,0,0,0.05)' },
+              ticks: {
+                font: { size: 11 },
+                callback: function(v) { return v + '%'; }
+              }
+            }
+          }
         }
-      }
-    });
+      });
+    } else {
+      _cGrowth = new Chart(gCtx, {
+        type: 'line',
+        data: {
+          labels: growthLabels,
+          datasets: [
+            { label: 'This Month', data: currItemUnits, borderColor: '#1B7D3D', backgroundColor: 'rgba(27,125,61,0.08)', tension: 0.3, fill: false, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: '#1B7D3D', pointBorderColor: '#fff', pointBorderWidth: 2, borderWidth: 2 },
+            { label: 'Last Month', data: prevItemUnits, borderColor: '#A5D6A7', backgroundColor: 'rgba(165,214,167,0.08)', tension: 0.3, fill: false, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: '#A5D6A7', pointBorderColor: '#fff', pointBorderWidth: 2, borderWidth: 2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11 } } },
+            tooltip: { backgroundColor: 'rgba(26,26,46,0.9)', padding: 10, cornerRadius: 8, bodyFont: { size: 11 } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } }, beginAtZero: true }
+          }
+        }
+      });
+    }
   }
 
   // Branch summary table (visible for admin/cluster/supervisor)
@@ -2172,7 +2229,13 @@ function calcKpiActual(kpi, ym) {
   return actual;
 }
 
-var _dashKpiView = 'all'; // 'all', 'shop', 'agent'
+var _dashKpiView = 'all'; // 'all', 'shop', 'agent', 'branch'
+var _growthChartView = 'compare'; // 'compare' or 'pct'
+
+function setGrowthChartView(v) {
+  _growthChartView = v;
+  renderDashboard();
+}
 
 function setDashKpiView(view) {
   _dashKpiView = view;
@@ -2185,6 +2248,21 @@ function setDashKpiView(view) {
 function renderDashboardKpiSection() {
   var section = g('dash-kpi-section');
   if (!section) return;
+
+  // Show/hide the "By Branch" button (only for cluster/admin)
+  var branchBtn = g('dash-kpi-branch-btn');
+  if (branchBtn) branchBtn.style.display = (currentRole === 'cluster' || currentRole === 'admin') ? '' : 'none';
+
+  // Populate and show/hide branch dropdown for "By Branch" view
+  var branchFilterWrap = g('dash-kpi-branch-filter-wrap');
+  var branchFilterSel = g('dash-kpi-branch-filter');
+  if (branchFilterWrap) branchFilterWrap.style.display = (_dashKpiView === 'branch' && (currentRole === 'cluster' || currentRole === 'admin')) ? '' : 'none';
+  if (branchFilterSel && _dashKpiView === 'branch') {
+    var allBranches = getBranches();
+    var curBranch = branchFilterSel.value;
+    branchFilterSel.innerHTML = '<option value="">All Branches</option>' +
+      allBranches.map(function(b) { return '<option value="' + esc(b) + '"' + (curBranch === b ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('');
+  }
 
   // Determine relevant KPIs based on role
   var relevantKpis = [];
@@ -2207,11 +2285,22 @@ function renderDashboardKpiSection() {
     relevantKpis = kpiList.slice();
   }
 
-  // Apply view filter (agent/supervisor can toggle by agent or by shop)
+  // Apply view filter
   if (_dashKpiView === 'shop') {
     relevantKpis = relevantKpis.filter(function(k) { return k.kpiFor === 'shop'; });
   } else if (_dashKpiView === 'agent') {
     relevantKpis = relevantKpis.filter(function(k) { return k.kpiFor === 'agent'; });
+  } else if (_dashKpiView === 'branch' && branchFilterSel && branchFilterSel.value) {
+    // Filter by branch: for shop KPIs use assignee's branch, for agent KPIs use assigneeBranch
+    var selectedBranch = branchFilterSel.value;
+    relevantKpis = relevantKpis.filter(function(k) {
+      if (k.kpiFor === 'agent') return k.assigneeBranch === selectedBranch;
+      if (k.kpiFor === 'shop') {
+        var sup = staffList.find(function(u) { return u.id === k.assigneeId; });
+        return sup ? sup.branch === selectedBranch : false;
+      }
+      return false;
+    });
   }
 
   // Show/hide the view toggle buttons based on role
