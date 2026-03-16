@@ -988,6 +988,22 @@ input, select, textarea, button {
 .td-buy-number { font-weight: 700; color: #1B7D3D; }
 
 .data-table tbody tr:hover { background: #F5F5F5 !important; }
+
+/* KPI branch group header row */
+.kpi-branch-header {
+  background: #E8F5E9 !important;
+  color: #1B7D3D !important;
+  font-weight: 700;
+  font-size: .82rem;
+  padding: 8px 14px !important;
+  border-top: 2px solid #1B7D3D;
+  letter-spacing: .03em;
+}
+.kpi-branch-count {
+  font-weight: 400;
+  opacity: .75;
+  font-size: .75rem;
+}
 .data-table tbody tr:hover td { background: transparent !important; }
 .data-table tbody tr:nth-child(even) td { background: #FAFAFA; }
 .data-table tbody tr:nth-child(even):hover td { background: transparent; }
